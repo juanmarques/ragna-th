@@ -84,11 +84,8 @@ void AROServiceNPC_Refine::ServerRefineItem_Implementation(int32 InventorySlot)
 		return;
 	}
 
-	// Deduct ore and Zeny
-	Inventory->Internal_RemoveItem(OreSlot, 1);
-	Inventory->RemoveZeny(ZenyCost);
-
 	// Attempt refinement using the refinement system
+	// Note: AttemptRefine handles ore and zeny deduction internally
 	// We work on a copy from inventory, then apply result back
 	bool bSuccess = URORefinementSystem::AttemptRefine(ItemToRefine, Inventory, WeaponLevel);
 

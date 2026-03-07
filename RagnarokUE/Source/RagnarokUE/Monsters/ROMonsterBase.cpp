@@ -4,6 +4,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
 #include "GameFramework/Controller.h"
+#include "RagnarokUE/Items/ROLootManager.h"
+#include "RagnarokUE/Character/ROLevelingComponent.h"
 
 AROMonsterBase::AROMonsterBase()
 {
@@ -298,15 +300,15 @@ void AROMonsterBase::GenerateLoot()
 
 	const FVector DeathLocation = GetActorLocation();
 
-	for (const FRODropInfo& Drop : DropTable)
+	// Use the LootManager world subsystem to spawn loot pickup actors
+	UWorld* World = GetWorld();
+	if (World)
 	{
-		// Roll for each drop independently
-		const float Roll = FMath::FRandRange(0.0f, 100.0f);
-		if (Roll <= Drop.DropRate)
+		UROLootManager* LootManager = World->GetSubsystem<UROLootManager>();
+		if (LootManager)
 		{
-			// TODO: Spawn a pickup actor at DeathLocation with ItemID = Drop.ItemID
-			// For now, log the drop
-			UE_LOG(LogTemp, Log, TEXT("Monster %s dropped item ID %d"), *MonsterName.ToString(), Drop.ItemID);
+			AActor* Killer = GetHighestThreatTarget();
+			LootManager->GenerateLoot(MonsterID, Killer, DeathLocation);
 		}
 	}
 }
