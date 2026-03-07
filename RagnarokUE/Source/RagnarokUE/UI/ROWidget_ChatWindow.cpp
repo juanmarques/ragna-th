@@ -47,7 +47,7 @@ void UROWidget_ChatWindow::AddMessage(const FROChatMessage& Message)
 void UROWidget_ChatWindow::AddSystemMessage(const FString& Message)
 {
 	FROChatMessage SysMsg;
-	SysMsg.Channel = EROChatChannel::System;
+	SysMsg.Channel = EChatChannel::System;
 	SysMsg.SenderName = TEXT("System");
 	SysMsg.Message = Message;
 	SysMsg.Timestamp = FDateTime::Now();
@@ -64,7 +64,7 @@ void UROWidget_ChatWindow::ClearMessages()
 	}
 }
 
-void UROWidget_ChatWindow::SetActiveChannel(EROChatChannel Channel)
+void UROWidget_ChatWindow::SetActiveChannel(EChatChannel Channel)
 {
 	ActiveChannel = Channel;
 
@@ -73,11 +73,11 @@ void UROWidget_ChatWindow::SetActiveChannel(EROChatChannel Channel)
 		FString ChannelName;
 		switch (Channel)
 		{
-		case EROChatChannel::Local:   ChannelName = TEXT("[Local]"); break;
-		case EROChatChannel::Party:   ChannelName = TEXT("[Party]"); break;
-		case EROChatChannel::Guild:   ChannelName = TEXT("[Guild]"); break;
-		case EROChatChannel::Whisper: ChannelName = TEXT("[Whisper]"); break;
-		case EROChatChannel::Global:  ChannelName = TEXT("[Global]"); break;
+		case EChatChannel::Local:   ChannelName = TEXT("[Local]"); break;
+		case EChatChannel::Party:   ChannelName = TEXT("[Party]"); break;
+		case EChatChannel::Guild:   ChannelName = TEXT("[Guild]"); break;
+		case EChatChannel::Whisper: ChannelName = TEXT("[Whisper]"); break;
+		case EChatChannel::Global:  ChannelName = TEXT("[Global]"); break;
 		default:                      ChannelName = TEXT("[Local]"); break;
 		}
 
@@ -92,17 +92,17 @@ void UROWidget_ChatWindow::SwitchTab(EROChatTab Tab)
 	RefreshChatLog();
 }
 
-FLinearColor UROWidget_ChatWindow::GetChannelColor(EROChatChannel Channel)
+FLinearColor UROWidget_ChatWindow::GetChannelColor(EChatChannel Channel)
 {
 	switch (Channel)
 	{
-	case EROChatChannel::Local:   return FLinearColor::White;
-	case EROChatChannel::Party:   return FLinearColor(0.3f, 0.5f, 1.0f, 1.0f);   // Blue
-	case EROChatChannel::Guild:   return FLinearColor(0.3f, 1.0f, 0.3f, 1.0f);   // Green
-	case EROChatChannel::Whisper: return FLinearColor(1.0f, 1.0f, 0.3f, 1.0f);   // Yellow
-	case EROChatChannel::Global:  return FLinearColor(1.0f, 0.6f, 0.2f, 1.0f);   // Orange
-	case EROChatChannel::System:  return FLinearColor(1.0f, 0.2f, 0.2f, 1.0f);   // Red
-	case EROChatChannel::Battle:  return FLinearColor(0.8f, 0.8f, 0.8f, 1.0f);   // Light gray
+	case EChatChannel::Local:   return FLinearColor::White;
+	case EChatChannel::Party:   return FLinearColor(0.3f, 0.5f, 1.0f, 1.0f);   // Blue
+	case EChatChannel::Guild:   return FLinearColor(0.3f, 1.0f, 0.3f, 1.0f);   // Green
+	case EChatChannel::Whisper: return FLinearColor(1.0f, 1.0f, 0.3f, 1.0f);   // Yellow
+	case EChatChannel::Global:  return FLinearColor(1.0f, 0.6f, 0.2f, 1.0f);   // Orange
+	case EChatChannel::System:  return FLinearColor(1.0f, 0.2f, 0.2f, 1.0f);   // Red
+	case EChatChannel::Battle:  return FLinearColor(0.8f, 0.8f, 0.8f, 1.0f);   // Light gray
 	default:                      return FLinearColor::White;
 	}
 }
@@ -120,7 +120,7 @@ void UROWidget_ChatWindow::OnInputCommitted(const FText& Text, ETextCommit::Type
 		return;
 	}
 
-	EROChatChannel Channel = ActiveChannel;
+	EChatChannel Channel = ActiveChannel;
 	FString Message;
 	FString TargetName;
 
@@ -138,14 +138,14 @@ void UROWidget_ChatWindow::OnInputCommitted(const FText& Text, ETextCommit::Type
 	}
 }
 
-bool UROWidget_ChatWindow::ParseChatCommand(const FString& Input, EROChatChannel& OutChannel, FString& OutMessage, FString& OutTargetName)
+bool UROWidget_ChatWindow::ParseChatCommand(const FString& Input, EChatChannel& OutChannel, FString& OutMessage, FString& OutTargetName)
 {
 	OutTargetName.Empty();
 
 	// /p message - party chat
 	if (Input.StartsWith(TEXT("/p ")))
 	{
-		OutChannel = EROChatChannel::Party;
+		OutChannel = EChatChannel::Party;
 		OutMessage = Input.Mid(3);
 		return true;
 	}
@@ -153,7 +153,7 @@ bool UROWidget_ChatWindow::ParseChatCommand(const FString& Input, EROChatChannel
 	// /g message - guild chat
 	if (Input.StartsWith(TEXT("/g ")))
 	{
-		OutChannel = EROChatChannel::Guild;
+		OutChannel = EChatChannel::Guild;
 		OutMessage = Input.Mid(3);
 		return true;
 	}
@@ -161,7 +161,7 @@ bool UROWidget_ChatWindow::ParseChatCommand(const FString& Input, EROChatChannel
 	// /w "name" message - whisper
 	if (Input.StartsWith(TEXT("/w ")))
 	{
-		OutChannel = EROChatChannel::Whisper;
+		OutChannel = EChatChannel::Whisper;
 		const FString Remainder = Input.Mid(3);
 
 		// Parse "name" format
@@ -196,7 +196,7 @@ bool UROWidget_ChatWindow::ParseChatCommand(const FString& Input, EROChatChannel
 	// /s message - shout/global
 	if (Input.StartsWith(TEXT("/s ")))
 	{
-		OutChannel = EROChatChannel::Global;
+		OutChannel = EChatChannel::Global;
 		OutMessage = Input.Mid(3);
 		return true;
 	}
@@ -241,13 +241,13 @@ void UROWidget_ChatWindow::AppendMessageToLog(const FROChatMessage& Message)
 	FString FormattedMsg;
 	switch (Message.Channel)
 	{
-	case EROChatChannel::Whisper:
+	case EChatChannel::Whisper:
 		FormattedMsg = FString::Printf(TEXT("[From %s]: %s"), *Message.SenderName, *Message.Message);
 		break;
-	case EROChatChannel::System:
+	case EChatChannel::System:
 		FormattedMsg = FString::Printf(TEXT("[System]: %s"), *Message.Message);
 		break;
-	case EROChatChannel::Battle:
+	case EChatChannel::Battle:
 		FormattedMsg = Message.Message;
 		break;
 	default:
@@ -278,13 +278,13 @@ bool UROWidget_ChatWindow::PassesFilter(const FROChatMessage& Message) const
 	case EROChatTab::All:
 		return true;
 	case EROChatTab::Party:
-		return Message.Channel == EROChatChannel::Party || Message.Channel == EROChatChannel::System;
+		return Message.Channel == EChatChannel::Party || Message.Channel == EChatChannel::System;
 	case EROChatTab::Guild:
-		return Message.Channel == EROChatChannel::Guild || Message.Channel == EROChatChannel::System;
+		return Message.Channel == EChatChannel::Guild || Message.Channel == EChatChannel::System;
 	case EROChatTab::Whisper:
-		return Message.Channel == EROChatChannel::Whisper;
+		return Message.Channel == EChatChannel::Whisper;
 	case EROChatTab::Battle:
-		return Message.Channel == EROChatChannel::Battle;
+		return Message.Channel == EChatChannel::Battle;
 	default:
 		return true;
 	}
