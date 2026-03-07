@@ -58,6 +58,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "RO|Damage")
 	static int32 CalculateSoftDEF(int32 VIT);
 
+	/**
+	 * Calculate soft MDEF (INT-based) damage reduction.
+	 * Formula: INT + floor(INT/5)^2 + DEX/5 + VIT/5
+	 */
+	UFUNCTION(BlueprintCallable, Category = "RO|Damage")
+	static int32 CalculateSoftMDEF(int32 INT, int32 VIT, int32 DEX);
+
 	// ============================
 	// Accuracy & Evasion
 	// ============================
@@ -86,6 +93,13 @@ public:
 	// ============================
 	// Attack Speed
 	// ============================
+
+	/**
+	 * Get the base ASPD value for a given job class.
+	 * This is the weapon-type delay used in ASPD calculations.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "RO|Damage")
+	static int32 GetBaseASPDForJob(EROJobClass Job);
 
 	/**
 	 * Calculate ASPD (attacks per second scaled to 200).

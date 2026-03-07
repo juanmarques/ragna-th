@@ -116,29 +116,30 @@ void UROStatsComponent::RecalculateDerivedStats()
 
 	// --- ATK (Status ATK, weapon ATK is separate) ---
 	// StatusATK = BaseLevel/4 + STR + DEX/5 + LUK/3
-	ATK = URODamageFormulas::CalculateStatusATK(BaseLevel, TotalSTR, TotalDEX, TotalLUK);
+	ATK = URODamageFormulas::CalculateBaseATK(TotalSTR, TotalDEX, TotalLUK);
 
 	// --- MATK ---
 	// MATK_Min = INT + (INT/7)^2
 	// MATK_Max = INT + (INT/5)^2
-	MATK_Min = URODamageFormulas::CalculateMATKMin(TotalINT);
-	MATK_Max = URODamageFormulas::CalculateMATKMax(TotalINT);
+	const FVector2D MATKRange = URODamageFormulas::CalculateBaseMATK(TotalINT);
+	MATK_Min = static_cast<int32>(MATKRange.X);
+	MATK_Max = static_cast<int32>(MATKRange.Y);
 
 	// --- Soft DEF (from VIT) ---
 	// SoftDEF = BaseLevel/2 + VIT/2 (hard DEF comes from equipment, stored elsewhere)
-	DEF = URODamageFormulas::CalculateSoftDEF(BaseLevel, TotalVIT);
+	DEF = URODamageFormulas::CalculateSoftDEF(TotalVIT);
 
 	// --- Soft MDEF ---
 	// SoftMDEF = INT + VIT/5 + DEX/5 + BaseLevel/4
-	MDEF = URODamageFormulas::CalculateSoftMDEF(BaseLevel, TotalINT, TotalVIT, TotalDEX);
+	MDEF = URODamageFormulas::CalculateSoftMDEF(TotalINT, TotalVIT, TotalDEX);
 
 	// --- HIT ---
 	// HIT = BaseLevel + DEX + LUK/3 + 175
-	HIT = URODamageFormulas::CalculateHIT(BaseLevel, TotalDEX, TotalLUK);
+	HIT = URODamageFormulas::CalculateHitRate(TotalDEX, TotalLUK, BaseLevel);
 
 	// --- FLEE ---
 	// FLEE = BaseLevel + AGI + LUK/5 + 100
-	FLEE = URODamageFormulas::CalculateFLEE(BaseLevel, TotalAGI, TotalLUK);
+	FLEE = URODamageFormulas::CalculateFleeRate(TotalAGI, TotalLUK, BaseLevel);
 
 	// --- Perfect Dodge ---
 	// PerfectDodge = LUK/10 + 1
@@ -148,7 +149,7 @@ void UROStatsComponent::RecalculateDerivedStats()
 	// Base ASPD depends on weapon type and job class; simplified formula:
 	// ASPD = 200 - (BaseASPD - (AGI + DEX/4))
 	// We store the effective ASPD value (higher = faster, max 190)
-	ASPD = URODamageFormulas::CalculateASPD(GetOwnerJobClass(), TotalAGI, TotalDEX);
+	ASPD = URODamageFormulas::CalculateASPD(URODamageFormulas::GetBaseASPDForJob(GetOwnerJobClass()), TotalAGI, TotalDEX);
 
 	// --- Critical Rate ---
 	// Crit = LUK * 0.3 + 1
@@ -156,11 +157,11 @@ void UROStatsComponent::RecalculateDerivedStats()
 
 	// --- MaxHP ---
 	// Formula varies by job; simplified: base HP table[level] * (1 + VIT/100)
-	MaxHP = URODamageFormulas::CalculateMaxHP(GetOwnerJobClass(), BaseLevel, TotalVIT);
+	MaxHP = URODamageFormulas::CalculateMaxHP(BaseLevel, TotalVIT, GetOwnerJobClass());
 
 	// --- MaxSP ---
 	// SP = base SP table[level] * (1 + INT/100)
-	MaxSP = URODamageFormulas::CalculateMaxSP(GetOwnerJobClass(), BaseLevel, TotalINT);
+	MaxSP = URODamageFormulas::CalculateMaxSP(BaseLevel, TotalINT, GetOwnerJobClass());
 }
 
 int32 UROStatsComponent::GetStatPointCost(int32 CurrentBaseStatValue)
@@ -190,14 +191,14 @@ void UROStatsComponent::ServerAllocateStat_Implementation(EROStat Stat)
 	case EROStat::STR: BaseStat = &BaseSTR; break;
 	case EROStat::AGI: BaseStat = &BaseAGI; break;
 	case EROStat::VIT: BaseStat = &BaseVIT; break;
-	case EROStat::INT: BaseStat = &BaseINT; break;
+	case EROStat::INT_STAT: BaseStat = &BaseINT; break;
 	case EROStat::DEX: BaseStat = &BaseDEX; break;
 	case EROStat::LUK: BaseStat = &BaseLUK; break;
 	default: return;
 	}
 
 	// Check cap (99 is the classic max)
-	if (*BaseStat >= ROConstants::MAX_BASE_STAT)
+	if (*BaseStat >= ROConstants::MaxStats)
 	{
 		return;
 	}
@@ -225,7 +226,7 @@ int32 UROStatsComponent::GetStatValue(EROStat Stat) const
 	case EROStat::STR: return BaseSTR;
 	case EROStat::AGI: return BaseAGI;
 	case EROStat::VIT: return BaseVIT;
-	case EROStat::INT: return BaseINT;
+	case EROStat::INT_STAT: return BaseINT;
 	case EROStat::DEX: return BaseDEX;
 	case EROStat::LUK: return BaseLUK;
 	default: return 0;
@@ -239,7 +240,7 @@ int32 UROStatsComponent::GetTotalStat(EROStat Stat) const
 	case EROStat::STR: return TotalSTR;
 	case EROStat::AGI: return TotalAGI;
 	case EROStat::VIT: return TotalVIT;
-	case EROStat::INT: return TotalINT;
+	case EROStat::INT_STAT: return TotalINT;
 	case EROStat::DEX: return TotalDEX;
 	case EROStat::LUK: return TotalLUK;
 	default: return 0;
@@ -253,7 +254,7 @@ void UROStatsComponent::AddBonusStat(EROStat Stat, int32 Amount)
 	case EROStat::STR: BonusSTR += Amount; break;
 	case EROStat::AGI: BonusAGI += Amount; break;
 	case EROStat::VIT: BonusVIT += Amount; break;
-	case EROStat::INT: BonusINT += Amount; break;
+	case EROStat::INT_STAT: BonusINT += Amount; break;
 	case EROStat::DEX: BonusDEX += Amount; break;
 	case EROStat::LUK: BonusLUK += Amount; break;
 	default: return;
