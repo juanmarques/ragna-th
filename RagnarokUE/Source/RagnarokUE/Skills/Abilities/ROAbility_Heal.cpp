@@ -60,7 +60,7 @@ void UROAbility_Heal::OnCastComplete()
 		UROStatsComponent* StatsComp = AvatarActor->FindComponentByClass<UROStatsComponent>();
 		if (StatsComp)
 		{
-			INT_Stat = StatsComp->GetTotalStat(EROStat::INT);
+			INT_Stat = StatsComp->GetTotalStat(EROStat::INT_STAT);
 		}
 	}
 

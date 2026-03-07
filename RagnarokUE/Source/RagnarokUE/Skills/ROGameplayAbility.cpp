@@ -114,7 +114,7 @@ void UROGameplayAbility::ActivateAbility(
 		if (StatsComp)
 		{
 			DEX = StatsComp->GetTotalStat(EROStat::DEX);
-			INT_Stat = StatsComp->GetTotalStat(EROStat::INT);
+			INT_Stat = StatsComp->GetTotalStat(EROStat::INT_STAT);
 		}
 	}
 
