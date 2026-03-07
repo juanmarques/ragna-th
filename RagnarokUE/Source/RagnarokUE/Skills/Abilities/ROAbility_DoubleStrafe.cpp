@@ -3,6 +3,8 @@
 #include "ROAbility_DoubleStrafe.h"
 #include "AbilitySystemComponent.h"
 #include "RagnarokUE/Skills/ROAttributeSet.h"
+#include "RagnarokUE/Combat/RODamageGameplayEffect.h"
+#include "RagnarokUE/Core/ROPlayerController.h"
 
 UROAbility_DoubleStrafe::UROAbility_DoubleStrafe()
 {
@@ -53,12 +55,42 @@ void UROAbility_DoubleStrafe::OnCastComplete()
 		return;
 	}
 
+	UAbilitySystemComponent* SourceASC = CachedActorInfo->AbilitySystemComponent.Get();
+
+	// Resolve target from the player controller's selected target
+	AActor* TargetActor = nullptr;
+	if (CachedActorInfo->AvatarActor.IsValid())
+	{
+		APawn* OwnerPawn = Cast<APawn>(CachedActorInfo->AvatarActor.Get());
+		if (OwnerPawn)
+		{
+			AROPlayerController* PC = Cast<AROPlayerController>(OwnerPawn->GetController());
+			if (PC)
+			{
+				TargetActor = PC->SelectedTarget;
+			}
+		}
+	}
+
+	if (!TargetActor)
+	{
+		EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+		return;
+	}
+
+	UAbilitySystemComponent* TargetASC = TargetActor->FindComponentByClass<UAbilitySystemComponent>();
+	if (!TargetASC)
+	{
+		EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+		return;
+	}
+
 	// 2-hit attack: each hit does ATK * (100% + 10% * Level)
 	const float PerHitMod = GetPerHitDamageModifier();
 	const float TotalDamageMod = PerHitMod * 2.0f; // 2 hits
 
 	FGameplayEffectSpecHandle DamageSpec = MakeOutgoingGameplayEffectSpec(
-		UGameplayEffect::StaticClass(), SkillLevel);
+		URODamageGameplayEffect::StaticClass(), SkillLevel);
 
 	if (DamageSpec.IsValid())
 	{
@@ -85,6 +117,9 @@ void UROAbility_DoubleStrafe::OnCastComplete()
 		{
 			DamageSpec.Data->SetSetByCallerMagnitude(SizeModTag, 1.0f);
 		}
+
+		// Apply the damage effect to the target
+		SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
 	}
 
 	EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
