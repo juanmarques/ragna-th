@@ -1,0 +1,24 @@
+# UE5 Build artifacts
+RagnarokUE/Binaries/
+RagnarokUE/Intermediate/
+RagnarokUE/Saved/
+RagnarokUE/DerivedDataCache/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.xcworkspace
+*.xcuserdata
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Compiled
+*.o
+*.obj
+*.exe
+*.dll
+*.dylib
+*.so

@@ -1,0 +1,113 @@
+// Copyright Ragna-TH Project. All Rights Reserved.
+
+#include "ROAbility_Bash.h"
+#include "AbilitySystemComponent.h"
+#include "RagnarokUE/Skills/ROAttributeSet.h"
+#include "RagnarokUE/Combat/ROStatusEffectComponent.h"
+#include "RagnarokUE/Combat/ROElementalSystem.h"
+#include "GameplayEffect.h"
+
+UROAbility_Bash::UROAbility_Bash()
+{
+	SkillID = 5;
+	SkillName = FName("SM_BASH");
+	MaxSkillLevel = 10;
+	SkillLevel = 1;
+	SkillElement = EROElement::Neutral;
+
+	// SP cost: 8 + 2 * Level (using base=6, perLevel=2 so GetSPCost = 6 + 2*Level = 8 at Lv1)
+	SPCostBase = 6.0f;
+	SPCostPerLevel = 2.0f;
+
+	// Instant cast
+	VariableCastTimeBase = 0.0f;
+	FixedCastTime = 0.0f;
+	CooldownDuration = 0.5f;
+
+	StunChanceBase = 5.0f;
+	StunDuration = 5.0f;
+}
+
+void UROAbility_Bash::OnCastComplete()
+{
+	Super::OnCastComplete();
+
+	if (!CachedActorInfo || !CachedActorInfo->AbilitySystemComponent.IsValid())
+	{
+		EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = CachedActorInfo->AbilitySystemComponent.Get();
+
+	// Get damage modifier: ATK * (100% + 30% * Level)
+	const float DamageMod = GetDamageModifier();
+
+	// Create and apply damage gameplay effect
+	FGameplayEffectSpecHandle DamageSpecHandle = MakeOutgoingGameplayEffectSpec(
+		UGameplayEffect::StaticClass(), SkillLevel);
+
+	if (DamageSpecHandle.IsValid())
+	{
+		// Set damage parameters via SetByCaller
+		FGameplayTag SkillModTag = FGameplayTag::RequestGameplayTag(FName("Data.SkillMod"), false);
+		if (SkillModTag.IsValid())
+		{
+			DamageSpecHandle.Data->SetSetByCallerMagnitude(SkillModTag, DamageMod);
+		}
+
+		FGameplayTag DamageTypeTag = FGameplayTag::RequestGameplayTag(FName("Data.DamageType"), false);
+		if (DamageTypeTag.IsValid())
+		{
+			DamageSpecHandle.Data->SetSetByCallerMagnitude(DamageTypeTag, 0.0f); // Physical
+		}
+
+		FGameplayTag ElementModTag = FGameplayTag::RequestGameplayTag(FName("Data.ElementMod"), false);
+		if (ElementModTag.IsValid())
+		{
+			DamageSpecHandle.Data->SetSetByCallerMagnitude(ElementModTag, 1.0f); // Neutral
+		}
+
+		FGameplayTag SizeModTag = FGameplayTag::RequestGameplayTag(FName("Data.SizeMod"), false);
+		if (SizeModTag.IsValid())
+		{
+			DamageSpecHandle.Data->SetSetByCallerMagnitude(SizeModTag, 1.0f);
+		}
+	}
+
+	// Apply stun at high levels
+	const float StunChance = GetStunChance();
+	if (StunChance > 0.0f && CachedActorInfo->AvatarActor.IsValid())
+	{
+		// Find target actor and apply stun via their status effect component
+		// In a full implementation, this would target the attack target
+		// For now, the stun logic is ready to be connected to targeting
+		AActor* TargetActor = nullptr; // Would come from targeting system
+		if (TargetActor)
+		{
+			UROStatusEffectComponent* StatusComp = TargetActor->FindComponentByClass<UROStatusEffectComponent>();
+			if (StatusComp)
+			{
+				StatusComp->ApplyStatusEffect(EROStatusEffect::Stun, StunDuration, 1, StunChance);
+			}
+		}
+	}
+
+	EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+}
+
+float UROAbility_Bash::GetDamageModifier() const
+{
+	// Damage: ATK * (100% + 30% * SkillLevel)
+	return 1.0f + 0.3f * static_cast<float>(SkillLevel);
+}
+
+float UROAbility_Bash::GetStunChance() const
+{
+	// Stun chance starts at level 6: 5% per level above 5
+	if (SkillLevel >= 6)
+	{
+		return StunChanceBase * static_cast<float>(SkillLevel - 5);
+	}
+	return 0.0f;
+}
