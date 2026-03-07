@@ -2,124 +2,156 @@
 
 #include "ROWorldSubsystem.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogROWorld, Log, All);
-
 void UROWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	UE_LOG(LogROWorld, Log, TEXT("ROWorldSubsystem initialized."));
+
+	UE_LOG(LogTemp, Log, TEXT("ROWorldSubsystem: Initialized"));
 }
 
 void UROWorldSubsystem::Deinitialize()
 {
-	PlayersPerMap.Empty();
-	PlayerMapLookup.Empty();
+	MapPlayers.Empty();
+	PlayerToMap.Empty();
+
 	Super::Deinitialize();
 }
 
-void UROWorldSubsystem::OnPlayerChangeMap(int32 PlayerID, FName FromMap, FName ToMap)
+void UROWorldSubsystem::PlayerEnteredMap(FName MapID, const FString& PlayerNetID)
 {
-	// Remove from old map
-	if (!FromMap.IsNone())
+	if (MapID.IsNone() || PlayerNetID.IsEmpty())
 	{
-		TArray<int32>* OldMapPlayers = PlayersPerMap.Find(FromMap);
-		if (OldMapPlayers)
-		{
-			OldMapPlayers->Remove(PlayerID);
-
-			// Clean up empty map entries
-			if (OldMapPlayers->Num() == 0)
-			{
-				PlayersPerMap.Remove(FromMap);
-			}
-		}
+		return;
 	}
 
-	// Add to new map
-	if (!ToMap.IsNone())
+	TArray<FString>& Players = MapPlayers.FindOrAdd(MapID);
+	if (!Players.Contains(PlayerNetID))
 	{
-		TArray<int32>& NewMapPlayers = PlayersPerMap.FindOrAdd(ToMap);
-		NewMapPlayers.AddUnique(PlayerID);
-
-		PlayerMapLookup.Add(PlayerID, ToMap);
+		Players.Add(PlayerNetID);
 	}
 
-	UE_LOG(LogROWorld, Log, TEXT("Player %d moved from '%s' to '%s'"),
-		PlayerID,
-		FromMap.IsNone() ? TEXT("None") : *FromMap.ToString(),
-		ToMap.IsNone() ? TEXT("None") : *ToMap.ToString());
+	PlayerToMap.Add(PlayerNetID, MapID);
 
-	OnPlayerMapChanged.Broadcast(PlayerID, FromMap, ToMap);
+	UE_LOG(LogTemp, Log, TEXT("ROWorldSubsystem: Player %s entered map %s (%d players)"),
+		*PlayerNetID, *MapID.ToString(), Players.Num());
+
+	OnPlayerEnteredMap.Broadcast(MapID, PlayerNetID);
 }
 
-void UROWorldSubsystem::OnPlayerLogout(int32 PlayerID)
+void UROWorldSubsystem::PlayerLeftMap(FName MapID, const FString& PlayerNetID)
 {
-	const FName* CurrentMap = PlayerMapLookup.Find(PlayerID);
-	if (CurrentMap)
+	if (MapID.IsNone() || PlayerNetID.IsEmpty())
 	{
-		TArray<int32>* MapPlayers = PlayersPerMap.Find(*CurrentMap);
-		if (MapPlayers)
-		{
-			MapPlayers->Remove(PlayerID);
-			if (MapPlayers->Num() == 0)
-			{
-				PlayersPerMap.Remove(*CurrentMap);
-			}
-		}
+		return;
 	}
 
-	PlayerMapLookup.Remove(PlayerID);
-	UE_LOG(LogROWorld, Log, TEXT("Player %d logged out."), PlayerID);
-}
-
-TArray<int32> UROWorldSubsystem::GetPlayersInMap(FName MapID) const
-{
-	const TArray<int32>* Players = PlayersPerMap.Find(MapID);
+	TArray<FString>* Players = MapPlayers.Find(MapID);
 	if (Players)
 	{
-		return *Players;
+		Players->Remove(PlayerNetID);
+
+		UE_LOG(LogTemp, Log, TEXT("ROWorldSubsystem: Player %s left map %s (%d players remaining)"),
+			*PlayerNetID, *MapID.ToString(), Players->Num());
 	}
-	return TArray<int32>();
+
+	// Only remove from reverse lookup if they were on this map
+	const FName* CurrentMap = PlayerToMap.Find(PlayerNetID);
+	if (CurrentMap && *CurrentMap == MapID)
+	{
+		PlayerToMap.Remove(PlayerNetID);
+	}
+
+	OnPlayerLeftMap.Broadcast(MapID, PlayerNetID);
 }
 
-int32 UROWorldSubsystem::GetPlayerCount() const
+void UROWorldSubsystem::PlayerChangedMap(const FString& PlayerNetID, FName OldMapID, FName NewMapID)
 {
-	return PlayerMapLookup.Num();
+	if (!OldMapID.IsNone())
+	{
+		PlayerLeftMap(OldMapID, PlayerNetID);
+	}
+
+	if (!NewMapID.IsNone())
+	{
+		PlayerEnteredMap(NewMapID, PlayerNetID);
+	}
 }
 
-int32 UROWorldSubsystem::GetPlayerCountInMap(FName MapID) const
+int32 UROWorldSubsystem::GetPlayerCountOnMap(FName MapID) const
 {
-	const TArray<int32>* Players = PlayersPerMap.Find(MapID);
+	const TArray<FString>* Players = MapPlayers.Find(MapID);
 	return Players ? Players->Num() : 0;
 }
 
-FName UROWorldSubsystem::GetPlayerMap(int32 PlayerID) const
+int32 UROWorldSubsystem::GetTotalPlayerCount() const
 {
-	const FName* MapID = PlayerMapLookup.Find(PlayerID);
-	return MapID ? *MapID : NAME_None;
+	return PlayerToMap.Num();
 }
 
-TArray<FName> UROWorldSubsystem::GetActiveMaps() const
+TArray<FString> UROWorldSubsystem::GetPlayersOnMap(FName MapID) const
 {
-	TArray<FName> Maps;
-	PlayersPerMap.GetKeys(Maps);
-	return Maps;
+	const TArray<FString>* Players = MapPlayers.Find(MapID);
+	return Players ? *Players : TArray<FString>();
+}
+
+TArray<FROMapPlayerInfo> UROWorldSubsystem::GetAllMapPlayerInfo() const
+{
+	TArray<FROMapPlayerInfo> Result;
+	for (const auto& Pair : MapPlayers)
+	{
+		FROMapPlayerInfo Info;
+		Info.MapID = Pair.Key;
+		Info.PlayerNetIDs = Pair.Value;
+		Info.PlayerCount = Pair.Value.Num();
+		Result.Add(Info);
+	}
+	return Result;
+}
+
+FName UROWorldSubsystem::GetPlayerMap(const FString& PlayerNetID) const
+{
+	const FName* MapID = PlayerToMap.Find(PlayerNetID);
+	return MapID ? *MapID : NAME_None;
 }
 
 void UROWorldSubsystem::BroadcastToMap(FName MapID, const FString& Message)
 {
-	UE_LOG(LogROWorld, Log, TEXT("[MAP:%s] %s"), *MapID.ToString(), *Message);
-	OnMapBroadcast.Broadcast(MapID, Message);
+	const TArray<FString>* Players = MapPlayers.Find(MapID);
+	if (!Players)
+	{
+		return;
+	}
 
-	// In a full implementation, this would iterate over all player controllers
-	// in the specified map and call their chat/notification functions.
+	UE_LOG(LogTemp, Log, TEXT("ROWorldSubsystem: Broadcast to map %s (%d players): %s"),
+		*MapID.ToString(), Players->Num(), *Message);
+
+	// TODO: Send the message to each player's client via RPC.
+	// for (const FString& NetID : *Players)
+	// {
+	//     // Find the player controller by NetID and call a client RPC
+	//     // PlayerController->ClientShowMessage(Message);
+	// }
 }
 
 void UROWorldSubsystem::BroadcastToAll(const FString& Message)
 {
-	UE_LOG(LogROWorld, Log, TEXT("[SERVER] %s"), *Message);
-	OnServerBroadcast.Broadcast(Message);
+	UE_LOG(LogTemp, Log, TEXT("ROWorldSubsystem: Server-wide broadcast (%d total players): %s"),
+		GetTotalPlayerCount(), *Message);
 
-	// In a full implementation, this would iterate over all connected
-	// player controllers and send the message to each.
+	for (const auto& Pair : MapPlayers)
+	{
+		BroadcastToMap(Pair.Key, Message);
+	}
+}
+
+void UROWorldSubsystem::BroadcastToArea(FName MapID, FVector Origin, float Radius, const FString& Message)
+{
+	UE_LOG(LogTemp, Log, TEXT("ROWorldSubsystem: Area broadcast on map %s at %s (radius=%.0f): %s"),
+		*MapID.ToString(), *Origin.ToString(), Radius, *Message);
+
+	// TODO: In production:
+	// 1. Get all player controllers on the target map
+	// 2. Check distance from Origin to each player's location
+	// 3. Send message only to players within Radius
+	// This requires integration with the player character location tracking.
 }
