@@ -1,0 +1,136 @@
+// Copyright Ragna-TH Project. All Rights Reserved.
+
+#include "ROAbility_Hiding.h"
+#include "AbilitySystemComponent.h"
+#include "RagnarokUE/Skills/ROAttributeSet.h"
+
+UROAbility_Hiding::UROAbility_Hiding()
+{
+	SkillID = 51;
+	SkillName = FName("TF_HIDING");
+	MaxSkillLevel = 10;
+	SkillLevel = 1;
+	SkillElement = EROElement::Neutral;
+
+	// No SP cost to activate (SP is drained over time instead)
+	SPCostBase = 0.0f;
+	SPCostPerLevel = 0.0f;
+
+	// Instant cast
+	VariableCastTimeBase = 0.0f;
+	FixedCastTime = 0.0f;
+	CooldownDuration = 0.5f;
+
+	SPDrainTickInterval = 1.0f;
+	bIsHiding = false;
+}
+
+void UROAbility_Hiding::OnCastComplete()
+{
+	Super::OnCastComplete();
+
+	if (!CachedActorInfo || !CachedActorInfo->AbilitySystemComponent.IsValid())
+	{
+		EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = CachedActorInfo->AbilitySystemComponent.Get();
+
+	// Toggle behavior: if already hiding, stop hiding
+	FGameplayTag HidingTag = FGameplayTag::RequestGameplayTag(FName("Status.Hiding"), false);
+	if (HidingTag.IsValid() && ASC->HasMatchingGameplayTag(HidingTag))
+	{
+		EndHiding();
+		return;
+	}
+
+	// Start hiding
+	bIsHiding = true;
+
+	// Apply hiding tag
+	if (HidingTag.IsValid())
+	{
+		ASC->AddLooseGameplayTag(HidingTag);
+	}
+
+	// Start SP drain timer
+	if (CachedActorInfo->AvatarActor.IsValid())
+	{
+		FTimerDelegate TimerDelegate;
+		TimerDelegate.BindUObject(this, &UROAbility_Hiding::OnSPDrainTick);
+
+		CachedActorInfo->AvatarActor->GetWorldTimerManager().SetTimer(
+			SPDrainTimerHandle, TimerDelegate, SPDrainTickInterval, true);
+	}
+
+	// Note: ability stays active (does not EndAbility) while hiding is toggled on
+}
+
+void UROAbility_Hiding::EndHiding()
+{
+	if (!bIsHiding)
+	{
+		return;
+	}
+
+	bIsHiding = false;
+
+	if (CachedActorInfo && CachedActorInfo->AbilitySystemComponent.IsValid())
+	{
+		UAbilitySystemComponent* ASC = CachedActorInfo->AbilitySystemComponent.Get();
+
+		// Remove hiding tag
+		FGameplayTag HidingTag = FGameplayTag::RequestGameplayTag(FName("Status.Hiding"), false);
+		if (HidingTag.IsValid())
+		{
+			ASC->RemoveLooseGameplayTag(HidingTag);
+		}
+	}
+
+	// Clear SP drain timer
+	if (CachedActorInfo && CachedActorInfo->AvatarActor.IsValid())
+	{
+		CachedActorInfo->AvatarActor->GetWorldTimerManager().ClearTimer(SPDrainTimerHandle);
+	}
+
+	EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+}
+
+void UROAbility_Hiding::OnSPDrainTick()
+{
+	if (!bIsHiding || !CachedActorInfo || !CachedActorInfo->AbilitySystemComponent.IsValid())
+	{
+		EndHiding();
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = CachedActorInfo->AbilitySystemComponent.Get();
+	const UROAttributeSet* AttrSet = ASC->GetSet<UROAttributeSet>();
+
+	if (!AttrSet)
+	{
+		EndHiding();
+		return;
+	}
+
+	const float CurrentSP = AttrSet->GetSP();
+	const float DrainAmount = GetSPDrainPerTick();
+
+	if (CurrentSP < DrainAmount)
+	{
+		// Not enough SP - end hiding
+		EndHiding();
+		return;
+	}
+
+	// Deduct SP
+	const float NewSP = CurrentSP - DrainAmount;
+	ASC->ApplyModToAttribute(UROAttributeSet::GetSPAttribute(), EGameplayModOp::Override, NewSP);
+}
+
+float UROAbility_Hiding::GetSPDrainPerTick() const
+{
+	// SP drain per tick: 10 - SkillLevel
+	return FMath::Max(1.0f, 10.0f - static_cast<float>(SkillLevel));
+}
