@@ -43,6 +43,13 @@ int32 URODamageFormulas::CalculateSoftDEF(int32 VIT)
 	return FMath::Clamp(VIT + VitBonus, 0, 100);
 }
 
+int32 URODamageFormulas::CalculateSoftMDEF(int32 INT, int32 VIT, int32 DEX)
+{
+	// Formula: INT + floor(INT/5)^2 + DEX/5 + VIT/5
+	const int32 IntBonus = (INT / 5) * (INT / 5);
+	return INT + IntBonus + DEX / 5 + VIT / 5;
+}
+
 // ============================================================================
 // Accuracy & Evasion
 // ============================================================================
@@ -68,6 +75,83 @@ float URODamageFormulas::CalculateCritRate(int32 LUK)
 // ============================================================================
 // Attack Speed
 // ============================================================================
+
+int32 URODamageFormulas::GetBaseASPDForJob(EROJobClass Job)
+{
+	switch (Job)
+	{
+	// Novice
+	case EROJobClass::Novice:
+	case EROJobClass::HighNovice:
+		return 150;
+
+	// Swordsman line
+	case EROJobClass::Swordsman:
+	case EROJobClass::HighSwordsman:
+		return 145;
+	case EROJobClass::Knight:
+	case EROJobClass::Crusader:
+	case EROJobClass::LordKnight:
+	case EROJobClass::Paladin:
+		return 145;
+
+	// Magician line
+	case EROJobClass::Magician:
+	case EROJobClass::HighMagician:
+		return 150;
+	case EROJobClass::Wizard:
+	case EROJobClass::Sage:
+	case EROJobClass::HighWizard:
+	case EROJobClass::Professor:
+		return 150;
+
+	// Archer line
+	case EROJobClass::Archer:
+	case EROJobClass::HighArcher:
+		return 145;
+	case EROJobClass::Hunter:
+	case EROJobClass::Bard:
+	case EROJobClass::Dancer:
+	case EROJobClass::Sniper:
+	case EROJobClass::Minstrel:
+	case EROJobClass::Gypsy:
+		return 145;
+
+	// Thief line
+	case EROJobClass::Thief:
+	case EROJobClass::HighThief:
+		return 140;
+	case EROJobClass::Assassin:
+	case EROJobClass::Rogue:
+	case EROJobClass::AssassinCross:
+	case EROJobClass::Stalker:
+		return 140;
+
+	// Merchant line
+	case EROJobClass::Merchant:
+	case EROJobClass::HighMerchant:
+		return 150;
+	case EROJobClass::Blacksmith:
+	case EROJobClass::Alchemist:
+	case EROJobClass::Whitesmith:
+	case EROJobClass::Creator:
+		return 150;
+
+	// Acolyte line
+	case EROJobClass::Acolyte:
+	case EROJobClass::HighAcolyte:
+		return 150;
+	case EROJobClass::Priest:
+	case EROJobClass::HighPriest:
+		return 150;
+	case EROJobClass::Monk:
+	case EROJobClass::Champion:
+		return 145;
+
+	default:
+		return 150;
+	}
+}
 
 float URODamageFormulas::CalculateASPD(int32 BaseASPD, int32 AGI, int32 DEX)
 {

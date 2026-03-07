@@ -102,6 +102,7 @@ UROBTTask_AssistAttack::UROBTTask_AssistAttack()
 {
 	NodeName = "RO Assist: Stack Aggro Attack";
 	bNotifyTick = true;
+	bNotifyAbort = true;
 }
 
 EBTNodeResult::Type UROBTTask_AssistAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

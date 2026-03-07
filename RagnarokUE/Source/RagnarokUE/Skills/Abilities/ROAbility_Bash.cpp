@@ -5,7 +5,8 @@
 #include "RagnarokUE/Skills/ROAttributeSet.h"
 #include "RagnarokUE/Combat/ROStatusEffectComponent.h"
 #include "RagnarokUE/Combat/ROElementalSystem.h"
-#include "GameplayEffect.h"
+#include "RagnarokUE/Combat/RODamageGameplayEffect.h"
+#include "RagnarokUE/Core/ROPlayerController.h"
 
 UROAbility_Bash::UROAbility_Bash()
 {
@@ -40,12 +41,40 @@ void UROAbility_Bash::OnCastComplete()
 
 	UAbilitySystemComponent* SourceASC = CachedActorInfo->AbilitySystemComponent.Get();
 
+	// Resolve target from the player controller's selected target
+	AActor* TargetActor = nullptr;
+	if (CachedActorInfo->AvatarActor.IsValid())
+	{
+		APawn* OwnerPawn = Cast<APawn>(CachedActorInfo->AvatarActor.Get());
+		if (OwnerPawn)
+		{
+			AROPlayerController* PC = Cast<AROPlayerController>(OwnerPawn->GetController());
+			if (PC)
+			{
+				TargetActor = PC->SelectedTarget;
+			}
+		}
+	}
+
+	if (!TargetActor)
+	{
+		EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+		return;
+	}
+
+	UAbilitySystemComponent* TargetASC = TargetActor->FindComponentByClass<UAbilitySystemComponent>();
+	if (!TargetASC)
+	{
+		EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+		return;
+	}
+
 	// Get damage modifier: ATK * (100% + 30% * Level)
 	const float DamageMod = GetDamageModifier();
 
 	// Create and apply damage gameplay effect
 	FGameplayEffectSpecHandle DamageSpecHandle = MakeOutgoingGameplayEffectSpec(
-		UGameplayEffect::StaticClass(), SkillLevel);
+		URODamageGameplayEffect::StaticClass(), SkillLevel);
 
 	if (DamageSpecHandle.IsValid())
 	{
@@ -73,23 +102,19 @@ void UROAbility_Bash::OnCastComplete()
 		{
 			DamageSpecHandle.Data->SetSetByCallerMagnitude(SizeModTag, 1.0f);
 		}
+
+		// Apply the damage effect to the target
+		SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpecHandle.Data.Get(), TargetASC);
 	}
 
 	// Apply stun at high levels
 	const float StunChance = GetStunChance();
-	if (StunChance > 0.0f && CachedActorInfo->AvatarActor.IsValid())
+	if (StunChance > 0.0f && TargetActor)
 	{
-		// Find target actor and apply stun via their status effect component
-		// In a full implementation, this would target the attack target
-		// For now, the stun logic is ready to be connected to targeting
-		AActor* TargetActor = nullptr; // Would come from targeting system
-		if (TargetActor)
+		UROStatusEffectComponent* StatusComp = TargetActor->FindComponentByClass<UROStatusEffectComponent>();
+		if (StatusComp)
 		{
-			UROStatusEffectComponent* StatusComp = TargetActor->FindComponentByClass<UROStatusEffectComponent>();
-			if (StatusComp)
-			{
-				StatusComp->ApplyStatusEffect(EROStatusEffect::Stun, StunDuration, 1, StunChance);
-			}
+			StatusComp->ApplyStatusEffect(EROStatusEffect::Stun, StunDuration, 1, StunChance);
 		}
 	}
 
