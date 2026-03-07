@@ -6,10 +6,32 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "ROWorldSubsystem.generated.h"
 
+/** Per-map player tracking data. */
+USTRUCT(BlueprintType)
+struct FROMapPlayerInfo
+{
+	GENERATED_BODY()
+
+	/** Map identifier. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "World")
+	FName MapID;
+
+	/** Player network IDs currently on this map. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "World")
+	TArray<FString> PlayerNetIDs;
+
+	/** Number of players on this map. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "World")
+	int32 PlayerCount = 0;
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPlayerEnteredMap, FName, MapID, const FString&, PlayerNetID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPlayerLeftMap, FName, MapID, const FString&, PlayerNetID);
+
 /**
  * UROWorldSubsystem
- * Server-only subsystem that manages multiple map zones,
- * tracks players per map, and provides broadcasting functions.
+ * Server-side world management. Tracks player-per-map distribution,
+ * provides broadcast functions, and manages player count per map.
  */
 UCLASS()
 class RAGNAROKUESERVER_API UROWorldSubsystem : public UGameInstanceSubsystem
@@ -20,103 +42,94 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	// --- Player Map Tracking ---
+	// ---- Player Tracking ----
 
 	/**
-	 * Notify that a player has changed maps.
-	 * @param PlayerID Character ID of the player.
-	 * @param FromMap Previous map ID (NAME_None if first login).
-	 * @param ToMap New map ID.
+	 * Register a player entering a map.
+	 * @param MapID       The map the player entered.
+	 * @param PlayerNetID The player's network identifier.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "RO|World")
-	void OnPlayerChangeMap(int32 PlayerID, FName FromMap, FName ToMap);
+	UFUNCTION(BlueprintCallable, Category = "World")
+	void PlayerEnteredMap(FName MapID, const FString& PlayerNetID);
 
 	/**
-	 * Remove a player from tracking (logout).
-	 * @param PlayerID Character ID of the player.
+	 * Register a player leaving a map.
+	 * @param MapID       The map the player left.
+	 * @param PlayerNetID The player's network identifier.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "RO|World")
-	void OnPlayerLogout(int32 PlayerID);
+	UFUNCTION(BlueprintCallable, Category = "World")
+	void PlayerLeftMap(FName MapID, const FString& PlayerNetID);
 
 	/**
-	 * Get all player IDs in a specific map.
-	 * @param MapID Map to query.
-	 * @return Array of character IDs.
+	 * Move a player between maps (convenience: removes from old, adds to new).
+	 * @param PlayerNetID The player's network identifier.
+	 * @param OldMapID    The map the player is leaving.
+	 * @param NewMapID    The map the player is entering.
 	 */
-	UFUNCTION(BlueprintPure, Category = "RO|World")
-	TArray<int32> GetPlayersInMap(FName MapID) const;
+	UFUNCTION(BlueprintCallable, Category = "World")
+	void PlayerChangedMap(const FString& PlayerNetID, FName OldMapID, FName NewMapID);
+
+	// ---- Queries ----
+
+	/** Get the number of players on a specific map. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "World")
+	int32 GetPlayerCountOnMap(FName MapID) const;
+
+	/** Get total players across all maps. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "World")
+	int32 GetTotalPlayerCount() const;
+
+	/** Get all player NetIDs currently on a map. */
+	UFUNCTION(BlueprintCallable, Category = "World")
+	TArray<FString> GetPlayersOnMap(FName MapID) const;
+
+	/** Get per-map player info for all maps. */
+	UFUNCTION(BlueprintCallable, Category = "World")
+	TArray<FROMapPlayerInfo> GetAllMapPlayerInfo() const;
+
+	/** Get the map a specific player is on. Returns NAME_None if not found. */
+	UFUNCTION(BlueprintCallable, Category = "World")
+	FName GetPlayerMap(const FString& PlayerNetID) const;
+
+	// ---- Broadcast Functions ----
 
 	/**
-	 * Get the total number of online players across all maps.
-	 * @return Total online player count.
+	 * Broadcast a message to all players on a specific map.
+	 * @param MapID   The target map.
+	 * @param Message The message content.
 	 */
-	UFUNCTION(BlueprintPure, Category = "RO|World")
-	int32 GetPlayerCount() const;
-
-	/**
-	 * Get the number of players in a specific map.
-	 * @param MapID Map to query.
-	 * @return Player count in that map.
-	 */
-	UFUNCTION(BlueprintPure, Category = "RO|World")
-	int32 GetPlayerCountInMap(FName MapID) const;
-
-	/**
-	 * Get the map a player is currently on.
-	 * @param PlayerID Character ID.
-	 * @return Map ID (NAME_None if not tracked).
-	 */
-	UFUNCTION(BlueprintPure, Category = "RO|World")
-	FName GetPlayerMap(int32 PlayerID) const;
-
-	/**
-	 * Get all active map IDs.
-	 * @return Array of map names that have players.
-	 */
-	UFUNCTION(BlueprintPure, Category = "RO|World")
-	TArray<FName> GetActiveMaps() const;
-
-	// --- Broadcasting ---
-
-	/**
-	 * Broadcast a message to all players in a specific map.
-	 * @param MapID Map to broadcast to.
-	 * @param Message Message text.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "RO|World")
+	UFUNCTION(BlueprintCallable, Category = "World")
 	void BroadcastToMap(FName MapID, const FString& Message);
 
 	/**
-	 * Broadcast a message to all online players.
-	 * @param Message Message text.
+	 * Broadcast a message to all players on all maps (server-wide).
+	 * @param Message The message content.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "RO|World")
+	UFUNCTION(BlueprintCallable, Category = "World")
 	void BroadcastToAll(const FString& Message);
 
-	// --- Delegates ---
+	/**
+	 * Broadcast a message to all players within a radius on a specific map.
+	 * @param MapID    The target map.
+	 * @param Origin   The center of the broadcast area.
+	 * @param Radius   The broadcast radius in UE units.
+	 * @param Message  The message content.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World")
+	void BroadcastToArea(FName MapID, FVector Origin, float Radius, const FString& Message);
 
-	/** Broadcast when a player changes map. */
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnPlayerMapChanged, int32, PlayerID, FName, FromMap, FName, ToMap);
+	// ---- Delegates ----
 
-	UPROPERTY(BlueprintAssignable, Category = "RO|World")
-	FOnPlayerMapChanged OnPlayerMapChanged;
+	UPROPERTY(BlueprintAssignable, Category = "World")
+	FOnPlayerEnteredMap OnPlayerEnteredMap;
 
-	/** Broadcast when a map-wide message is sent. */
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMapBroadcast, FName, MapID, const FString&, Message);
+	UPROPERTY(BlueprintAssignable, Category = "World")
+	FOnPlayerLeftMap OnPlayerLeftMap;
 
-	UPROPERTY(BlueprintAssignable, Category = "RO|World")
-	FOnMapBroadcast OnMapBroadcast;
+protected:
+	/** Per-map player tracking. */
+	TMap<FName, TArray<FString>> MapPlayers;
 
-	/** Broadcast when a server-wide message is sent. */
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnServerBroadcast, const FString&, Message);
-
-	UPROPERTY(BlueprintAssignable, Category = "RO|World")
-	FOnServerBroadcast OnServerBroadcast;
-
-private:
-	/** Map of MapID -> Array of PlayerIDs. */
-	TMap<FName, TArray<int32>> PlayersPerMap;
-
-	/** Reverse lookup: PlayerID -> MapID. */
-	TMap<int32, FName> PlayerMapLookup;
+	/** Reverse lookup: player -> current map. */
+	TMap<FString, FName> PlayerToMap;
 };
