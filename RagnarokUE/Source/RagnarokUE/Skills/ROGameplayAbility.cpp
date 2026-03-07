@@ -3,6 +3,7 @@
 #include "ROGameplayAbility.h"
 #include "ROAttributeSet.h"
 #include "RagnarokUE/Combat/ROCastingComponent.h"
+#include "RagnarokUE/Character/ROStatsComponent.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayTagContainer.h"
 
@@ -104,16 +105,17 @@ void UROGameplayAbility::ActivateAbility(
 		return;
 	}
 
-	// Get cast times
-	const UROAttributeSet* AttrSet = GetROAttributeSet(ActorInfo);
+	// Get cast times - read actual DEX and INT from the stats component
 	int32 DEX = 1;
 	int32 INT_Stat = 1;
-	if (AttrSet)
+	if (ActorInfo && ActorInfo->AvatarActor.IsValid())
 	{
-		// We use HIT as a proxy or rely on base stats from the owning character
-		// For now use default values; in a full implementation, stats come from character component
-		DEX = 1;
-		INT_Stat = 1;
+		UROStatsComponent* StatsComp = ActorInfo->AvatarActor->FindComponentByClass<UROStatsComponent>();
+		if (StatsComp)
+		{
+			DEX = StatsComp->GetTotalStat(EROStat::DEX);
+			INT_Stat = StatsComp->GetTotalStat(EROStat::INT);
+		}
 	}
 
 	const float VarCast = GetVariableCastTime(DEX, INT_Stat);
