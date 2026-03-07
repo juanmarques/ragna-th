@@ -10,6 +10,7 @@ UROBTTask_UseSkill::UROBTTask_UseSkill()
 {
 	NodeName = "RO: Use Monster Skill";
 	bNotifyTick = true;
+	bNotifyAbort = true;
 
 	BlackboardKey.AddObjectFilter(this, GET_MEMBER_NAME_CHECKED(UROBTTask_UseSkill, BlackboardKey), AActor::StaticClass());
 }

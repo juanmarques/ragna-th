@@ -124,23 +124,21 @@ void UROPartySubsystem::LeaveParty(int32 PartyID, int32 PlayerID)
 
 	OnMemberLeft.Broadcast(PartyID, PlayerID);
 
-	// If the leader left, assign a new leader or disband
-	if (Party->LeaderPlayerID == PlayerID)
+	// Capture remaining member count and leader status before any removal
+	const int32 RemainingMembers = Party->MemberPlayerIDs.Num();
+	const bool bWasLeader = (Party->LeaderPlayerID == PlayerID);
+
+	if (RemainingMembers == 0)
 	{
-		if (Party->MemberPlayerIDs.Num() > 0)
-		{
-			Party->LeaderPlayerID = Party->MemberPlayerIDs[0];
-		}
-		else
-		{
-			ActiveParties.Remove(PartyID);
-		}
+		// Party is now empty, remove it. Do not access Party pointer after this.
+		ActiveParties.Remove(PartyID);
+		return;
 	}
 
-	// If party is now empty, remove it
-	if (Party->MemberPlayerIDs.Num() == 0)
+	// If the leader left, assign a new leader
+	if (bWasLeader)
 	{
-		ActiveParties.Remove(PartyID);
+		Party->LeaderPlayerID = Party->MemberPlayerIDs[0];
 	}
 }
 

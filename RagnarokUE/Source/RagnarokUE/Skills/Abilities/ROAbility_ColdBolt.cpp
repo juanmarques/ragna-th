@@ -4,6 +4,8 @@
 #include "AbilitySystemComponent.h"
 #include "RagnarokUE/Skills/ROAttributeSet.h"
 #include "RagnarokUE/Combat/ROElementalSystem.h"
+#include "RagnarokUE/Combat/RODamageGameplayEffect.h"
+#include "RagnarokUE/Core/ROPlayerController.h"
 
 UROAbility_ColdBolt::UROAbility_ColdBolt()
 {
@@ -35,12 +37,41 @@ void UROAbility_ColdBolt::OnCastComplete()
 	}
 
 	UAbilitySystemComponent* SourceASC = CachedActorInfo->AbilitySystemComponent.Get();
+
+	// Resolve target from the player controller's selected target
+	AActor* TargetActor = nullptr;
+	if (CachedActorInfo->AvatarActor.IsValid())
+	{
+		APawn* OwnerPawn = Cast<APawn>(CachedActorInfo->AvatarActor.Get());
+		if (OwnerPawn)
+		{
+			AROPlayerController* PC = Cast<AROPlayerController>(OwnerPawn->GetController());
+			if (PC)
+			{
+				TargetActor = PC->SelectedTarget;
+			}
+		}
+	}
+
+	if (!TargetActor)
+	{
+		EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+		return;
+	}
+
+	UAbilitySystemComponent* TargetASC = TargetActor->FindComponentByClass<UAbilitySystemComponent>();
+	if (!TargetASC)
+	{
+		EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+		return;
+	}
+
 	const int32 NumBolts = GetBoltCount();
 	const float PerBoltMod = GetPerBoltDamageModifier();
 	const float TotalDamageMod = PerBoltMod * static_cast<float>(NumBolts);
 
 	FGameplayEffectSpecHandle DamageSpec = MakeOutgoingGameplayEffectSpec(
-		UGameplayEffect::StaticClass(), SkillLevel);
+		URODamageGameplayEffect::StaticClass(), SkillLevel);
 
 	if (DamageSpec.IsValid())
 	{
@@ -61,6 +92,9 @@ void UROAbility_ColdBolt::OnCastComplete()
 		{
 			DamageSpec.Data->SetSetByCallerMagnitude(ElementModTag, 1.0f); // Water element
 		}
+
+		// Apply the damage effect to the target
+		SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
 	}
 
 	EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);

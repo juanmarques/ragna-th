@@ -12,6 +12,7 @@ UROBTTask_RoamRandom::UROBTTask_RoamRandom()
 {
 	NodeName = "RO: Roam Random";
 	bNotifyTick = true;
+	bNotifyAbort = true;
 
 	// Default BlackboardKey is HomeLocation
 	BlackboardKey.AddVectorFilter(this, GET_MEMBER_NAME_CHECKED(UROBTTask_RoamRandom, BlackboardKey));

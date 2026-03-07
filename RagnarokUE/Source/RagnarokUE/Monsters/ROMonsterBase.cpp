@@ -9,7 +9,7 @@
 
 AROMonsterBase::AROMonsterBase()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 
 	MonsterID = 0;
@@ -44,11 +44,6 @@ void AROMonsterBase::BeginPlay()
 {
 	Super::BeginPlay();
 	SpawnLocation = GetActorLocation();
-}
-
-void AROMonsterBase::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 }
 
 void AROMonsterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -261,7 +256,8 @@ void AROMonsterBase::MarkAttackPerformed()
 
 void AROMonsterBase::OnRep_HP()
 {
-	// Client-side HP update - can trigger UI updates, damage numbers, etc.
+	// Broadcast HP change for UI updates (health bars, damage numbers, etc.)
+	OnMonsterHPChanged.Broadcast(this, HP, MaxHP);
 }
 
 void AROMonsterBase::OnRep_IsDead()
@@ -345,8 +341,14 @@ void AROMonsterBase::DistributeExp()
 		const int64 BaseExpShare = FMath::RoundToInt64(BaseExpReward * DamageShare);
 		const int64 JobExpShare = FMath::RoundToInt64(JobExpReward * DamageShare);
 
-		// TODO: Call the character's AddExp function once the character system interface is defined
-		// For now log it
+		// Distribute EXP via the character's leveling component
+		UROLevelingComponent* LevelingComp = Attacker->FindComponentByClass<UROLevelingComponent>();
+		if (LevelingComp)
+		{
+			LevelingComp->AddBaseExp(BaseExpShare);
+			LevelingComp->AddJobExp(JobExpShare);
+		}
+
 		UE_LOG(LogTemp, Log, TEXT("Distributing %lld Base EXP and %lld Job EXP to %s"),
 			BaseExpShare, JobExpShare, *Attacker->GetName());
 	}

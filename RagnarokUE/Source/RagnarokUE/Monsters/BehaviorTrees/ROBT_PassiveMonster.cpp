@@ -74,6 +74,7 @@ UROBTTask_PassiveFightBack::UROBTTask_PassiveFightBack()
 {
 	NodeName = "RO Passive: Fight Back";
 	bNotifyTick = true;
+	bNotifyAbort = true;
 }
 
 EBTNodeResult::Type UROBTTask_PassiveFightBack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

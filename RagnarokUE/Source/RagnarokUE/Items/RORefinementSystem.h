@@ -15,7 +15,7 @@ class UROWeaponData;
  * Static utility class implementing the Ragnarok Online refinement (upgrade) system.
  *
  * Refinement rules:
- * - Weapons and armor can be refined from +0 to +10 (max +20 with special ores).
+ * - Weapons and armor can be refined from +0 to +10 (pre-renewal max).
  * - Success rate decreases at higher refine levels.
  * - Safe refine limits: Lv1 weapon=+7, Lv2=+6, Lv3=+5, Lv4=+4, Armor=+4.
  * - Below safe limit, success is 100%.

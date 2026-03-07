@@ -13,10 +13,10 @@ UROHealGameplayEffect::UROHealGameplayEffect()
 	HealModifier.Attribute = UROAttributeSet::GetIncomingHealingAttribute();
 	HealModifier.ModifierOp = EGameplayModOp::Additive;
 
-	// Use SetByCaller so the ability can set the heal amount at runtime
-	FSetByCallerFloat SetByCaller;
-	SetByCaller.DataTag = FGameplayTag::RequestGameplayTag(FName("Data.HealAmount"));
-	HealModifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(SetByCaller);
+	// Use SetByCaller magnitude so the ability can set the heal amount at runtime
+	// The tag "Data.HealAmount" is used to look up the magnitude from the spec
+	FGameplayTag HealAmountTag = FGameplayTag::RequestGameplayTag(FName("Data.HealAmount"));
+	HealModifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(HealAmountTag);
 
 	Modifiers.Add(HealModifier);
 }

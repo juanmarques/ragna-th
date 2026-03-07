@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
 #include "RagnarokUE/Data/ROEnums.h"
 #include "RagnarokUE/Data/ROStructs.h"
 #include "ROCardSystem.generated.h"
@@ -17,7 +18,7 @@ class UROItemDatabase;
  * Cards are the RO system for socketing bonus effects into equipment.
  */
 UCLASS()
-class RAGNAROKUE_API UROCardSystem : public UObject
+class RAGNAROKUE_API UROCardSystem : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 

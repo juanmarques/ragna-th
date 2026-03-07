@@ -6,11 +6,11 @@
 #include "GameFramework/Character.h"
 #include "RagnarokUE/Data/ROEnums.h"
 #include "RagnarokUE/Data/ROStructs.h"
-#include "Net/UnrealNetwork.h"
 #include "ROMonsterBase.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMonsterDied, AROMonsterBase*, Monster, AActor*, Killer);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnMonsterDamaged, AROMonsterBase*, Monster, float, Damage, AActor*, DamageCauser);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnMonsterHPChanged, AROMonsterBase*, Monster, int32, NewHP, int32, MaxHP);
 
 /**
  * AROMonsterBase
@@ -26,7 +26,6 @@ public:
 	AROMonsterBase();
 
 	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// ---- Identity ----
@@ -157,6 +156,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Monster|Events")
 	FOnMonsterDamaged OnMonsterDamaged;
 
+	UPROPERTY(BlueprintAssignable, Category = "Monster|Events")
+	FOnMonsterHPChanged OnMonsterHPChanged;
+
 	// ---- Functions ----
 
 	/** Initialize this monster from database data. Call on server after spawn. */
@@ -168,7 +170,7 @@ public:
 		AController* EventInstigator, AActor* DamageCauser) override;
 
 	/** Kill this monster, generate loot and distribute EXP. */
-	UFUNCTION(BlueprintCallable, Authority, Category = "Monster")
+	UFUNCTION(BlueprintCallable, Category = "Monster")
 	void Die(AActor* Killer);
 
 	/** Get the actor with the highest threat. */
@@ -188,7 +190,7 @@ public:
 	void SetSkillCooldown(int32 SkillID, float CooldownDuration);
 
 	/** Reset monster to full HP and clear state (used on return-to-home). */
-	UFUNCTION(BlueprintCallable, Authority, Category = "Monster")
+	UFUNCTION(BlueprintCallable, Category = "Monster")
 	void ResetToIdle();
 
 	/** Can this monster currently attack (attack speed gating). */

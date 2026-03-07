@@ -188,7 +188,8 @@ public:
 protected:
 	/** In-memory account database (in production, use a real database). */
 	TMap<FString, FROAccountData> AccountsByUsername;
-	TMap<int32, FROAccountData*> AccountsByID;
+	/** Maps AccountID -> Username key for safe lookup into AccountsByUsername (avoids dangling pointers). */
+	TMap<int32, FString> AccountIDToUsername;
 
 	/** Active sessions. */
 	TMap<FString, FROSessionData> ActiveSessions;

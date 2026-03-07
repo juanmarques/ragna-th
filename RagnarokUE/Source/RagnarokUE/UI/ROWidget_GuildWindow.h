@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "RagnarokUE/Data/ROEnums.h"
+#include "RagnarokUE/Social/ROGuildSubsystem.h"
 #include "ROWidget_GuildWindow.generated.h"
 
 class UTextBlock;
@@ -57,11 +58,11 @@ struct FROGuildMemberInfo
 };
 
 /**
- * FROGuildInfo
- * Full guild information.
+ * FROGuildDisplayInfo
+ * Display-oriented guild information for the UI.
  */
 USTRUCT(BlueprintType)
-struct FROGuildInfo
+struct FROGuildDisplayInfo
 {
 	GENERATED_BODY()
 
@@ -109,7 +110,7 @@ public:
 
 	/** Set guild info for the Info tab. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Guild")
-	void SetGuildInfo(const FROGuildInfo& Info);
+	void SetGuildInfo(const FROGuildDisplayInfo& Info);
 
 	/** Set the guild member list. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Guild")
@@ -193,7 +194,7 @@ protected:
 
 private:
 	/** Cached guild info. */
-	FROGuildInfo CachedGuildInfo;
+	FROGuildDisplayInfo CachedGuildInfo;
 
 	/** Guild member list. */
 	TArray<FROGuildMemberInfo> GuildMembers;
