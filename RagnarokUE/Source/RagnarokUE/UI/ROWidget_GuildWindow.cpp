@@ -26,7 +26,7 @@ void UROWidget_GuildWindow::NativeConstruct()
 	RefreshDisplay();
 }
 
-void UROWidget_GuildWindow::SetGuildInfo(const FROGuildInfo& Info)
+void UROWidget_GuildWindow::SetGuildInfo(const FROGuildDisplayInfo& Info)
 {
 	CachedGuildInfo = Info;
 

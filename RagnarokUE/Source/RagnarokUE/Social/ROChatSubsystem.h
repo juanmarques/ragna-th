@@ -17,7 +17,9 @@ enum class EChatChannel : uint8
 	Guild		UMETA(DisplayName = "Guild"),
 	Whisper		UMETA(DisplayName = "Whisper"),
 	Global		UMETA(DisplayName = "Global"),
-	Trade		UMETA(DisplayName = "Trade")
+	Trade		UMETA(DisplayName = "Trade"),
+	System		UMETA(DisplayName = "System"),
+	Battle		UMETA(DisplayName = "Battle")
 };
 
 /** A single chat message. */
