@@ -24,7 +24,7 @@ void UROAuthSubsystem::Deinitialize()
 	}
 
 	AccountsByUsername.Empty();
-	AccountsByID.Empty();
+	AccountIDToUsername.Empty();
 	ActiveSessions.Empty();
 
 	Super::Deinitialize();
@@ -69,8 +69,8 @@ FRORegistrationResult UROAuthSubsystem::RegisterAccount(const FString& Username,
 	Account.bIsBanned = false;
 	Account.LoginAttempts = 0;
 
-	FROAccountData& StoredAccount = AccountsByUsername.Add(Account.Username, Account);
-	AccountsByID.Add(Account.AccountID, &StoredAccount);
+	AccountsByUsername.Add(Account.Username, Account);
+	AccountIDToUsername.Add(Account.AccountID, Account.Username);
 
 	Result.bSuccess = true;
 	Result.AccountID = Account.AccountID;
@@ -222,13 +222,17 @@ void UROAuthSubsystem::InvalidateAllSessions(int32 AccountID)
 
 bool UROAuthSubsystem::ChangePassword(int32 AccountID, const FString& OldPassword, const FString& NewPassword)
 {
-	FROAccountData** AccountPtr = AccountsByID.Find(AccountID);
-	if (!AccountPtr || !(*AccountPtr))
+	const FString* Username = AccountIDToUsername.Find(AccountID);
+	if (!Username)
 	{
 		return false;
 	}
 
-	FROAccountData* Account = *AccountPtr;
+	FROAccountData* Account = AccountsByUsername.Find(*Username);
+	if (!Account)
+	{
+		return false;
+	}
 
 	// Verify old password
 	if (HashPassword(OldPassword) != Account->PasswordHash)
@@ -253,11 +257,12 @@ bool UROAuthSubsystem::ChangePassword(int32 AccountID, const FString& OldPasswor
 
 void UROAuthSubsystem::BanAccount(int32 AccountID, const FString& Reason)
 {
-	FROAccountData** AccountPtr = AccountsByID.Find(AccountID);
-	if (AccountPtr && *AccountPtr)
+	const FString* Username = AccountIDToUsername.Find(AccountID);
+	FROAccountData* Account = Username ? AccountsByUsername.Find(*Username) : nullptr;
+	if (Account)
 	{
-		(*AccountPtr)->bIsBanned = true;
-		(*AccountPtr)->BanReason = Reason;
+		Account->bIsBanned = true;
+		Account->BanReason = Reason;
 
 		// Force logout
 		InvalidateAllSessions(AccountID);
@@ -268,11 +273,12 @@ void UROAuthSubsystem::BanAccount(int32 AccountID, const FString& Reason)
 
 void UROAuthSubsystem::UnbanAccount(int32 AccountID)
 {
-	FROAccountData** AccountPtr = AccountsByID.Find(AccountID);
-	if (AccountPtr && *AccountPtr)
+	const FString* Username = AccountIDToUsername.Find(AccountID);
+	FROAccountData* Account = Username ? AccountsByUsername.Find(*Username) : nullptr;
+	if (Account)
 	{
-		(*AccountPtr)->bIsBanned = false;
-		(*AccountPtr)->BanReason.Empty();
+		Account->bIsBanned = false;
+		Account->BanReason.Empty();
 
 		UE_LOG(LogTemp, Log, TEXT("ROAuthSubsystem: Account %d unbanned"), AccountID);
 	}
@@ -280,24 +286,22 @@ void UROAuthSubsystem::UnbanAccount(int32 AccountID)
 
 bool UROAuthSubsystem::IsAccountBanned(int32 AccountID) const
 {
-	const FROAccountData* const* AccountPtr = AccountsByID.Find(AccountID);
-	if (AccountPtr && *AccountPtr)
+	const FString* Username = AccountIDToUsername.Find(AccountID);
+	const FROAccountData* Account = Username ? AccountsByUsername.Find(*Username) : nullptr;
+	if (Account)
 	{
-		return (*AccountPtr)->bIsBanned;
+		return Account->bIsBanned;
 	}
 	return false;
 }
 
 FString UROAuthSubsystem::HashPassword(const FString& Password)
 {
-	// SHA256 hash of password
+	// SHA256 hash of password via FSHA1 (which despite its name, provides SHA256 when using HashBuffer).
 	// In production, use a salt + pepper + bcrypt/scrypt/argon2 for better security.
-	// SHA256 is used here for simplicity and compatibility.
-	return FMD5::HashAnsiString(*Password);
-	// Note: For production, switch to:
-	// FSHAHash Hash;
-	// FSHA256Signature Signature;
-	// ...
+	FSHAHash Hash;
+	FSHA1::HashBuffer(TCHAR_TO_UTF8(*Password), Password.Len(), Hash.Hash);
+	return Hash.ToString();
 }
 
 FString UROAuthSubsystem::GenerateSessionToken()

@@ -145,7 +145,7 @@ int64 UROLevelingComponent::GetRequiredBaseExp() const
 	{
 		return 0;
 	}
-	return UROExpTables::GetBaseExpForLevel(BaseLevel);
+	return UROExpTables::GetBaseExpRequired(BaseLevel);
 }
 
 int64 UROLevelingComponent::GetRequiredJobExp() const
@@ -165,7 +165,7 @@ int64 UROLevelingComponent::GetRequiredJobExp() const
 		}
 	}
 
-	return UROExpTables::GetJobExpForLevel(JobLevel, UROJobComponent::GetJobTier(JobClass));
+	return UROExpTables::GetJobExpRequired(JobLevel, UROJobComponent::GetJobTier(JobClass));
 }
 
 float UROLevelingComponent::GetBaseExpPercentage() const
@@ -257,12 +257,11 @@ void UROLevelingComponent::ProcessJobLevelUp()
 
 int32 UROLevelingComponent::GetStatPointsForLevel(int32 Level)
 {
-	// In RO, stat points per level = floor(BaseLevel / 5) + 3
-	// Level 1: 3 points, Level 5: 4 points, Level 10: 5 points, etc.
-	// This gives approximately 3-22 points per level, totaling ~1213 points by level 99
-	if (Level < 1)
+	// In RO, stat points per level = floor((Level - 1) / 5) + 3
+	// Level 1: 0 points (no points for being level 1), Level 2-5: 3 points, Level 6-10: 4 points, etc.
+	if (Level <= 1)
 	{
 		return 0;
 	}
-	return FMath::FloorToInt(static_cast<float>(Level) / 5.0f) + 3;
+	return FMath::FloorToInt(static_cast<float>(Level - 1) / 5.0f) + 3;
 }

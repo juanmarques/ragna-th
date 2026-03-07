@@ -66,6 +66,7 @@ UROBTTask_AggressiveChaseAttack::UROBTTask_AggressiveChaseAttack()
 {
 	NodeName = "RO Aggressive: Chase & Attack";
 	bNotifyTick = true;
+	bNotifyAbort = true;
 }
 
 EBTNodeResult::Type UROBTTask_AggressiveChaseAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

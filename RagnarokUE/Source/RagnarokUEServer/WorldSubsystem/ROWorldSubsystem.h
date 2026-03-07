@@ -27,6 +27,7 @@ struct FROMapPlayerInfo
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPlayerEnteredMap, FName, MapID, const FString&, PlayerNetID);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPlayerLeftMap, FName, MapID, const FString&, PlayerNetID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerDisconnected, const FString&, PlayerNetID);
 
 /**
  * UROWorldSubsystem
@@ -91,6 +92,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "World")
 	FName GetPlayerMap(const FString& PlayerNetID) const;
 
+	/** Get player count on a specific map. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "World")
+	int32 GetMapPlayerCount(FName MapID) const;
+
+	// ---- Player Disconnect / Cleanup ----
+
+	/**
+	 * Completely remove a player from all tracking (disconnect cleanup).
+	 * Looks up the player's current map, removes them from MapPlayers and PlayerToMap,
+	 * cleans up empty map entries, and broadcasts the disconnect delegate.
+	 * @param PlayerNetID The player's network identifier (AccountID_CharacterID or equivalent unique key).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "World")
+	void RemovePlayerCompletely(const FString& PlayerNetID);
+
 	// ---- Broadcast Functions ----
 
 	/**
@@ -125,6 +141,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "World")
 	FOnPlayerLeftMap OnPlayerLeftMap;
+
+	UPROPERTY(BlueprintAssignable, Category = "World")
+	FOnPlayerDisconnected OnPlayerDisconnected;
 
 protected:
 	/** Per-map player tracking. */

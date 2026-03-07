@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "RagnarokUE/Data/ROEnums.h"
+#include "RagnarokUE/Social/ROChatSubsystem.h"
 #include "ROWidget_ChatWindow.generated.h"
 
 class UScrollBox;
@@ -12,21 +13,6 @@ class UTextBlock;
 class UEditableTextBox;
 class UButton;
 class URichTextBlock;
-
-/**
- * Chat channel types.
- */
-UENUM(BlueprintType)
-enum class EROChatChannel : uint8
-{
-	Local		UMETA(DisplayName = "Local"),
-	Party		UMETA(DisplayName = "Party"),
-	Guild		UMETA(DisplayName = "Guild"),
-	Whisper		UMETA(DisplayName = "Whisper"),
-	Global		UMETA(DisplayName = "Global"),
-	System		UMETA(DisplayName = "System"),
-	Battle		UMETA(DisplayName = "Battle")
-};
 
 /**
  * Chat tab filter types.
@@ -39,28 +25,6 @@ enum class EROChatTab : uint8
 	Guild		UMETA(DisplayName = "Guild"),
 	Whisper		UMETA(DisplayName = "Whisper"),
 	Battle		UMETA(DisplayName = "Battle Log")
-};
-
-/**
- * FROChatMessage
- * Represents a single chat message.
- */
-USTRUCT(BlueprintType)
-struct FROChatMessage
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chat")
-	EROChatChannel Channel = EROChatChannel::Local;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chat")
-	FString SenderName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chat")
-	FString Message;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chat")
-	FDateTime Timestamp;
 };
 
 /**
@@ -97,11 +61,11 @@ public:
 
 	/** Set the active channel for outgoing messages. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Chat")
-	void SetActiveChannel(EROChatChannel Channel);
+	void SetActiveChannel(EChatChannel Channel);
 
 	/** Get the active outgoing channel. */
 	UFUNCTION(BlueprintPure, Category = "RO|Chat")
-	EROChatChannel GetActiveChannel() const { return ActiveChannel; }
+	EChatChannel GetActiveChannel() const { return ActiveChannel; }
 
 	/** Switch the filter tab. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Chat")
@@ -109,12 +73,12 @@ public:
 
 	/** Get the color for a given channel. */
 	UFUNCTION(BlueprintPure, Category = "RO|Chat")
-	static FLinearColor GetChannelColor(EROChatChannel Channel);
+	static FLinearColor GetChannelColor(EChatChannel Channel);
 
 	// --- Delegates ---
 
 	/** Broadcast when the user sends a message. */
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnChatMessageSent, EROChatChannel, Channel, const FString&, Message, const FString&, TargetName);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnChatMessageSent, EChatChannel, Channel, const FString&, Message, const FString&, TargetName);
 
 	UPROPERTY(BlueprintAssignable, Category = "RO|Chat")
 	FOnChatMessageSent OnChatMessageSent;
@@ -125,7 +89,7 @@ protected:
 	void OnInputCommitted(const FText& Text, ETextCommit::Type CommitMethod);
 
 	/** Parse chat commands from input string. Returns true if a command was found. */
-	bool ParseChatCommand(const FString& Input, EROChatChannel& OutChannel, FString& OutMessage, FString& OutTargetName);
+	bool ParseChatCommand(const FString& Input, EChatChannel& OutChannel, FString& OutMessage, FString& OutTargetName);
 
 	/** Refresh the chat log display based on current tab filter. */
 	void RefreshChatLog();
@@ -179,7 +143,7 @@ private:
 	TArray<FROChatMessage> MessageHistory;
 
 	/** Current active outgoing channel. */
-	EROChatChannel ActiveChannel = EROChatChannel::Local;
+	EChatChannel ActiveChannel = EChatChannel::Local;
 
 	/** Current filter tab. */
 	EROChatTab CurrentTab = EROChatTab::All;

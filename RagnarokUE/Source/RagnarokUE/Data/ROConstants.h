@@ -37,8 +37,8 @@ namespace ROConstants
 
 	// ---- Equipment ----
 
-	/** Maximum refine level for equipment (+0 to +20). */
-	constexpr int32 MaxRefineLevel = 20;
+	/** Maximum refine level for equipment (+0 to +10, pre-renewal). */
+	constexpr int32 MaxRefineLevel = 10;
 
 	/** Maximum number of card slots in a single piece of equipment. */
 	constexpr int32 MaxCardSlots = 4;

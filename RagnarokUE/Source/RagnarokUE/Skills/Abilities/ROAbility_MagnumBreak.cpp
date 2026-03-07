@@ -4,6 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "RagnarokUE/Skills/ROAttributeSet.h"
 #include "RagnarokUE/Combat/ROStatusEffectComponent.h"
+#include "RagnarokUE/Combat/RODamageGameplayEffect.h"
 #include "GameFramework/Character.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -39,6 +40,13 @@ void UROAbility_MagnumBreak::OnCastComplete()
 		return;
 	}
 
+	if (!CachedActorInfo->AbilitySystemComponent.IsValid())
+	{
+		EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, false);
+		return;
+	}
+
+	UAbilitySystemComponent* SourceASC = CachedActorInfo->AbilitySystemComponent.Get();
 	AActor* AvatarActor = CachedActorInfo->AvatarActor.Get();
 	const FVector Origin = AvatarActor->GetActorLocation();
 
@@ -80,10 +88,10 @@ void UROAbility_MagnumBreak::OnCastComplete()
 
 		// Apply fire damage via GAS
 		UAbilitySystemComponent* TargetASC = HitActor->FindComponentByClass<UAbilitySystemComponent>();
-		if (TargetASC && CachedActorInfo->AbilitySystemComponent.IsValid())
+		if (TargetASC)
 		{
 			FGameplayEffectSpecHandle DamageSpec = MakeOutgoingGameplayEffectSpec(
-				UGameplayEffect::StaticClass(), SkillLevel);
+				URODamageGameplayEffect::StaticClass(), SkillLevel);
 
 			if (DamageSpec.IsValid())
 			{
@@ -105,6 +113,9 @@ void UROAbility_MagnumBreak::OnCastComplete()
 					// Fire element attack - modifier depends on target's element
 					DamageSpec.Data->SetSetByCallerMagnitude(ElementModTag, 1.0f); // Default; actual calc via execution
 				}
+
+				// Apply the damage effect to the target
+				SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
 			}
 		}
 	}
@@ -141,15 +152,17 @@ void UROAbility_MagnumBreak::ApplyFireEndow() const
 		ASC->AddLooseGameplayTag(FireEndowTag);
 
 		// Set a timer to remove the tag after duration
+		// Use weak pointer to avoid dangling reference if ASC is destroyed
 		if (CachedActorInfo->AvatarActor.IsValid())
 		{
 			FTimerHandle TimerHandle;
 			FTimerDelegate TimerDelegate;
-			TimerDelegate.BindLambda([ASC, FireEndowTag]()
+			TWeakObjectPtr<UAbilitySystemComponent> WeakASC(ASC);
+			TimerDelegate.BindLambda([WeakASC, FireEndowTag]()
 			{
-				if (ASC && ASC->IsValidLowLevel())
+				if (WeakASC.IsValid())
 				{
-					ASC->RemoveLooseGameplayTag(FireEndowTag);
+					WeakASC->RemoveLooseGameplayTag(FireEndowTag);
 				}
 			});
 
