@@ -21,7 +21,7 @@ UROAbility_FireBolt::UROAbility_FireBolt()
 
 	// Variable cast time scales with level
 	VariableCastTimeBase = 0.7f; // Base variable cast per bolt
-	FixedCastTime = 0.3f;
+	FixedCastTime = 0.0f; // Pre-renewal has no fixed cast time
 	CooldownDuration = 0.3f;
 
 	BoltInterval = 0.15f;
