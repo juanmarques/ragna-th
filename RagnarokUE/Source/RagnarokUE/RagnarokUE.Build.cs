@@ -33,7 +33,8 @@ public class RagnarokUE : ModuleRules
 		{
 			"Json",
 			"JsonUtilities",
-			"HTTP"
+			"HTTP",
+			"ImageWrapper"
 		});
 	}
 }
