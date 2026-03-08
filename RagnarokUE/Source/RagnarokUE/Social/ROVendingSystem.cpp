@@ -160,8 +160,10 @@ bool UROVendingSystem::BuyFromShop(int32 BuyerID, int32 VendorID, int32 ItemInde
 	BuyerInv->RemoveZeny(TotalCostInt);
 	VendorInv->AddZeny(TotalCostInt);
 
-	// Add items to buyer's inventory
-	BuyerInv->Internal_AddItem(VendItem.Item.ItemID, Amount);
+	// Add items to buyer's inventory (preserve refine, cards, etc)
+	FROItemInstance PurchasedItem = VendItem.Item;
+	PurchasedItem.Amount = Amount;
+	BuyerInv->Internal_PlaceItem(PurchasedItem);
 
 	// Update weights
 	BuyerInv->UpdateWeight();

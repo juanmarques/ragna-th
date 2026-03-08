@@ -31,7 +31,7 @@ public:
 	 * @return True if the card was successfully inserted.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Card System")
-	static bool InsertCard(UPARAM(ref) FROItemInstance& Equipment, int32 CardID, int32 SlotIndex);
+	static bool InsertCard(UPARAM(ref) FROItemInstance& Equipment, int32 CardID, int32 SlotIndex, UROItemDatabase* ItemDatabase = nullptr);
 
 	/**
 	 * Remove a card from an equipment item's card slot.
