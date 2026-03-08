@@ -18,6 +18,7 @@ namespace RODatabaseSchema
 		"  account_id SERIAL PRIMARY KEY,"
 		"  username VARCHAR(24) NOT NULL UNIQUE,"
 		"  password_hash VARCHAR(128) NOT NULL,"
+		"  password_salt VARCHAR(64) NOT NULL,"
 		"  email VARCHAR(128),"
 		"  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
 		"  last_login_at TIMESTAMP,"

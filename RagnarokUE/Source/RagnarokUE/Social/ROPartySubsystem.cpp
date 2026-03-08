@@ -158,8 +158,11 @@ void UROPartySubsystem::DisbandParty(int32 PartyID)
 		return;
 	}
 
+	// Copy the member array before iterating — broadcast handlers may modify the original
+	TArray<int32> MembersCopy = Party->MemberPlayerIDs;
+
 	// Remove all members from the reverse lookup
-	for (int32 MemberID : Party->MemberPlayerIDs)
+	for (int32 MemberID : MembersCopy)
 	{
 		PlayerPartyMap.Remove(MemberID);
 		OnMemberLeft.Broadcast(PartyID, MemberID);

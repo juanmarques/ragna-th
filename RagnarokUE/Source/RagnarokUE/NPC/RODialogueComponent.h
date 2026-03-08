@@ -123,7 +123,7 @@ public:
 
 	/** Select a choice by index in the current node's Choices array. Returns the next node. */
 	UFUNCTION(BlueprintCallable, Category = "Dialogue")
-	FRODialogueNode SelectChoice(int32 ChoiceIndex);
+	FRODialogueNode SelectChoice(int32 ChoiceIndex, AROCharacterBase* Player = nullptr);
 
 	/** Get the current dialogue node. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Dialogue")
@@ -135,7 +135,7 @@ public:
 
 	/** End the current dialogue session. */
 	UFUNCTION(BlueprintCallable, Category = "Dialogue")
-	void EndDialogue();
+	void EndDialogue(AROCharacterBase* Player = nullptr);
 
 protected:
 	/** Find a dialogue node by its NodeID. Returns nullptr if not found. */

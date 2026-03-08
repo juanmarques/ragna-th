@@ -279,7 +279,11 @@ void AROCharacterBase::Respawn(FVector RespawnLocation)
 
 void AROCharacterBase::SitDown()
 {
-	if (!HasAuthority()) return;
+	if (!HasAuthority())
+	{
+		ServerSitDown();
+		return;
+	}
 	if (bIsDead || bIsSitting)
 	{
 		return;
@@ -298,7 +302,11 @@ void AROCharacterBase::SitDown()
 
 void AROCharacterBase::StandUp()
 {
-	if (!HasAuthority()) return;
+	if (!HasAuthority())
+	{
+		ServerStandUp();
+		return;
+	}
 	if (!bIsSitting)
 	{
 		return;
@@ -307,6 +315,16 @@ void AROCharacterBase::StandUp()
 	bIsSitting = false;
 
 	UE_LOG(LogTemp, Log, TEXT("ROCharacterBase: %s stood up."), *GetName());
+}
+
+void AROCharacterBase::ServerSitDown_Implementation()
+{
+	SitDown();
+}
+
+void AROCharacterBase::ServerStandUp_Implementation()
+{
+	StandUp();
 }
 
 float AROCharacterBase::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,

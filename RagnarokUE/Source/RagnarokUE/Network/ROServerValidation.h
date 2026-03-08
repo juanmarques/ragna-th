@@ -164,9 +164,9 @@ public:
 	/** Maximum allowed teleport distance before flagging (in UE units). */
 	static constexpr float MaxTeleportDistance = 5000.0f;
 
-	/** Damage tolerance multiplier. 1.5x accounts for critical hits, elemental advantages,
-	 * and card bonuses without being so permissive that cheating goes undetected. */
-	static constexpr float DamageToleranceMultiplier = 1.5f;
+	/** Damage tolerance multiplier. 2.0x accounts for critical hits, elemental advantages,
+	 * card bonuses, buff stacking, and enchant effects while still catching obvious cheats. */
+	static constexpr float DamageToleranceMultiplier = 2.0f;
 
 	/** Minimum cooldown tolerance in seconds (network latency allowance). */
 	static constexpr float CooldownToleranceSeconds = 0.1f;

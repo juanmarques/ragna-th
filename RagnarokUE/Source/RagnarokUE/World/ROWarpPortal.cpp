@@ -2,8 +2,10 @@
 
 #include "ROWarpPortal.h"
 #include "ROWoEManager.h"
+#include "ROMapManager.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/PlayerController.h"
 #include "RagnarokUE/Character/ROCharacterBase.h"
 #include "Net/UnrealNetwork.h"
 
@@ -121,10 +123,54 @@ void AROWarpPortal::UsePortal(AActor* PlayerCharacter)
 	UE_LOG(LogTemp, Log, TEXT("Warp Portal: Teleporting player to map '%s' at %s. Uses remaining: %d"),
 		*DestinationMap.ToString(), *DestinationLocation.ToString(), RemainingUses - 1);
 
-	// Teleport the player
-	PlayerCharacter->SetActorLocation(DestinationLocation);
+	// Determine if this is a cross-map warp by comparing current map to destination
+	const UWorld* World = GetWorld();
+	const FName CurrentMapName = World ? FName(*World->GetMapName()) : NAME_None;
+	const bool bIsCrossMap = !DestinationMap.IsNone() && CurrentMapName != DestinationMap;
 
-	// For cross-map warping, would need server travel similar to ROPortalActor.
+	if (!bIsCrossMap)
+	{
+		// Same-map teleport: move the actor directly
+		PlayerCharacter->SetActorLocation(DestinationLocation);
+	}
+	else
+	{
+		// Cross-map warp: use per-player ClientTravel with destination coordinates
+		FString TravelURL;
+
+		UGameInstance* GI = GetGameInstance();
+		UROMapManager* MapManager = GI ? GI->GetSubsystem<UROMapManager>() : nullptr;
+		if (MapManager)
+		{
+			FROMapConnectionInfo DestInfo = MapManager->GetMapConnectionInfo(DestinationMap);
+			if (!DestInfo.LevelAssetPath.IsEmpty())
+			{
+				TravelURL = DestInfo.LevelAssetPath;
+			}
+		}
+
+		// Fallback to convention-based path
+		if (TravelURL.IsEmpty())
+		{
+			TravelURL = FString::Printf(TEXT("/Game/Maps/%s"), *DestinationMap.ToString());
+		}
+
+		// Append destination coordinates so the receiving GameMode can position the player
+		TravelURL += FString::Printf(TEXT("?DestX=%.1f?DestY=%.1f?DestZ=%.1f"),
+			DestinationLocation.X, DestinationLocation.Y, DestinationLocation.Z);
+
+		UE_LOG(LogTemp, Log, TEXT("Warp Portal: Client travel to '%s'"), *TravelURL);
+
+		ACharacter* Character = Cast<ACharacter>(PlayerCharacter);
+		if (Character)
+		{
+			APlayerController* PC = Cast<APlayerController>(Character->GetController());
+			if (PC)
+			{
+				PC->ClientTravel(TravelURL, TRAVEL_Absolute);
+			}
+		}
+	}
 
 	RemainingUses--;
 

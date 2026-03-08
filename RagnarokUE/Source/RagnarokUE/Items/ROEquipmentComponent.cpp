@@ -503,6 +503,9 @@ bool UROEquipmentComponent::ValidateEquipSlot(const UROItemBase* ItemData, EROEq
 					FROItemInstance ShieldItem = EquippedItems[EROEquipSlot::Shield];
 					EquippedItems.Remove(EROEquipSlot::Shield);
 					Inventory->Internal_PlaceItem(ShieldItem);
+					// Update weight immediately so subsequent checks see the shield
+					// in inventory (not equipped) and avoid double-counting
+					Inventory->UpdateWeight();
 				}
 				else
 				{

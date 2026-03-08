@@ -251,8 +251,16 @@ void UROGameplayAbility::OnCastInterrupted()
 		}
 	}
 
-	// No SP deducted on interrupt
-	EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, true);
+	// No SP deducted on interrupt.
+	// Validate CachedActorInfo before passing to EndAbility. If the actor info is
+	// no longer valid (e.g., actor destroyed during cast), use CurrentActorInfo
+	// from the ability instance instead.
+	const FGameplayAbilityActorInfo* ActorInfoToUse = CachedActorInfo;
+	if (!ActorInfoToUse || !ActorInfoToUse->AbilitySystemComponent.IsValid())
+	{
+		ActorInfoToUse = GetCurrentActorInfo();
+	}
+	EndAbility(CachedHandle, ActorInfoToUse, CachedActivationInfo, true, true);
 }
 
 void UROGameplayAbility::DeductSP(const FGameplayAbilityActorInfo* ActorInfo, float Amount)

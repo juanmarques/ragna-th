@@ -67,14 +67,20 @@ void UROReplicationGraph::RouteAddNetworkActorToNodes(const FNewReplicatedActorI
 	// Game state and player states are always relevant
 	if (ActorInfo.Actor->IsA<AGameStateBase>() || ActorInfo.Actor->IsA<APlayerState>())
 	{
-		AlwaysRelevantNode->NotifyAddNetworkActor(ActorInfo);
+		if (AlwaysRelevantNode)
+		{
+			AlwaysRelevantNode->NotifyAddNetworkActor(ActorInfo);
+		}
 		return;
 	}
 
 	// Level script actors are always relevant
 	if (ActorInfo.Actor->IsA<ALevelScriptActor>())
 	{
-		AlwaysRelevantNode->NotifyAddNetworkActor(ActorInfo);
+		if (AlwaysRelevantNode)
+		{
+			AlwaysRelevantNode->NotifyAddNetworkActor(ActorInfo);
+		}
 		return;
 	}
 
@@ -106,7 +112,10 @@ void UROReplicationGraph::RouteRemoveNetworkActorToNodes(const FNewReplicatedAct
 		ActorInfo.Actor->IsA<APlayerState>() ||
 		ActorInfo.Actor->IsA<ALevelScriptActor>())
 	{
-		AlwaysRelevantNode->NotifyRemoveNetworkActor(ActorInfo);
+		if (AlwaysRelevantNode)
+		{
+			AlwaysRelevantNode->NotifyRemoveNetworkActor(ActorInfo);
+		}
 		return;
 	}
 

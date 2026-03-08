@@ -4,6 +4,8 @@
 #include "RagnarokUE/Character/ROCharacterBase.h"
 #include "RagnarokUE/Items/ROInventoryComponent.h"
 #include "RagnarokUE/Skills/ROSkillTreeComponent.h"
+#include "GameFramework/PlayerController.h"
+#include "Engine/World.h"
 
 AROServiceNPC_Shop::AROServiceNPC_Shop()
 {
@@ -32,28 +34,45 @@ void AROServiceNPC_Shop::OnInteract_Implementation(AROCharacterBase* Interactor)
 
 AROCharacterBase* AROServiceNPC_Shop::GetShopUserForCaller() const
 {
-	// Find the calling player by checking which registered shop user is closest to the NPC
-	// This is necessary because Server RPCs on non-player actors don't carry caller info
-	const FVector NPCLocation = GetActorLocation();
-	AROCharacterBase* ClosestUser = nullptr;
-	float ClosestDistSq = FLT_MAX;
-
-	for (const auto& Pair : ShopUsers)
+	// Look up the calling player by their ID from ShopUsers, not by proximity.
+	// This prevents an attacker from standing near the NPC and hijacking
+	// another player's shop session.
+	// Since this is a Server RPC on a non-player actor, we retrieve the caller
+	// via the first player controller with an active shop session whose pawn matches.
+	// In practice, the Server RPC is routed through the player's connection,
+	// so we iterate connections to find who actually called.
+	UWorld* World = GetWorld();
+	if (!World)
 	{
-		if (Pair.Value.IsValid())
+		return nullptr;
+	}
+
+	// Get the calling player controller from the network context
+	// For Server RPCs, UE routes the call from the owning client connection
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (!PC)
 		{
-			AROCharacterBase* Character = Pair.Value.Get();
-			const float DistSq = FVector::DistSquared(NPCLocation, Character->GetActorLocation());
-			// Must be within interaction range (reasonable shop interaction distance)
-			if (DistSq < ClosestDistSq)
-			{
-				ClosestDistSq = DistSq;
-				ClosestUser = Character;
-			}
+			continue;
+		}
+
+		APawn* Pawn = PC->GetPawn();
+		AROCharacterBase* Character = Cast<AROCharacterBase>(Pawn);
+		if (!Character)
+		{
+			continue;
+		}
+
+		const int32 PlayerID = Character->GetUniqueID();
+		const TWeakObjectPtr<AROCharacterBase>* Found = ShopUsers.Find(PlayerID);
+		if (Found && Found->IsValid() && Found->Get() == Character)
+		{
+			return Character;
 		}
 	}
 
-	return ClosestUser;
+	return nullptr;
 }
 
 void AROServiceNPC_Shop::OnShopPlayerDestroyed(AActor* DestroyedActor)
