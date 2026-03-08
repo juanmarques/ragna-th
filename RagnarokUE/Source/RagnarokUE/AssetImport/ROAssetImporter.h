@@ -177,15 +177,61 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "RO|AssetImport")
 	FROImportResult ImportElementIcons();
 
+	// --- PNG File Loading (no GRF required) ---
+
+	/**
+	 * Load all PNG assets from the Content directory using the asset manifest.
+	 * This is the preferred method when assets have been downloaded via the
+	 * Tools/download_ro_assets.py script. No GRF file needed.
+	 *
+	 * Reads Content/Data/asset_manifest.json and loads all referenced PNGs
+	 * as transient UTexture2D objects into the cache.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "RO|AssetImport")
+	FROImportResult LoadFromPNGFiles();
+
+	/**
+	 * Load a single PNG file from disk as a transient UTexture2D.
+	 * @param FilePath Absolute path to a .png file.
+	 * @return The created texture, or nullptr on failure.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "RO|AssetImport")
+	UTexture2D* LoadPNGAsTexture(const FString& FilePath);
+
+	/**
+	 * Get item icon texture by item ID.
+	 * Works with both GRF-imported and PNG-loaded assets.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "RO|AssetImport")
+	UTexture2D* GetItemIcon(int32 ItemID) const;
+
+	/**
+	 * Get skill icon texture by skill ID.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "RO|AssetImport")
+	UTexture2D* GetSkillIcon(int32 SkillID) const;
+
+	/**
+	 * Get monster icon texture by monster ID.
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "RO|AssetImport")
+	UTexture2D* GetMonsterIcon(int32 MonsterID) const;
+
+	/**
+	 * Get element icon texture by element index (matches EROElement enum order).
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "RO|AssetImport")
+	UTexture2D* GetElementIcon(int32 ElementIndex) const;
+
 	// --- Texture Cache ---
 
 	/**
-	 * Get a previously loaded transient texture by its GRF path.
-	 * @param SPRPath The GRF path used to load the texture.
+	 * Get a previously loaded transient texture by its key.
+	 * @param Key The cache key (GRF path, PNG path, or ID-based key).
 	 * @return The cached texture, or nullptr if not cached.
 	 */
 	UFUNCTION(BlueprintPure, Category = "RO|AssetImport")
-	UTexture2D* GetCachedTexture(const FString& SPRPath) const;
+	UTexture2D* GetCachedTexture(const FString& Key) const;
 
 	/** Clear the transient texture cache. */
 	UFUNCTION(BlueprintCallable, Category = "RO|AssetImport")
@@ -207,7 +253,20 @@ private:
 	/** The currently open GRF reader. */
 	TSharedPtr<FROGRFReader> GRFReader;
 
-	/** Cache of transient textures loaded at runtime (GRF path -> texture). */
+	/** Cache of transient textures loaded at runtime (key -> texture). */
 	UPROPERTY()
 	TMap<FString, UTexture2D*> TextureCache;
+
+	/** ID-based texture caches for fast lookups. */
+	UPROPERTY()
+	TMap<int32, UTexture2D*> ItemIconCache;
+
+	UPROPERTY()
+	TMap<int32, UTexture2D*> SkillIconCache;
+
+	UPROPERTY()
+	TMap<int32, UTexture2D*> MonsterIconCache;
+
+	UPROPERTY()
+	TMap<int32, UTexture2D*> ElementIconCache;
 };
