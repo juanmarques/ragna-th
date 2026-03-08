@@ -28,10 +28,12 @@ public:
 	 * @param Equipment The equipment item instance to insert the card into.
 	 * @param CardID The item ID of the card to insert.
 	 * @param SlotIndex Which card slot to use (0-3).
+	 * @param ItemDatabase The item database for card/equipment validation (required).
+	 * @param World The world context for authority checking.
 	 * @return True if the card was successfully inserted.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Card System")
-	static bool InsertCard(UPARAM(ref) FROItemInstance& Equipment, int32 CardID, int32 SlotIndex, UROItemDatabase* ItemDatabase = nullptr);
+	static bool InsertCard(UPARAM(ref) FROItemInstance& Equipment, int32 CardID, int32 SlotIndex, UROItemDatabase* ItemDatabase, UWorld* World = nullptr);
 
 	/**
 	 * Remove a card from an equipment item's card slot.

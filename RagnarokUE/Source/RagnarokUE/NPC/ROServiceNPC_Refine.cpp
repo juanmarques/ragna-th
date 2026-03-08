@@ -9,7 +9,6 @@ AROServiceNPC_Refine::AROServiceNPC_Refine()
 {
 	bIsService = true;
 	MaxRefineLevel = 10;
-	CurrentRefineUser = nullptr;
 	DisplayName = FText::FromString(TEXT("Refine NPC"));
 }
 
@@ -22,13 +21,52 @@ void AROServiceNPC_Refine::OnInteract_Implementation(AROCharacterBase* Interacto
 
 	Super::OnInteract_Implementation(Interactor);
 
-	CurrentRefineUser = Interactor;
+	const int32 PlayerID = Interactor->GetUniqueID();
+	RefineUsers.Add(PlayerID, Interactor);
+
+	// Bind cleanup on player destroyed/disconnected
+	Interactor->OnDestroyed.AddUniqueDynamic(this, &AROServiceNPC_Refine::OnRefinePlayerDestroyed);
 
 	UE_LOG(LogTemp, Log, TEXT("Refine NPC %s: Player opened refinement window."), *NPCName.ToString());
 }
 
+AROCharacterBase* AROServiceNPC_Refine::GetRefineUserForCaller() const
+{
+	const FVector NPCLocation = GetActorLocation();
+	AROCharacterBase* ClosestUser = nullptr;
+	float ClosestDistSq = FLT_MAX;
+
+	for (const auto& Pair : RefineUsers)
+	{
+		if (Pair.Value.IsValid())
+		{
+			AROCharacterBase* Character = Pair.Value.Get();
+			const float DistSq = FVector::DistSquared(NPCLocation, Character->GetActorLocation());
+			if (DistSq < ClosestDistSq)
+			{
+				ClosestDistSq = DistSq;
+				ClosestUser = Character;
+			}
+		}
+	}
+
+	return ClosestUser;
+}
+
+void AROServiceNPC_Refine::OnRefinePlayerDestroyed(AActor* DestroyedActor)
+{
+	if (!DestroyedActor)
+	{
+		return;
+	}
+
+	const int32 PlayerID = DestroyedActor->GetUniqueID();
+	RefineUsers.Remove(PlayerID);
+}
+
 void AROServiceNPC_Refine::ServerRefineItem_Implementation(int32 InventorySlot)
 {
+	AROCharacterBase* CurrentRefineUser = GetRefineUserForCaller();
 	if (!CurrentRefineUser)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Refine NPC: No active user for refinement."));
@@ -85,33 +123,23 @@ void AROServiceNPC_Refine::ServerRefineItem_Implementation(int32 InventorySlot)
 	}
 
 	// Attempt refinement using the refinement system
-	// Note: AttemptRefine handles ore and zeny deduction internally
-	// We work on a copy from inventory, then apply result back
-	bool bSuccess = URORefinementSystem::AttemptRefine(ItemToRefine, Inventory, WeaponLevel);
+	// AttemptRefine now operates directly on the inventory slot, handling ore/zeny deduction internally
+	bool bSuccess = URORefinementSystem::AttemptRefine(Inventory, InventorySlot, WeaponLevel);
 
 	if (bSuccess)
 	{
-		// Update the item in inventory with the new refine level
-		// We need to update the actual slot in the inventory
-		// Since we got a copy, we write it back via direct slot access
-		if (Inventory->InventorySlots.IsValidIndex(InventorySlot))
-		{
-			Inventory->InventorySlots[InventorySlot].RefineLevel = ItemToRefine.RefineLevel;
-		}
-
+		// AttemptRefine modifies the item directly in the inventory
+		const FROItemInstance& RefinedItem = Inventory->GetItemAtSlot(InventorySlot);
 		UE_LOG(LogTemp, Log, TEXT("Refine NPC: Refinement SUCCESS! Item %d now +%d."),
-			ItemToRefine.ItemID, ItemToRefine.RefineLevel);
+			RefinedItem.ItemID, RefinedItem.RefineLevel);
+		OnRefineResult.Broadcast(true, RefinedItem.RefineLevel, RefinedItem.ItemID);
 	}
 	else
 	{
-		// On failure, the item is destroyed (standard RO behavior)
-		Inventory->Internal_RemoveItem(InventorySlot, 1);
-
+		// On failure, AttemptRefine destroys the item internally
 		UE_LOG(LogTemp, Log, TEXT("Refine NPC: Refinement FAILED! Item %d destroyed."), ItemToRefine.ItemID);
+		OnRefineResult.Broadcast(false, 0, ItemToRefine.ItemID);
 	}
-
-	// Broadcast result
-	OnRefineResult.Broadcast(bSuccess, bSuccess ? ItemToRefine.RefineLevel : 0, ItemToRefine.ItemID);
 }
 
 bool AROServiceNPC_Refine::ServerRefineItem_Validate(int32 InventorySlot)

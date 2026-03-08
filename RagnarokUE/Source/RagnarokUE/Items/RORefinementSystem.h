@@ -75,13 +75,13 @@ public:
 	 * calculates success/failure, and applies the result.
 	 * On success: increments refine level.
 	 * On failure: destroys the equipment (sets ItemID to 0).
-	 * @param Item The item instance to refine (modified in place).
-	 * @param Inventory The player's inventory component (for ore/zeny checks).
+	 * @param Inventory The player's inventory component (for ore/zeny checks and item access).
+	 * @param ItemSlotIndex The inventory slot index of the item to refine.
 	 * @param WeaponLevel The weapon level (0 for armor, 1-4 for weapons).
 	 * @return True if refinement succeeded, false if it failed or couldn't be attempted.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Refinement")
-	static bool AttemptRefine(UPARAM(ref) FROItemInstance& Item, UROInventoryComponent* Inventory, int32 WeaponLevel);
+	static bool AttemptRefine(UROInventoryComponent* Inventory, int32 ItemSlotIndex, int32 WeaponLevel);
 
 private:
 	/** Maximum standard refine level. */

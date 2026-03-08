@@ -116,9 +116,15 @@ public:
 	FROShopItem GetShopItemAtIndex(int32 Index) const;
 
 protected:
-	/** The player currently using the shop. */
-	UPROPERTY()
-	TObjectPtr<AROCharacterBase> CurrentShopUser;
+	/** Per-player shop interaction map: PlayerID -> Character reference. */
+	TMap<int32, TWeakObjectPtr<AROCharacterBase>> ShopUsers;
+
+	/** Get the calling player's character for a Server RPC on this NPC. */
+	AROCharacterBase* GetShopUserForCaller() const;
+
+	/** Called when a player interacting with the shop is destroyed (disconnect). */
+	UFUNCTION()
+	void OnShopPlayerDestroyed(AActor* DestroyedActor);
 
 	/**
 	 * Get the Discount skill level for a player.

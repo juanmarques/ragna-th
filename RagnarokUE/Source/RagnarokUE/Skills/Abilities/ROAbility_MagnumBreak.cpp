@@ -30,6 +30,17 @@ UROAbility_MagnumBreak::UROAbility_MagnumBreak()
 	FireEndowDuration = 10.0f;
 }
 
+void UROAbility_MagnumBreak::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	// Ensure fire endow timer is cleaned up when ability is removed (e.g. character destruction, disconnect)
+	if (ActorInfo && ActorInfo->AvatarActor.IsValid())
+	{
+		ActorInfo->AvatarActor->GetWorldTimerManager().ClearTimer(FireEndowTimerHandle);
+	}
+
+	Super::OnRemoveAbility(ActorInfo, Spec);
+}
+
 void UROAbility_MagnumBreak::OnCastComplete()
 {
 	Super::OnCastComplete();

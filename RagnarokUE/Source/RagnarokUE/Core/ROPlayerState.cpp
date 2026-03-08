@@ -3,6 +3,8 @@
 #include "Core/ROPlayerState.h"
 #include "RagnarokUE.h"
 #include "Net/UnrealNetwork.h"
+#include "RagnarokUE/Character/ROLevelingComponent.h"
+#include "RagnarokUE/Character/ROJobComponent.h"
 
 AROPlayerState::AROPlayerState()
 	: CharacterName(TEXT(""))
@@ -29,4 +31,42 @@ void AROPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AROPlayerState, GuildID);
 	DOREPLIFETIME(AROPlayerState, GuildName);
 	DOREPLIFETIME(AROPlayerState, PartyID);
+}
+
+void AROPlayerState::SyncFromCharacter(APawn* NewPawn)
+{
+	if (!NewPawn || !HasAuthority())
+	{
+		return;
+	}
+
+	if (UROLevelingComponent* LevelComp = NewPawn->FindComponentByClass<UROLevelingComponent>())
+	{
+		BaseLevel = LevelComp->BaseLevel;
+		JobLevel = LevelComp->JobLevel;
+		LevelComp->OnBaseLevelUp.AddDynamic(this, &AROPlayerState::OnCharacterBaseLevelUp);
+		LevelComp->OnJobLevelUp.AddDynamic(this, &AROPlayerState::OnCharacterJobLevelUp);
+	}
+
+	if (UROJobComponent* JobComp = NewPawn->FindComponentByClass<UROJobComponent>())
+	{
+		JobClass = JobComp->CurrentJobClass;
+		JobComp->OnJobChanged.AddDynamic(this, &AROPlayerState::OnCharacterJobChanged);
+	}
+}
+
+void AROPlayerState::OnCharacterBaseLevelUp(int32 NewBaseLevel)
+{
+	BaseLevel = NewBaseLevel;
+}
+
+void AROPlayerState::OnCharacterJobLevelUp(int32 NewJobLevel)
+{
+	JobLevel = NewJobLevel;
+}
+
+void AROPlayerState::OnCharacterJobChanged(EROJobClass OldJob, EROJobClass NewJob)
+{
+	JobClass = NewJob;
+	JobLevel = 1; // Job level resets on job change
 }

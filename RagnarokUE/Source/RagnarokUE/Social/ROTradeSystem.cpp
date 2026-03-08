@@ -9,10 +9,21 @@ void UROTradeSystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	NextTradeID = 1;
+
+	// Set up periodic timer to clean up expired trade requests
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(CleanupTimerHandle, this,
+			&UROTradeSystem::CleanupExpiredRequests, 5.0f, true);
+	}
 }
 
 void UROTradeSystem::Deinitialize()
 {
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(CleanupTimerHandle);
+	}
 	ActiveTrades.Empty();
 	PendingRequests.Empty();
 	PlayerTradeMap.Empty();
@@ -53,6 +64,7 @@ int32 UROTradeSystem::InitiateTrade(int32 InitiatorID, int32 TargetID)
 	NewTrade.TradeID = NextTradeID++;
 	NewTrade.Player1ID = InitiatorID;
 	NewTrade.Player2ID = TargetID;
+	NewTrade.RequestTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
 	ActiveTrades.Add(NewTrade.TradeID, NewTrade);
 	PendingRequests.Add(TargetID, NewTrade.TradeID);
@@ -243,10 +255,16 @@ bool UROTradeSystem::LockTrade(int32 TradeID, int32 PlayerID)
 	if (PlayerID == Trade->Player1ID)
 	{
 		Trade->bPlayer1Locked = true;
+		// Snapshot current trade items and Zeny at lock time for tamper detection
+		Trade->Player1LockedItems = Trade->Player1Items;
+		Trade->Player1LockedZeny = Trade->Player1Zeny;
 	}
 	else
 	{
 		Trade->bPlayer2Locked = true;
+		// Snapshot current trade items and Zeny at lock time for tamper detection
+		Trade->Player2LockedItems = Trade->Player2Items;
+		Trade->Player2LockedZeny = Trade->Player2Zeny;
 	}
 
 	OnTradeLocked.Broadcast(TradeID, PlayerID);
@@ -297,6 +315,22 @@ bool UROTradeSystem::ExecuteTrade(int32 TradeID)
 
 	if (!Trade->IsFullyConfirmed())
 	{
+		return false;
+	}
+
+	// Verify trade items and Zeny haven't changed since lock (tamper detection)
+	if (Trade->Player1Items != Trade->Player1LockedItems ||
+		Trade->Player1Zeny != Trade->Player1LockedZeny)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Trade %d aborted: Player1 trade contents changed after lock."), TradeID);
+		CancelTradeWithReason(TradeID, TEXT("Trade items changed after lock"));
+		return false;
+	}
+	if (Trade->Player2Items != Trade->Player2LockedItems ||
+		Trade->Player2Zeny != Trade->Player2LockedZeny)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Trade %d aborted: Player2 trade contents changed after lock."), TradeID);
+		CancelTradeWithReason(TradeID, TEXT("Trade items changed after lock"));
 		return false;
 	}
 
@@ -503,6 +537,54 @@ int32 UROTradeSystem::GetTradeForPlayer(int32 PlayerID) const
 {
 	const int32* TradeID = PlayerTradeMap.Find(PlayerID);
 	return TradeID ? *TradeID : 0;
+}
+
+void UROTradeSystem::CancelTradeWithReason(int32 TradeID, const FString& Reason)
+{
+	FROTradeSession* Trade = ActiveTrades.Find(TradeID);
+	if (!Trade)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Trade %d cancelled: %s"), TradeID, *Reason);
+
+	const int32 P1 = Trade->Player1ID;
+	const int32 P2 = Trade->Player2ID;
+
+	PlayerTradeMap.Remove(P1);
+	PlayerTradeMap.Remove(P2);
+	PendingRequests.Remove(P1);
+	PendingRequests.Remove(P2);
+	ActiveTrades.Remove(TradeID);
+
+	OnTradeCancelled.Broadcast(TradeID, 0);
+}
+
+void UROTradeSystem::CleanupExpiredRequests()
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const float CurrentTime = World->GetTimeSeconds();
+	TArray<int32> ExpiredTrades;
+
+	for (const auto& Pair : PendingRequests)
+	{
+		const FROTradeSession* Session = ActiveTrades.Find(Pair.Value);
+		if (Session && CurrentTime - Session->RequestTime > TradeRequestTimeout)
+		{
+			ExpiredTrades.Add(Pair.Value);
+		}
+	}
+
+	for (int32 TradeID : ExpiredTrades)
+	{
+		CancelTradeWithReason(TradeID, TEXT("Trade request timed out"));
+	}
 }
 
 APawn* UROTradeSystem::FindPlayerPawnByID(int32 PlayerID) const

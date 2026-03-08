@@ -53,6 +53,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zone")
 	int32 OwnerGuildID = 0;
 
+	/**
+	 * Static tracking of which zones each character is currently in.
+	 * Used to correctly recompute flags when overlapping zones are exited.
+	 */
+	static TMap<TWeakObjectPtr<AActor>, TArray<TWeakObjectPtr<AROMapZone>>> CharacterZones;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -78,6 +84,6 @@ protected:
 	/** Apply zone rules to a player entering the zone. */
 	void ApplyZoneRules(AActor* PlayerCharacter);
 
-	/** Remove zone rules from a player leaving the zone. */
+	/** Remove zone rules from a player leaving the zone. Recomputes flags from remaining zones. */
 	void RemoveZoneRules(AActor* PlayerCharacter);
 };

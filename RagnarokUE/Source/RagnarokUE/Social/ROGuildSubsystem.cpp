@@ -356,11 +356,16 @@ void UROGuildSubsystem::ContributeGuildExp(int32 GuildID, int32 PlayerID, int64 
 		return;
 	}
 
-	// Track individual contribution
-	Member->ContributedExp += ExpAmount;
+	// Apply the EXP tax rate: only the taxed portion goes to the guild
+	// ExpTaxRate is stored as 0.0-50.0, so convert to a 0.0-0.5 fraction
+	const float TaxRate = FMath::Clamp(Guild->ExpTaxRate / 100.0f, 0.0f, 0.5f);
+	const int64 TaxedExp = FMath::RoundToInt64(ExpAmount * TaxRate);
 
-	// Add to guild EXP pool
-	Guild->GuildExp += ExpAmount;
+	// Guild receives the taxed portion
+	Guild->GuildExp += TaxedExp;
+
+	// Track individual contribution (only what actually went to the guild)
+	Member->ContributedExp += TaxedExp;
 
 	// Check for level up
 	ProcessGuildLevelUp(*Guild);
@@ -571,13 +576,20 @@ bool UROGuildSubsystem::RequestAlliance(int32 GuildID, int32 TargetGuildID)
 bool UROGuildSubsystem::DeclareHostility(int32 GuildID, int32 TargetGuildID)
 {
 	FROGuildInfo* Guild = ActiveGuilds.Find(GuildID);
-	if (!Guild || !ActiveGuilds.Contains(TargetGuildID) || GuildID == TargetGuildID)
+	FROGuildInfo* TargetGuild = ActiveGuilds.Find(TargetGuildID);
+	if (!Guild || !TargetGuild || GuildID == TargetGuildID)
 	{
 		return false;
 	}
 
-	// Max 3 hostile
+	// Max 3 hostile for the declaring guild
 	if (Guild->GetHostileCount() >= 3)
+	{
+		return false;
+	}
+
+	// Max 3 hostile for the target guild as well
+	if (TargetGuild->GetHostileCount() >= 3)
 	{
 		return false;
 	}
@@ -589,12 +601,6 @@ bool UROGuildSubsystem::DeclareHostility(int32 GuildID, int32 TargetGuildID)
 		{
 			return false;
 		}
-	}
-
-	FROGuildInfo* TargetGuild = ActiveGuilds.Find(TargetGuildID);
-	if (!TargetGuild)
-	{
-		return false;
 	}
 
 	FROGuildAllianceEntry Entry;

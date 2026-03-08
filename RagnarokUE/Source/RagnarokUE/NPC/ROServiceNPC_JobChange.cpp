@@ -29,6 +29,9 @@ void AROServiceNPC_JobChange::OnInteract_Implementation(AROCharacterBase* Intera
 
 	CurrentInteractor = Interactor;
 
+	// Bind cleanup on player destroyed/disconnected
+	Interactor->OnDestroyed.AddUniqueDynamic(this, &AROServiceNPC_JobChange::OnJobChangePlayerDestroyed);
+
 	// Check if the player can change jobs and log feedback
 	if (CanPlayerChangeJob(Interactor))
 	{
@@ -201,4 +204,12 @@ void AROServiceNPC_JobChange::ExecuteJobChange(AROCharacterBase* Player)
 		*UEnum::GetValueAsString(TargetJobClass),
 		SkillPointsToGrant,
 		bIsOptimal ? TEXT("Yes") : TEXT("No"));
+}
+
+void AROServiceNPC_JobChange::OnJobChangePlayerDestroyed(AActor* DestroyedActor)
+{
+	if (CurrentInteractor == DestroyedActor)
+	{
+		CurrentInteractor = nullptr;
+	}
 }

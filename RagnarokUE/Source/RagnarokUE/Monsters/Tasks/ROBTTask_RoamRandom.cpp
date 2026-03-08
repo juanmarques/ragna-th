@@ -76,6 +76,7 @@ EBTNodeResult::Type UROBTTask_RoamRandom::ExecuteTask(UBehaviorTreeComponent& Ow
 	Memory->TargetLocation = NavResult.Location;
 	Memory->Phase = ERoamPhase::Moving;
 	Memory->WaitTimeRemaining = FMath::FRandRange(MinWaitTime, MaxWaitTime);
+	Memory->MoveTimer = 0.0f;
 
 	// Start moving
 	AIController->MoveToLocation(NavResult.Location, AcceptanceRadius);
@@ -112,6 +113,16 @@ void UROBTTask_RoamRandom::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* No
 	{
 	case ERoamPhase::Moving:
 	{
+		// Timeout check: if movement takes too long, force transition to waiting
+		Memory->MoveTimer += DeltaSeconds;
+		if (Memory->MoveTimer >= MaxMoveTime)
+		{
+			Memory->Phase = ERoamPhase::Waiting;
+			Memory->MoveTimer = 0.0f;
+			AIController->StopMovement();
+			break;
+		}
+
 		// Check if we've arrived at destination
 		const float DistToTarget = FVector::Dist(
 			AIController->GetPawn()->GetActorLocation(),

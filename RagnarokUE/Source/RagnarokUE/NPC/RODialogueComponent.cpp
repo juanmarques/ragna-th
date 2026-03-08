@@ -2,6 +2,8 @@
 
 #include "RODialogueComponent.h"
 #include "RagnarokUE/Character/ROCharacterBase.h"
+#include "RagnarokUE/NPC/ROQuestManager.h"
+#include "Engine/GameInstance.h"
 
 URODialogueComponent::URODialogueComponent()
 {
@@ -23,6 +25,12 @@ FRODialogueNode URODialogueComponent::StartDialogue(AROCharacterBase* Player)
 		return FRODialogueNode();
 	}
 
+	// Create or reset per-player session
+	FDialogueSession& Session = ActiveSessions.FindOrAdd(Player);
+	Session.CurrentNodeIndex = 0;
+	Session.bIsActive = true;
+
+	// Update legacy state for backward-compatible API
 	CurrentPlayer = Player;
 	CurrentNodeIndex = 0;
 	bIsDialogueActive = true;
@@ -35,12 +43,21 @@ FRODialogueNode URODialogueComponent::StartDialogue(AROCharacterBase* Player)
 
 FRODialogueNode URODialogueComponent::SelectChoice(int32 ChoiceIndex)
 {
-	if (!bIsDialogueActive || !DialogueTree.IsValidIndex(CurrentNodeIndex))
+	// Use per-player session if available, fall back to legacy single-player state
+	AROCharacterBase* Player = CurrentPlayer;
+
+	// Find the active session for this player
+	FDialogueSession* Session = Player ? ActiveSessions.Find(Player) : nullptr;
+
+	int32 ActiveNodeIndex = Session ? Session->CurrentNodeIndex : CurrentNodeIndex;
+	bool bActive = Session ? Session->bIsActive : bIsDialogueActive;
+
+	if (!bActive || !DialogueTree.IsValidIndex(ActiveNodeIndex))
 	{
 		return FRODialogueNode();
 	}
 
-	const FRODialogueNode& CurrentNode = DialogueTree[CurrentNodeIndex];
+	const FRODialogueNode& CurrentNode = DialogueTree[ActiveNodeIndex];
 
 	if (!CurrentNode.Choices.IsValidIndex(ChoiceIndex))
 	{
@@ -50,6 +67,20 @@ FRODialogueNode URODialogueComponent::SelectChoice(int32 ChoiceIndex)
 	}
 
 	const FRODialogueChoice& Choice = CurrentNode.Choices[ChoiceIndex];
+
+	// Handle quest trigger from this choice
+	if (Choice.bStartsQuest && Choice.QuestID != 0 && Player)
+	{
+		UGameInstance* GI = GetWorld() ? Cast<UGameInstance>(GetWorld()->GetGameInstance()) : nullptr;
+		if (GI)
+		{
+			UROQuestManager* QuestMgr = GI->GetSubsystem<UROQuestManager>();
+			if (QuestMgr)
+			{
+				QuestMgr->AcceptQuest(Choice.QuestID, Player);
+			}
+		}
+	}
 
 	// Check if the choice ends dialogue
 	if (Choice.bEndsDialogue || Choice.NextNodeID < 0)
@@ -69,16 +100,26 @@ FRODialogueNode URODialogueComponent::SelectChoice(int32 ChoiceIndex)
 	}
 
 	// Update current node index
+	int32 NewNodeIndex = ActiveNodeIndex;
 	for (int32 i = 0; i < DialogueTree.Num(); ++i)
 	{
 		if (DialogueTree[i].NodeID == Choice.NextNodeID)
 		{
-			CurrentNodeIndex = i;
+			NewNodeIndex = i;
 			break;
 		}
 	}
 
-	OnDialogueNodeChanged.Broadcast(*NextNode, CurrentPlayer);
+	// Update per-player session
+	if (Session)
+	{
+		Session->CurrentNodeIndex = NewNodeIndex;
+	}
+
+	// Update legacy state
+	CurrentNodeIndex = NewNodeIndex;
+
+	OnDialogueNodeChanged.Broadcast(*NextNode, Player);
 
 	return *NextNode;
 }
@@ -96,10 +137,25 @@ void URODialogueComponent::EndDialogue()
 {
 	if (bIsDialogueActive)
 	{
-		bIsDialogueActive = false;
 		AROCharacterBase* Player = CurrentPlayer;
+
+		// Clean up per-player session
+		if (Player)
+		{
+			ActiveSessions.Remove(Player);
+		}
+
+		// Update legacy state
+		bIsDialogueActive = false;
 		CurrentPlayer = nullptr;
 		CurrentNodeIndex = 0;
+
+		// Check if any other sessions are still active
+		// (for the legacy bIsDialogueActive flag, only clear if no sessions remain)
+		if (ActiveSessions.Num() > 0)
+		{
+			bIsDialogueActive = true;
+		}
 
 		OnDialogueEnd.Broadcast(Player);
 	}

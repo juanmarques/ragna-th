@@ -2,9 +2,12 @@
 
 #include "ROPortalActor.h"
 #include "ROMapManager.h"
+#include "ROWoEManager.h"
 #include "Components/BoxComponent.h"
 #include "RagnarokUE/Character/ROLevelingComponent.h"
+#include "RagnarokUE/Character/ROCharacterBase.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
 AROPortalActor::AROPortalActor()
@@ -99,6 +102,30 @@ void AROPortalActor::TeleportPlayer(AActor* PlayerCharacter)
 		return;
 	}
 
+	// Check WoE teleport restriction
+	{
+		UGameInstance* WoEGI = GetGameInstance();
+		if (WoEGI)
+		{
+			if (UROWoEManager* WoEMgr = WoEGI->GetSubsystem<UROWoEManager>())
+			{
+				if (WoEMgr->IsWoEActive() && WoEMgr->IsSkillRestrictedInWoE(27)) // 27 = Warp Portal skill ID
+				{
+					UE_LOG(LogTemp, Log, TEXT("Portal %s: Teleport blocked during WoE"), *GetName());
+					return;
+				}
+			}
+		}
+	}
+
+	// Check zone teleport block
+	AROCharacterBase* ROChar = Cast<AROCharacterBase>(PlayerCharacter);
+	if (ROChar && ROChar->bTeleportBlocked)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Portal %s: Teleport blocked in current zone"), *GetName());
+		return;
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("Portal %s: Teleporting player to map '%s' at location %s"),
 		*GetName(), *DestinationMapID.ToString(), *DestinationLocation.ToString());
 
@@ -137,11 +164,16 @@ void AROPortalActor::TeleportPlayer(AActor* PlayerCharacter)
 	TravelURL += FString::Printf(TEXT("?DestX=%.1f?DestY=%.1f?DestZ=%.1f?DestYaw=%.1f"),
 		DestinationLocation.X, DestinationLocation.Y, DestinationLocation.Z, DestinationRotation);
 
-	UE_LOG(LogTemp, Log, TEXT("Portal %s: Server travel to '%s'"), *GetName(), *TravelURL);
+	UE_LOG(LogTemp, Log, TEXT("Portal %s: Client travel to '%s'"), *GetName(), *TravelURL);
 
-	UWorld* World = GetWorld();
-	if (World)
+	// Use per-player ClientTravel instead of ServerTravel to avoid disconnecting all players
+	ACharacter* Character = Cast<ACharacter>(PlayerCharacter);
+	if (Character)
 	{
-		World->ServerTravel(TravelURL + TEXT("?listen"));
+		APlayerController* PC = Cast<APlayerController>(Character->GetController());
+		if (PC)
+		{
+			PC->ClientTravel(TravelURL, TRAVEL_Absolute);
+		}
 	}
 }

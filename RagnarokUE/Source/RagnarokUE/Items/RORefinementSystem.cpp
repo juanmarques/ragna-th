@@ -101,15 +101,21 @@ int32 URORefinementSystem::GetRefineCost(int32 CurrentRefine)
 	}
 }
 
-bool URORefinementSystem::AttemptRefine(FROItemInstance& Item, UROInventoryComponent* Inventory, int32 WeaponLevel)
+bool URORefinementSystem::AttemptRefine(UROInventoryComponent* Inventory, int32 ItemSlotIndex, int32 WeaponLevel)
 {
-	if (!Inventory || !Item.IsValid())
+	if (!Inventory)
+	{
+		return false;
+	}
+
+	FROItemInstance* Item = Inventory->GetItemAtSlotRef(ItemSlotIndex);
+	if (!Item || !Item->IsValid())
 	{
 		return false;
 	}
 
 	// Check max refine
-	if (Item.RefineLevel >= MAX_REFINE)
+	if (Item->RefineLevel >= MAX_REFINE)
 	{
 		return false;
 	}
@@ -123,34 +129,46 @@ bool URORefinementSystem::AttemptRefine(FROItemInstance& Item, UROInventoryCompo
 	}
 
 	// Check Zeny cost
-	int32 Cost = GetRefineCost(Item.RefineLevel);
+	int32 Cost = GetRefineCost(Item->RefineLevel);
 	if (Inventory->Zeny < Cost)
 	{
 		return false;
 	}
 
-	// Consume ore and Zeny
-	Inventory->Internal_RemoveItem(OreSlot, 1);
+	// Consume ore first and verify it succeeded
+	if (!Inventory->Internal_RemoveItem(OreSlot, 1))
+	{
+		return false;
+	}
+
+	// Only deduct zeny if ore was consumed
 	Inventory->RemoveZeny(Cost);
 	Inventory->UpdateWeight();
 
-	// Calculate success
-	float SuccessRate = GetRefineSuccessRate(Item.RefineLevel, WeaponLevel);
+	// Re-acquire the pointer in case the array was modified by ore removal from the same slot area
+	Item = Inventory->GetItemAtSlotRef(ItemSlotIndex);
+	if (!Item || !Item->IsValid())
+	{
+		return false;
+	}
+
+	// Calculate success using strict less-than to avoid floating point bias
+	float SuccessRate = GetRefineSuccessRate(Item->RefineLevel, WeaponLevel);
 	float Roll = FMath::FRandRange(0.0f, 100.0f);
 
-	if (Roll <= SuccessRate)
+	if (Roll < SuccessRate)
 	{
 		// Success: increment refine level
-		Item.RefineLevel++;
+		Item->RefineLevel++;
 		return true;
 	}
 	else
 	{
 		// Failure: destroy the equipment
-		Item.ItemID = 0;
-		Item.Amount = 0;
-		Item.RefineLevel = 0;
-		Item.CardSlots.Empty();
+		Item->ItemID = 0;
+		Item->Amount = 0;
+		Item->RefineLevel = 0;
+		Item->CardSlots.Empty();
 		return false;
 	}
 }

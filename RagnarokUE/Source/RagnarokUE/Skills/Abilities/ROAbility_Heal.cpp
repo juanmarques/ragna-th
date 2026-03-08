@@ -135,22 +135,28 @@ void UROAbility_Heal::OnCastComplete()
 				DamageSpec.Data->SetSetByCallerMagnitude(DamageTypeTag, 2.0f); // Misc
 			}
 
-			// SkillMod carries the heal amount as a flat multiplier
-			// Since Misc damage = ATK * SkillMod * ElementMod, and we want
-			// fixed HealAmount damage, set SkillMod = HealAmount / SourceATK
+			// For Misc damage: FinalDamage = ATK * SkillMod * ElementMod.
+			// We want exactly HealAmount of Holy damage, with the elemental table
+			// lookup applied by RODamageExecution. To avoid division-by-ATK drift,
+			// set ATK-scaled SkillMod so that ATK * SkillMod = HealAmount, and
+			// let the execution calc apply Holy vs target element from the table.
+			// Capture ATK right now and compute the ratio atomically.
 			const UROAttributeSet* SrcAttrSet = SourceASC->GetSet<UROAttributeSet>();
-			const float SourceATK = (SrcAttrSet && SrcAttrSet->GetATK() > 0.0f) ? SrcAttrSet->GetATK() : 1.0f;
+			const float CurrentATK = (SrcAttrSet && SrcAttrSet->GetATK() > 0.0f) ? SrcAttrSet->GetATK() : 1.0f;
 
 			FGameplayTag SkillModTag = FGameplayTag::RequestGameplayTag(FName("Data.SkillMod"), false);
 			if (SkillModTag.IsValid())
 			{
-				DamageSpec.Data->SetSetByCallerMagnitude(SkillModTag, HealAmount / SourceATK);
+				DamageSpec.Data->SetSetByCallerMagnitude(SkillModTag, HealAmount / CurrentATK);
 			}
 
-			FGameplayTag ElementModTag = FGameplayTag::RequestGameplayTag(FName("Data.ElementMod"), false);
-			if (ElementModTag.IsValid())
+			// Set the attack element to Holy so RODamageExecution performs a proper
+			// Holy vs Undead elemental table lookup (instead of the old "Data.ElementMod"
+			// tag which the execution calc does not read).
+			FGameplayTag AttackElementTag = FGameplayTag::RequestGameplayTag(FName("Data.AttackElement"), false);
+			if (AttackElementTag.IsValid())
 			{
-				DamageSpec.Data->SetSetByCallerMagnitude(ElementModTag, 1.0f); // Holy vs Undead
+				DamageSpec.Data->SetSetByCallerMagnitude(AttackElementTag, static_cast<float>(EROElement::Holy));
 			}
 
 			SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);

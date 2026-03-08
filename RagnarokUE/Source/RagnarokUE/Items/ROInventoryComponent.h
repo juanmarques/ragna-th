@@ -92,6 +92,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
 	FROItemInstance GetItemAtSlot(int32 Index) const;
 
+	/** Get a reference to the item in the specified inventory slot. Returns nullptr if invalid index. */
+	FROItemInstance* GetItemAtSlotRef(int32 Index);
+
 	/** Find the first inventory slot containing the given ItemID. Returns -1 if not found. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
 	int32 FindItemByID(int32 ItemID) const;

@@ -77,9 +77,15 @@ public:
 	int32 GetRefineCost(const FROItemInstance& Item) const;
 
 protected:
-	/** The player currently using the refine NPC. */
-	UPROPERTY()
-	TObjectPtr<AROCharacterBase> CurrentRefineUser;
+	/** Per-player refine interaction map: PlayerID -> Character reference. */
+	TMap<int32, TWeakObjectPtr<AROCharacterBase>> RefineUsers;
+
+	/** Get the calling player's character for a Server RPC on this NPC. */
+	AROCharacterBase* GetRefineUserForCaller() const;
+
+	/** Called when a player interacting with the refine NPC is destroyed (disconnect). */
+	UFUNCTION()
+	void OnRefinePlayerDestroyed(AActor* DestroyedActor);
 
 	/**
 	 * Determine the weapon level for an item.

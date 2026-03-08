@@ -113,7 +113,7 @@ AROMonsterBase* AROMonsterSpawnManager::SpawnMonster(const FROMonsterSpawnInfo& 
 	return Monster;
 }
 
-AROMonsterBase* AROMonsterSpawnManager::SpawnSingleMonster(int32 MonsterID, FVector Location)
+AROMonsterBase* AROMonsterSpawnManager::SpawnSingleMonster(int32 MonsterID, FVector Location, int32 InSpawnDefIndex)
 {
 	FROMonsterSpawnInfo TempInfo;
 	TempInfo.MonsterID = MonsterID;
@@ -122,7 +122,12 @@ AROMonsterBase* AROMonsterSpawnManager::SpawnSingleMonster(int32 MonsterID, FVec
 	TempInfo.Count = 1;
 	TempInfo.RespawnDelay = 0.0f;
 
-	return SpawnMonster(TempInfo);
+	AROMonsterBase* Monster = SpawnMonster(TempInfo);
+	if (Monster)
+	{
+		Monster->SpawnDefIndex = InSpawnDefIndex;
+	}
+	return Monster;
 }
 
 void AROMonsterSpawnManager::OnMonsterDied(AROMonsterBase* Monster, AActor* Killer)
@@ -191,8 +196,18 @@ void AROMonsterSpawnManager::ProcessRespawnQueue(float CurrentTime)
 				const FROMonsterSpawnInfo& Def = SpawnDefinitions[DefIndex];
 				const int32 AliveCount = AliveCountPerDef.FindRef(DefIndex);
 
-				// Only spawn if below count cap
-				if (AliveCount < Def.Count)
+				// Count how many respawns for this definition are already queued
+				int32 PendingCount = 0;
+				for (int32 j = 0; j < RespawnQueue.Num(); ++j)
+				{
+					if (j != i && RespawnQueue[j].SpawnDefIndex == DefIndex)
+					{
+						PendingCount++;
+					}
+				}
+
+				// Only spawn if alive + pending (excluding self) is below count cap
+				if (AliveCount + PendingCount < Def.Count)
 				{
 					AROMonsterBase* Monster = SpawnMonster(Def);
 					if (Monster)
@@ -206,6 +221,11 @@ void AROMonsterSpawnManager::ProcessRespawnQueue(float CurrentTime)
 						// Spawn failed - keep entry in queue for retry next tick
 						continue;
 					}
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("SpawnManager: Dropping respawn for def %d (alive=%d, pending=%d, target=%d)."),
+						DefIndex, AliveCount, PendingCount, Def.Count);
 				}
 			}
 

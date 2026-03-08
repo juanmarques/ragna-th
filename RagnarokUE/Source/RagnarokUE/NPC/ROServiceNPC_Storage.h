@@ -97,4 +97,8 @@ protected:
 
 	/** Deduct storage access cost from player. Returns false if insufficient Zeny. */
 	bool DeductStorageCost(AROCharacterBase* Player);
+
+	/** Called when the current storage user is destroyed (disconnect cleanup). */
+	UFUNCTION()
+	void OnStoragePlayerDestroyed(AActor* DestroyedActor);
 };

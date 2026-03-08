@@ -171,9 +171,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Database")
 	TArray<FROCharacterSaveData> GetCharactersForAccount(int32 AccountID) const;
 
-	/** Delete a character. */
+	/** Delete a character. Verifies the character belongs to the given AccountID before deletion. */
 	UFUNCTION(BlueprintCallable, Category = "Database")
-	bool DeleteCharacter(int32 CharacterID);
+	bool DeleteCharacter(int32 CharacterID, int32 AccountID);
 
 	/** Create a new character and return its ID. */
 	UFUNCTION(BlueprintCallable, Category = "Database")

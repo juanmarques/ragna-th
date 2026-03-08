@@ -179,7 +179,9 @@ void UROWoEManager::CheckSchedule()
 		return;
 	}
 
-	const FDateTime Now = FDateTime::Now();
+	// Use UTC to ensure consistent scheduling across all server configurations.
+	// All WoE schedule entries should be defined in UTC.
+	const FDateTime Now = FDateTime::UtcNow();
 	// UE EDayOfWeek: Monday=0..Sunday=6 (ISO); schedule uses Sunday=0..Saturday=6 (POSIX)
 	const int32 UEDay = static_cast<int32>(Now.GetDayOfWeek());
 	const int32 CurrentDay = (UEDay + 1) % 7;

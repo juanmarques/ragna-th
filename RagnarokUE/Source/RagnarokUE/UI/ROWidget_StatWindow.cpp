@@ -4,6 +4,7 @@
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "Components/ProgressBar.h"
+#include "RagnarokUE/Data/ROConstants.h"
 
 UROWidget_StatWindow::UROWidget_StatWindow(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -152,7 +153,7 @@ void UROWidget_StatWindow::RefreshAllocationButtons()
 	{
 		if (!Btn) return;
 		const int32 Cost = GetStatPointCost(BaseStat);
-		const bool bCanAllocate = AvailableStatPoints >= Cost && BaseStat < 99;
+		const bool bCanAllocate = AvailableStatPoints >= Cost && BaseStat < ROConstants::MaxStats;
 		Btn->SetVisibility(bCanAllocate ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	};
 

@@ -335,14 +335,29 @@ int32 UROChatSubsystem::ResolvePlayerName(const FString& Name) const
 		return 0;
 	}
 
+	// First pass: look for an exact case match
 	for (APlayerState* PS : World->GetGameState()->PlayerArray)
 	{
 		AROPlayerState* ROPS = Cast<AROPlayerState>(PS);
-		if (ROPS && ROPS->GetCharacterName().Equals(Name, ESearchCase::IgnoreCase))
+		if (ROPS && ROPS->GetCharacterName().Equals(Name, ESearchCase::CaseSensitive))
 		{
 			return ROPS->GetPlayerId();
 		}
 	}
 
-	return 0;
+	// Second pass: case-insensitive, but only if there's exactly one match
+	int32 MatchedID = 0;
+	int32 MatchCount = 0;
+	for (APlayerState* PS : World->GetGameState()->PlayerArray)
+	{
+		AROPlayerState* ROPS = Cast<AROPlayerState>(PS);
+		if (ROPS && ROPS->GetCharacterName().Equals(Name, ESearchCase::IgnoreCase))
+		{
+			MatchedID = ROPS->GetPlayerId();
+			MatchCount++;
+		}
+	}
+
+	// Only return a match if there's exactly one case-insensitive match
+	return (MatchCount == 1) ? MatchedID : 0;
 }

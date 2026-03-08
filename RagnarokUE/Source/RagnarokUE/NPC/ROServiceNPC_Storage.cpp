@@ -3,6 +3,7 @@
 #include "ROServiceNPC_Storage.h"
 #include "RagnarokUE/Character/ROCharacterBase.h"
 #include "RagnarokUE/Items/ROInventoryComponent.h"
+#include "GameFramework/PlayerState.h"
 
 AROServiceNPC_Storage::AROServiceNPC_Storage()
 {
@@ -40,6 +41,13 @@ void AROServiceNPC_Storage::OnInteract_Implementation(AROCharacterBase* Interact
 
 	CurrentStorageUser = Interactor;
 
+	// Initialize storage for this player (legitimate payment flow)
+	const uint32 PlayerKey = GetPlayerKey(Interactor);
+	GetOrCreateStorage(PlayerKey);
+
+	// Bind cleanup on player destroyed/disconnected
+	Interactor->OnDestroyed.AddUniqueDynamic(this, &AROServiceNPC_Storage::OnStoragePlayerDestroyed);
+
 	UE_LOG(LogTemp, Log, TEXT("Storage NPC %s: Player opened storage. Cost: %d Zeny."),
 		*NPCName.ToString(), StorageAccessCost);
 }
@@ -66,6 +74,14 @@ uint32 AROServiceNPC_Storage::GetPlayerKey(AROCharacterBase* Player) const
 	{
 		return 0;
 	}
+
+	// Use PlayerState's PlayerId for a stable identifier across sessions
+	if (APlayerState* PS = Player->GetPlayerState())
+	{
+		return static_cast<uint32>(PS->GetPlayerId());
+	}
+
+	// Fallback to actor unique ID if no PlayerState
 	return Player->GetUniqueID();
 }
 
@@ -115,6 +131,14 @@ void AROServiceNPC_Storage::ServerDepositItem_Implementation(int32 InventorySlot
 		return;
 	}
 
+	// Verify storage was opened via OnInteract payment flow
+	const uint32 PlayerKey = GetPlayerKey(CurrentStorageUser);
+	if (!PlayerStorageData.Contains(PlayerKey))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Storage: Player attempted deposit without opening storage."));
+		return;
+	}
+
 	UROInventoryComponent* Inventory = CurrentStorageUser->FindComponentByClass<UROInventoryComponent>();
 	if (!Inventory)
 	{
@@ -136,7 +160,6 @@ void AROServiceNPC_Storage::ServerDepositItem_Implementation(int32 InventorySlot
 		return;
 	}
 
-	const uint32 PlayerKey = GetPlayerKey(CurrentStorageUser);
 	TArray<FROItemInstance>& Storage = GetOrCreateStorage(PlayerKey);
 
 	// Try to find a stackable slot first
@@ -181,13 +204,20 @@ void AROServiceNPC_Storage::ServerWithdrawItem_Implementation(int32 StorageSlot,
 		return;
 	}
 
+	// Verify storage was opened via OnInteract payment flow
+	const uint32 PlayerKey = GetPlayerKey(CurrentStorageUser);
+	if (!PlayerStorageData.Contains(PlayerKey))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Storage: Player attempted withdrawal without opening storage."));
+		return;
+	}
+
 	UROInventoryComponent* Inventory = CurrentStorageUser->FindComponentByClass<UROInventoryComponent>();
 	if (!Inventory)
 	{
 		return;
 	}
 
-	const uint32 PlayerKey = GetPlayerKey(CurrentStorageUser);
 	TArray<FROItemInstance>& Storage = GetOrCreateStorage(PlayerKey);
 
 	// Validate storage slot
@@ -232,7 +262,7 @@ void AROServiceNPC_Storage::ServerWithdrawItem_Implementation(int32 StorageSlot,
 
 bool AROServiceNPC_Storage::ServerWithdrawItem_Validate(int32 StorageSlot, int32 Amount)
 {
-	return Amount > 0 && StorageSlot >= 0;
+	return Amount > 0 && StorageSlot >= 0 && StorageSlot < MaxStorageSlots;
 }
 
 bool AROServiceNPC_Storage::ServerCloseStorage_Validate()
@@ -263,6 +293,14 @@ TArray<FROItemInstance> AROServiceNPC_Storage::GetPlayerStorage(AROCharacterBase
 		return *Storage;
 	}
 	return TArray<FROItemInstance>();
+}
+
+void AROServiceNPC_Storage::OnStoragePlayerDestroyed(AActor* DestroyedActor)
+{
+	if (CurrentStorageUser == DestroyedActor)
+	{
+		CurrentStorageUser = nullptr;
+	}
 }
 
 int32 AROServiceNPC_Storage::GetUsedStorageSlots(AROCharacterBase* Player) const

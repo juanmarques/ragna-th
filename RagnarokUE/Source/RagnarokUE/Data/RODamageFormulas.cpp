@@ -71,8 +71,8 @@ int32 URODamageFormulas::CalculateFleeRate(int32 AGI, int32 LUK, int32 BaseLevel
 
 float URODamageFormulas::CalculateCritRate(int32 LUK)
 {
-	// Pre-renewal formula: 1 + floor(LUK/3) (integer division)
-	return 1.0f + static_cast<float>(LUK / 3);
+	// Pre-renewal formula: 1 + LUK * 0.3
+	return 1.0f + (static_cast<float>(LUK) * 0.3f);
 }
 
 // ============================================================================
@@ -476,6 +476,11 @@ float URODamageFormulas::GetElementalModifier(EROElement AtkElement, EROElement 
 
 int32 URODamageFormulas::CalculateStatPointCost(int32 CurrentStatValue)
 {
+	// Guard: stats should never be below 1; minimum cost is 2 per RO rules
+	if (CurrentStatValue < 1)
+	{
+		return 2;
+	}
 	// floor((CurrentStatValue - 1) / 10) + 2
 	return (CurrentStatValue - 1) / 10 + 2;
 }
@@ -504,27 +509,20 @@ int32 URODamageFormulas::CalculatePhysicalDamage(
 	// Step 2: Apply skill modifier (percentage, 100 = 100%)
 	TotalATK = TotalATK * (SkillModifier / 100.0f);
 
-	// Step 3: Apply size modifier
-	TotalATK *= SizeModifier;
-
-	// Step 4: Apply race modifier
+	// Step 3: Apply race modifier
 	TotalATK *= RaceModifier;
 
-	// Step 5: Apply elemental modifier
-	const float ElemMod = GetElementalModifier(AtkElement, DefElement, DefElementLevel);
-	TotalATK *= ElemMod;
-
-	// Step 5b: Apply card fix modifier
+	// Step 3b: Apply card fix modifier
 	TotalATK *= CardFixModifier;
 
-	// Step 6: Subtract Hard DEF (flat reduction)
+	// Step 4: Subtract Hard DEF (flat reduction) -- before elemental/size modifiers (pre-renewal order)
 	// Critical hits ignore hard DEF in pre-renewal
 	if (!bIsCritical)
 	{
 		TotalATK -= static_cast<float>(CalculateHardDEF(TargetHardDEF));
 	}
 
-	// Step 7: Subtract Soft DEF (flat reduction from VIT)
+	// Step 5: Subtract Soft DEF (flat reduction from VIT)
 	// Critical hits also ignore soft DEF
 	if (!bIsCritical)
 	{
@@ -533,7 +531,17 @@ int32 URODamageFormulas::CalculatePhysicalDamage(
 		TotalATK -= static_cast<float>(EffectiveSoftDEF);
 	}
 
-	// Minimum damage is 1
+	// Minimum 1 before applying elemental/size modifiers
+	TotalATK = FMath::Max(1.0f, TotalATK);
+
+	// Step 6: Apply elemental modifier (after DEF subtraction, pre-renewal order)
+	const float ElemMod = GetElementalModifier(AtkElement, DefElement, DefElementLevel);
+	TotalATK *= ElemMod;
+
+	// Step 7: Apply size modifier
+	TotalATK *= SizeModifier;
+
+	// Minimum damage is 1 (allow negative for elemental absorb at caller's discretion)
 	return FMath::Max(1, static_cast<int32>(TotalATK));
 }
 

@@ -36,6 +36,12 @@ void UROCastingComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	// Only the server should advance cast timers and complete casts
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
 	if (!bIsCasting)
 	{
 		return;
@@ -65,8 +71,10 @@ void UROCastingComponent::StartCasting(float InVariableCastTime, float InFixedCa
 
 	if (TotalCastTime <= 0.0f)
 	{
-		// Instant cast - fire complete immediately
+		// Instant cast - fire complete immediately, then reset state so
+		// CastingSkillID and other fields don't remain stale on clients.
 		OnCastComplete.Broadcast();
+		ResetCastState();
 		return;
 	}
 
