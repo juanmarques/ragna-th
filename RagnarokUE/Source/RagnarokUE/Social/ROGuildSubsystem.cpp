@@ -78,6 +78,13 @@ bool UROGuildSubsystem::InviteToGuild(int32 GuildID, int32 InviterID, int32 Invi
 		return false;
 	}
 
+	// Check position-based invite permission
+	if (!Guild->Positions.IsValidIndex(Inviter->PositionIndex) ||
+		!Guild->Positions[Inviter->PositionIndex].bCanInvite)
+	{
+		return false;
+	}
+
 	// Check guild capacity
 	if (Guild->Members.Num() >= Guild->GetMaxMembers())
 	{
@@ -186,6 +193,13 @@ bool UROGuildSubsystem::ExpelFromGuild(int32 GuildID, int32 ExpellerID, int32 Ta
 	const FROGuildMember* Expeller = FindMember(*Guild, ExpellerID);
 	const FROGuildMember* Target = FindMember(*Guild, TargetID);
 	if (!Expeller || !Target)
+	{
+		return false;
+	}
+
+	// Check position-based expel permission
+	if (!Guild->Positions.IsValidIndex(Expeller->PositionIndex) ||
+		!Guild->Positions[Expeller->PositionIndex].bCanExpel)
 	{
 		return false;
 	}
