@@ -141,15 +141,26 @@ void AROMonsterSpawnManager::OnMonsterDied(AROMonsterBase* Monster, AActor* Kill
 		int32& Count = AliveCountPerDef.FindOrAdd(DefIndex);
 		Count = FMath::Max(0, Count - 1);
 
-		// Queue respawn with delay + random variance
+		// Queue respawn with delay + random variance, enforcing minimum 5-second delay
 		const FROMonsterSpawnInfo& Def = SpawnDefinitions[DefIndex];
 		const float Variance = FMath::FRandRange(-Def.RespawnVariance, Def.RespawnVariance);
-		const float RespawnTime = GetWorld()->GetTimeSeconds() + Def.RespawnDelay + Variance;
+		constexpr float MinRespawnDelay = 5.0f;
+		const float EffectiveDelay = FMath::Max(MinRespawnDelay, Def.RespawnDelay + Variance);
+		const float RespawnTime = GetWorld()->GetTimeSeconds() + EffectiveDelay;
 
 		RespawnQueue.Add(FRORespawnEntry(DefIndex, RespawnTime));
 
+		// Boss/MVP death announcement
+		if (Monster->bIsMVP || Monster->bIsBoss)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("BOSS KILLED: %s has been defeated by %s!"),
+				*Monster->MonsterName.ToString(),
+				Killer ? *Killer->GetName() : TEXT("Unknown"));
+			// TODO: Broadcast to all connected clients via game state
+		}
+
 		UE_LOG(LogTemp, Log, TEXT("SpawnManager: Monster %s died. Respawn in %.1f sec."),
-			*Monster->MonsterName.ToString(), Def.RespawnDelay + Variance);
+			*Monster->MonsterName.ToString(), EffectiveDelay);
 	}
 }
 
