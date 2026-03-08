@@ -138,6 +138,9 @@ public:
 	/** Internal: Remove item directly (server-side only). Returns true on success. */
 	bool Internal_RemoveItem(int32 SlotIndex, int32 Amount);
 
+	/** Internal: Place a fully-formed item instance into a free slot, preserving all data (refine, cards, etc). Returns slot index or -1. */
+	int32 Internal_PlaceItem(const FROItemInstance& Item);
+
 	/** Check if an item cooldown group is ready. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
 	bool IsItemCooldownReady(int32 CooldownGroup) const;

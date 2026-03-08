@@ -482,6 +482,23 @@ int32 UROInventoryComponent::Internal_AddItem(int32 ItemID, int32 Amount)
 	return FirstSlot;
 }
 
+int32 UROInventoryComponent::Internal_PlaceItem(const FROItemInstance& Item)
+{
+	if (!Item.IsValid())
+	{
+		return -1;
+	}
+
+	int32 FreeSlot = GetFreeSlot();
+	if (FreeSlot < 0)
+	{
+		return -1;
+	}
+
+	InventorySlots[FreeSlot] = Item;
+	return FreeSlot;
+}
+
 bool UROInventoryComponent::Internal_RemoveItem(int32 SlotIndex, int32 Amount)
 {
 	if (!InventorySlots.IsValidIndex(SlotIndex) || !InventorySlots[SlotIndex].IsValid())
