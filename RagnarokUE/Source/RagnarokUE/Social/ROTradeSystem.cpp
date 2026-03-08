@@ -367,7 +367,12 @@ bool UROTradeSystem::ExecuteTrade(int32 TradeID)
 	}
 	for (const FROItemInstance& Item : Trade->Player1Items)
 	{
-		Inv2->Internal_PlaceItem(Item);
+		int32 PlacedSlot = Inv2->Internal_PlaceItem(Item);
+		if (PlacedSlot < 0)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Trade %d CRITICAL: Failed to place Player1 item %d into Player2 inventory. Item lost!"),
+				TradeID, Item.ItemID);
+		}
 	}
 
 	// Execute: Remove items from Player2 by UniqueID, give to Player1
@@ -384,7 +389,12 @@ bool UROTradeSystem::ExecuteTrade(int32 TradeID)
 	}
 	for (const FROItemInstance& Item : Trade->Player2Items)
 	{
-		Inv1->Internal_PlaceItem(Item);
+		int32 PlacedSlot = Inv1->Internal_PlaceItem(Item);
+		if (PlacedSlot < 0)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Trade %d CRITICAL: Failed to place Player2 item %d into Player1 inventory. Item lost!"),
+				TradeID, Item.ItemID);
+		}
 	}
 
 	// Transfer Zeny

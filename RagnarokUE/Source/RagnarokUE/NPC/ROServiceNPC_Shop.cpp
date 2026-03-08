@@ -153,7 +153,8 @@ void AROServiceNPC_Shop::ServerSellItem_Implementation(int32 InventorySlot, int3
 
 bool AROServiceNPC_Shop::ServerSellItem_Validate(int32 InventorySlot, int32 Amount)
 {
-	return Amount > 0 && Amount <= 30000 && InventorySlot >= 0 && InventorySlot < 200;
+	// MaxSlots is 100 in ROInventoryComponent - reject out-of-range indices
+	return Amount > 0 && Amount <= 30000 && InventorySlot >= 0 && InventorySlot < 100;
 }
 
 int32 AROServiceNPC_Shop::GetBuyPrice(int32 ShopIndex, AROCharacterBase* Buyer) const
