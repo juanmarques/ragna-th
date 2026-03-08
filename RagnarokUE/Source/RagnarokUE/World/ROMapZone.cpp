@@ -3,6 +3,7 @@
 #include "ROMapZone.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Character.h"
+#include "RagnarokUE/Character/ROCharacterBase.h"
 
 AROMapZone::AROMapZone()
 {
@@ -66,33 +67,32 @@ void AROMapZone::OnZoneOverlapEnd(UPrimitiveComponent* OverlappedComponent, AAct
 
 void AROMapZone::ApplyZoneRules(AActor* PlayerCharacter)
 {
-	// TODO: Apply zone rules to the AROCharacterBase.
-	// In a full implementation:
-	//   AROCharacterBase* ROChar = Cast<AROCharacterBase>(PlayerCharacter);
-	//   if (ROChar)
-	//   {
-	//       ROChar->SetPvPEnabled(bIsPvPZone);
-	//       ROChar->SetTeleportBlocked(bIsNoTeleportZone);
-	//       ROChar->SetInTown(bIsTownZone);
-	//       ROChar->SetInGuildZone(bIsGuildZone, OwnerGuildID);
-	//   }
+	AROCharacterBase* ROChar = Cast<AROCharacterBase>(PlayerCharacter);
+	if (ROChar)
+	{
+		ROChar->bPvPEnabled = bIsPvPZone;
+		ROChar->bTeleportBlocked = bIsNoTeleportZone;
+		ROChar->bInTown = bIsTownZone;
+		ROChar->bInGuildZone = bIsGuildZone;
+		ROChar->GuildZoneOwnerID = OwnerGuildID;
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("Player %s entered zone '%s' [PvP=%d, NoTP=%d, Town=%d, Guild=%d]"),
 		*PlayerCharacter->GetName(), *ZoneName,
 		bIsPvPZone, bIsNoTeleportZone, bIsTownZone, bIsGuildZone);
-
-	// Display zone name to the player (via client RPC or UI notification)
-	if (!ZoneName.IsEmpty())
-	{
-		// TODO: Show zone name notification to the player's HUD.
-		UE_LOG(LogTemp, Log, TEXT("Zone: %s (Recommended Level: %d)"), *ZoneName, RecommendedLevel);
-	}
 }
 
 void AROMapZone::RemoveZoneRules(AActor* PlayerCharacter)
 {
-	// TODO: Revert zone rules when leaving.
-	// In a full implementation, reset the flags on the character.
+	AROCharacterBase* ROChar = Cast<AROCharacterBase>(PlayerCharacter);
+	if (ROChar)
+	{
+		ROChar->bPvPEnabled = false;
+		ROChar->bTeleportBlocked = false;
+		ROChar->bInTown = false;
+		ROChar->bInGuildZone = false;
+		ROChar->GuildZoneOwnerID = 0;
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("Player %s left zone '%s'"),
 		*PlayerCharacter->GetName(), *ZoneName);

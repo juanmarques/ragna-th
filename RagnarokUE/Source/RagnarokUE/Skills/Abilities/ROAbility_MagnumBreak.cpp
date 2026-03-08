@@ -78,6 +78,20 @@ void UROAbility_MagnumBreak::OnCastComplete()
 			continue;
 		}
 
+		// Line-of-sight check: skip targets behind walls/obstacles
+		{
+			FCollisionQueryParams LOSParams;
+			LOSParams.AddIgnoredActor(AvatarActor);
+			LOSParams.AddIgnoredActor(HitActor);
+			LOSParams.bTraceComplex = false;
+			FHitResult LOSHit;
+			if (GetWorld()->LineTraceSingleByChannel(LOSHit, Origin, HitActor->GetActorLocation(),
+				ECC_Visibility, LOSParams))
+			{
+				continue; // Blocked by geometry
+			}
+		}
+
 		// Apply pushback
 		const FVector PushDirection = (HitActor->GetActorLocation() - Origin).GetSafeNormal();
 		ACharacter* HitCharacter = Cast<ACharacter>(HitActor);
