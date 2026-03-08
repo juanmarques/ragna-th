@@ -1,8 +1,10 @@
 // Copyright Ragna-TH Project. All Rights Reserved.
 
 #include "ROWarpPortal.h"
+#include "ROWoEManager.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/Character.h"
+#include "RagnarokUE/Character/ROCharacterBase.h"
 #include "Net/UnrealNetwork.h"
 
 AROWarpPortal::AROWarpPortal()
@@ -85,8 +87,34 @@ void AROWarpPortal::OnPortalOverlapBegin(UPrimitiveComponent* OverlappedComponen
 
 void AROWarpPortal::UsePortal(AActor* PlayerCharacter)
 {
+	if (!PlayerCharacter)
+	{
+		return;
+	}
+
 	if (RemainingUses <= 0)
 	{
+		return;
+	}
+
+	// Check WoE teleport restriction
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UROWoEManager* WoEMgr = GI->GetSubsystem<UROWoEManager>())
+		{
+			if (WoEMgr->IsWoEActive() && WoEMgr->IsSkillRestrictedInWoE(27)) // 27 = Warp Portal skill ID
+			{
+				UE_LOG(LogTemp, Log, TEXT("Warp Portal blocked during WoE"));
+				return;
+			}
+		}
+	}
+
+	// Check zone teleport block
+	AROCharacterBase* ROChar = Cast<AROCharacterBase>(PlayerCharacter);
+	if (ROChar && ROChar->bTeleportBlocked)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Teleport blocked in current zone"));
 		return;
 	}
 

@@ -87,6 +87,10 @@ void UROWidget_NPCDialogue::SetNPCInfo(const FString& NPCName, UTexture2D* Portr
 
 void UROWidget_NPCDialogue::SetDialogueText(const FString& Text)
 {
+	// Skip any active typewriter from previous text before starting a new one
+	// This prevents accumulator bleed between dialogue pages
+	SkipTypewriter();
+
 	FullDialogueText = Text;
 	DisplayedCharCount = 0;
 	TypewriterAccumulator = 0.0f;

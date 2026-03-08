@@ -9,7 +9,6 @@ AROServiceNPC_Shop::AROServiceNPC_Shop()
 {
 	bIsShop = true;
 	ShopName = FText::FromString(TEXT("Shop"));
-	CurrentShopUser = nullptr;
 }
 
 void AROServiceNPC_Shop::OnInteract_Implementation(AROCharacterBase* Interactor)
@@ -21,18 +20,59 @@ void AROServiceNPC_Shop::OnInteract_Implementation(AROCharacterBase* Interactor)
 
 	Super::OnInteract_Implementation(Interactor);
 
-	CurrentShopUser = Interactor;
+	const int32 PlayerID = Interactor->GetUniqueID();
+	ShopUsers.Add(PlayerID, Interactor);
+
+	// Bind cleanup on player destroyed/disconnected
+	Interactor->OnDestroyed.AddUniqueDynamic(this, &AROServiceNPC_Shop::OnShopPlayerDestroyed);
 
 	UE_LOG(LogTemp, Log, TEXT("Shop NPC %s: Player opened shop '%s' with %d items."),
 		*NPCName.ToString(), *ShopName.ToString(), ShopInventory.Num());
 }
 
+AROCharacterBase* AROServiceNPC_Shop::GetShopUserForCaller() const
+{
+	// Find the calling player by checking which registered shop user is closest to the NPC
+	// This is necessary because Server RPCs on non-player actors don't carry caller info
+	const FVector NPCLocation = GetActorLocation();
+	AROCharacterBase* ClosestUser = nullptr;
+	float ClosestDistSq = FLT_MAX;
+
+	for (const auto& Pair : ShopUsers)
+	{
+		if (Pair.Value.IsValid())
+		{
+			AROCharacterBase* Character = Pair.Value.Get();
+			const float DistSq = FVector::DistSquared(NPCLocation, Character->GetActorLocation());
+			// Must be within interaction range (reasonable shop interaction distance)
+			if (DistSq < ClosestDistSq)
+			{
+				ClosestDistSq = DistSq;
+				ClosestUser = Character;
+			}
+		}
+	}
+
+	return ClosestUser;
+}
+
+void AROServiceNPC_Shop::OnShopPlayerDestroyed(AActor* DestroyedActor)
+{
+	if (!DestroyedActor)
+	{
+		return;
+	}
+
+	const int32 PlayerID = DestroyedActor->GetUniqueID();
+	ShopUsers.Remove(PlayerID);
+}
+
 void AROServiceNPC_Shop::ServerBuyItem_Implementation(int32 ShopIndex, int32 Amount)
 {
-	if (!IsValid(CurrentShopUser))
+	AROCharacterBase* Buyer = GetShopUserForCaller();
+	if (!Buyer)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Shop NPC: No active shop user for purchase."));
-		CurrentShopUser = nullptr;
 		return;
 	}
 
@@ -42,7 +82,7 @@ void AROServiceNPC_Shop::ServerBuyItem_Implementation(int32 ShopIndex, int32 Amo
 		return;
 	}
 
-	UROInventoryComponent* Inventory = CurrentShopUser->FindComponentByClass<UROInventoryComponent>();
+	UROInventoryComponent* Inventory = Buyer->FindComponentByClass<UROInventoryComponent>();
 	if (!Inventory)
 	{
 		return;
@@ -51,7 +91,7 @@ void AROServiceNPC_Shop::ServerBuyItem_Implementation(int32 ShopIndex, int32 Amo
 	const FROShopItem& ShopItem = ShopInventory[ShopIndex];
 
 	// Calculate total cost with Discount modifier
-	const int32 PricePerUnit = GetBuyPrice(ShopIndex, CurrentShopUser);
+	const int32 PricePerUnit = GetBuyPrice(ShopIndex, Buyer);
 	const int64 TotalCost = static_cast<int64>(PricePerUnit) * Amount;
 
 	// Reject purchases that exceed int32 Zeny range
@@ -105,14 +145,14 @@ bool AROServiceNPC_Shop::ServerBuyItem_Validate(int32 ShopIndex, int32 Amount)
 
 void AROServiceNPC_Shop::ServerSellItem_Implementation(int32 InventorySlot, int32 Amount)
 {
-	if (!IsValid(CurrentShopUser))
+	AROCharacterBase* Seller = GetShopUserForCaller();
+	if (!Seller)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Shop NPC: No active shop user for sale."));
-		CurrentShopUser = nullptr;
 		return;
 	}
 
-	UROInventoryComponent* Inventory = CurrentShopUser->FindComponentByClass<UROInventoryComponent>();
+	UROInventoryComponent* Inventory = Seller->FindComponentByClass<UROInventoryComponent>();
 	if (!Inventory)
 	{
 		return;
@@ -133,7 +173,7 @@ void AROServiceNPC_Shop::ServerSellItem_Implementation(int32 InventorySlot, int3
 	}
 
 	// Calculate sell price with Overcharge modifier (use int64 to avoid overflow)
-	const int32 PricePerUnit = GetSellPrice(ItemToSell.ItemID, CurrentShopUser);
+	const int32 PricePerUnit = GetSellPrice(ItemToSell.ItemID, Seller);
 	const int32 TotalSellPrice = static_cast<int32>(FMath::Min(
 		static_cast<int64>(PricePerUnit) * SellAmount, static_cast<int64>(MAX_int32)));
 

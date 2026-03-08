@@ -5,6 +5,9 @@
 #include "GameFramework/Character.h"
 #include "RagnarokUE/Character/ROCharacterBase.h"
 
+// Static member definition for zone tracking
+TMap<TWeakObjectPtr<AActor>, TArray<TWeakObjectPtr<AROMapZone>>> AROMapZone::CharacterZones;
+
 AROMapZone::AROMapZone()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -67,14 +70,22 @@ void AROMapZone::OnZoneOverlapEnd(UPrimitiveComponent* OverlappedComponent, AAct
 
 void AROMapZone::ApplyZoneRules(AActor* PlayerCharacter)
 {
+	// Track this zone for the character
+	TArray<TWeakObjectPtr<AROMapZone>>& Zones = CharacterZones.FindOrAdd(PlayerCharacter);
+	Zones.AddUnique(this);
+
 	AROCharacterBase* ROChar = Cast<AROCharacterBase>(PlayerCharacter);
 	if (ROChar)
 	{
-		ROChar->bPvPEnabled = bIsPvPZone;
-		ROChar->bTeleportBlocked = bIsNoTeleportZone;
-		ROChar->bInTown = bIsTownZone;
-		ROChar->bInGuildZone = bIsGuildZone;
-		ROChar->GuildZoneOwnerID = OwnerGuildID;
+		// Apply flags additively - any zone that enables a flag turns it on
+		if (bIsPvPZone) ROChar->bPvPEnabled = true;
+		if (bIsNoTeleportZone) ROChar->bTeleportBlocked = true;
+		if (bIsTownZone) ROChar->bInTown = true;
+		if (bIsGuildZone)
+		{
+			ROChar->bInGuildZone = true;
+			ROChar->GuildZoneOwnerID = OwnerGuildID;
+		}
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("Player %s entered zone '%s' [PvP=%d, NoTP=%d, Town=%d, Guild=%d]"),
@@ -84,14 +95,49 @@ void AROMapZone::ApplyZoneRules(AActor* PlayerCharacter)
 
 void AROMapZone::RemoveZoneRules(AActor* PlayerCharacter)
 {
+	// Remove this zone from the character's active zone list
+	TArray<TWeakObjectPtr<AROMapZone>>* Zones = CharacterZones.Find(PlayerCharacter);
+	if (Zones)
+	{
+		Zones->Remove(this);
+	}
+
 	AROCharacterBase* ROChar = Cast<AROCharacterBase>(PlayerCharacter);
 	if (ROChar)
 	{
+		// Reset all flags to defaults
 		ROChar->bPvPEnabled = false;
 		ROChar->bTeleportBlocked = false;
 		ROChar->bInTown = false;
 		ROChar->bInGuildZone = false;
 		ROChar->GuildZoneOwnerID = 0;
+
+		// Re-apply flags from all remaining active zones
+		if (Zones)
+		{
+			for (const TWeakObjectPtr<AROMapZone>& ZonePtr : *Zones)
+			{
+				AROMapZone* Zone = ZonePtr.Get();
+				if (!Zone)
+				{
+					continue;
+				}
+				if (Zone->bIsPvPZone) ROChar->bPvPEnabled = true;
+				if (Zone->bIsNoTeleportZone) ROChar->bTeleportBlocked = true;
+				if (Zone->bIsTownZone) ROChar->bInTown = true;
+				if (Zone->bIsGuildZone)
+				{
+					ROChar->bInGuildZone = true;
+					ROChar->GuildZoneOwnerID = Zone->OwnerGuildID;
+				}
+			}
+
+			// Clean up the entry if no zones remain
+			if (Zones->Num() == 0)
+			{
+				CharacterZones.Remove(PlayerCharacter);
+			}
+		}
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("Player %s left zone '%s'"),

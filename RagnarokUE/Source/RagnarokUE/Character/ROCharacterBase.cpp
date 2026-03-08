@@ -7,6 +7,7 @@
 #include "ROCharacterMovement.h"
 #include "RagnarokUE/Skills/ROAbilitySystemComponent.h"
 #include "RagnarokUE/Skills/ROAttributeSet.h"
+#include "RagnarokUE/Core/ROPlayerState.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -128,6 +129,12 @@ void AROCharacterBase::PossessedBy(AController* NewController)
 	if (HasAuthority())
 	{
 		InitializeAbilitySystem();
+
+		// Sync player state with authoritative character data
+		if (AROPlayerState* PS = NewController->GetPlayerState<AROPlayerState>())
+		{
+			PS->SyncFromCharacter(this);
+		}
 	}
 }
 
@@ -272,6 +279,7 @@ void AROCharacterBase::Respawn(FVector RespawnLocation)
 
 void AROCharacterBase::SitDown()
 {
+	if (!HasAuthority()) return;
 	if (bIsDead || bIsSitting)
 	{
 		return;
@@ -290,6 +298,7 @@ void AROCharacterBase::SitDown()
 
 void AROCharacterBase::StandUp()
 {
+	if (!HasAuthority()) return;
 	if (!bIsSitting)
 	{
 		return;
@@ -303,6 +312,12 @@ void AROCharacterBase::StandUp()
 float AROCharacterBase::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
 	AController* EventInstigator, AActor* DamageCauser)
 {
+	// Only server should process damage — CurrentHP is replicated
+	if (!HasAuthority())
+	{
+		return 0.0f;
+	}
+
 	if (bIsDead)
 	{
 		return 0.0f;
@@ -325,7 +340,21 @@ float AROCharacterBase::TakeDamage(float DamageAmount, struct FDamageEvent const
 		StandUp(); // Getting hit forces you to stand regardless of source
 	}
 
-	// 3. Ensure minimum 1 damage (RO always does at least 1 unless Miss)
+	// 3. Handle 0 (miss/immune) and negative (absorb/heal) damage
+	if (FinalDamage < 0.0f)
+	{
+		// Absorb: heal the character
+		CurrentHP = FMath::Min(CurrentHP + FMath::Abs(FMath::RoundToInt32(FinalDamage)), MaxHP);
+		OnRep_CurrentHP();
+		return 0.0f; // No damage dealt
+	}
+	else if (FinalDamage == 0.0f)
+	{
+		// Miss/immune — no damage
+		return 0.0f;
+	}
+
+	// Ensure minimum 1 damage for actual hits
 	FinalDamage = FMath::Max(1.0f, FinalDamage);
 
 	// 4. Apply damage to HP

@@ -52,6 +52,26 @@ struct RAGNAROKUE_API FROTradeSession
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trade")
 	bool bPlayer2Confirmed = false;
 
+	/** Snapshot of Player1's items at lock time, for tamper detection. */
+	UPROPERTY()
+	TArray<FROItemInstance> Player1LockedItems;
+
+	/** Snapshot of Player2's items at lock time, for tamper detection. */
+	UPROPERTY()
+	TArray<FROItemInstance> Player2LockedItems;
+
+	/** Snapshot of Player1's Zeny at lock time. */
+	UPROPERTY()
+	int32 Player1LockedZeny = 0;
+
+	/** Snapshot of Player2's Zeny at lock time. */
+	UPROPERTY()
+	int32 Player2LockedZeny = 0;
+
+	/** Time the trade request was created (for timeout). */
+	UPROPERTY()
+	float RequestTime = 0.0f;
+
 	bool IsValid() const { return TradeID > 0; }
 
 	bool IsPlayerInTrade(int32 PlayerID) const
@@ -123,6 +143,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Trade")
 	void CancelTrade(int32 TradeID, int32 PlayerID);
 
+	/** Cancel the trade session with a reason string (internal use). */
+	void CancelTradeWithReason(int32 TradeID, const FString& Reason);
+
+	/** Clean up expired trade requests that have timed out. */
+	void CleanupExpiredRequests();
+
 	// ---- Queries ----
 
 	/** Get the trade session info. */
@@ -168,6 +194,12 @@ protected:
 	TMap<int32, int32> PlayerTradeMap;
 
 	int32 NextTradeID = 1;
+
+	/** Trade request timeout in seconds. */
+	static constexpr float TradeRequestTimeout = 30.0f;
+
+	/** Timer handle for periodic cleanup of expired requests. */
+	FTimerHandle CleanupTimerHandle;
 
 	/** Find a player's pawn by their PlayerState ID. Returns nullptr if not found. */
 	APawn* FindPlayerPawnByID(int32 PlayerID) const;

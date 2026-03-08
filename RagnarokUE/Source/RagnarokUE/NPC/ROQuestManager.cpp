@@ -6,6 +6,7 @@
 #include "RagnarokUE/Character/ROLevelingComponent.h"
 #include "RagnarokUE/Character/ROJobComponent.h"
 #include "RagnarokUE/Items/ROInventoryComponent.h"
+#include "GameFramework/PlayerState.h"
 
 void UROQuestManager::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -38,6 +39,14 @@ uint32 UROQuestManager::GetPlayerKey(AROCharacterBase* Player) const
 	{
 		return 0;
 	}
+
+	// Use PlayerState's PlayerId for a stable identifier across sessions
+	if (APlayerState* PS = Player->GetPlayerState())
+	{
+		return static_cast<uint32>(PS->GetPlayerId());
+	}
+
+	// Fallback to actor unique ID if no PlayerState (e.g., AI-controlled characters)
 	return Player->GetUniqueID();
 }
 
@@ -161,6 +170,13 @@ void UROQuestManager::CompleteQuest(int32 QuestID, AROCharacterBase* Player)
 	if (!ActiveQuest)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("ROQuestManager: Quest %d not active for this player."), QuestID);
+		return;
+	}
+
+	// Prevent double-reward if quest is already marked complete
+	if (ActiveQuest->bIsComplete)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ROQuestManager: Quest %d already completed, preventing double reward."), QuestID);
 		return;
 	}
 
@@ -404,17 +420,39 @@ void UROQuestManager::NotifyNPCInteracted(AROCharacterBase* Player, int32 NPCID)
 
 	for (auto& Pair : *QuestTrackers)
 	{
-		for (TObjectPtr<UROQuestObjective>& Tracker : Pair.Value)
+		TArray<TObjectPtr<UROQuestObjective>>& Trackers = Pair.Value;
+		for (int32 TrackerIdx = 0; TrackerIdx < Trackers.Num(); ++TrackerIdx)
 		{
-			if (Tracker)
+			TObjectPtr<UROQuestObjective>& Tracker = Trackers[TrackerIdx];
+			if (!Tracker)
 			{
-				int32 OldProgress = Tracker->GetCurrentProgress();
-				Tracker->OnNPCInteracted(NPCID);
-				if (Tracker->GetCurrentProgress() != OldProgress)
+				continue;
+			}
+
+			// Enforce objective ordering: only advance this objective if all preceding ones are complete
+			if (TrackerIdx > 0)
+			{
+				bool bAllPriorComplete = true;
+				for (int32 PriorIdx = 0; PriorIdx < TrackerIdx; ++PriorIdx)
 				{
-					OnQuestObjectiveUpdated.Broadcast(Pair.Key, Tracker->GetObjectiveIndex(), Tracker->GetCurrentProgress());
-					SyncQuestProgress(PlayerKey, Pair.Key);
+					if (Trackers[PriorIdx] && !Trackers[PriorIdx]->CheckCompletion())
+					{
+						bAllPriorComplete = false;
+						break;
+					}
 				}
+				if (!bAllPriorComplete)
+				{
+					continue;
+				}
+			}
+
+			int32 OldProgress = Tracker->GetCurrentProgress();
+			Tracker->OnNPCInteracted(NPCID);
+			if (Tracker->GetCurrentProgress() != OldProgress)
+			{
+				OnQuestObjectiveUpdated.Broadcast(Pair.Key, Tracker->GetObjectiveIndex(), Tracker->GetCurrentProgress());
+				SyncQuestProgress(PlayerKey, Pair.Key);
 			}
 		}
 	}

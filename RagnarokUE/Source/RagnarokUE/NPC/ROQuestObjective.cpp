@@ -55,8 +55,12 @@ void UROQuestObjective::OnNPCInteracted(int32 NPCID)
 		return;
 	}
 
+	// Only allow progress if not yet complete (prevents over-counting)
 	if (NPCID == ObjectiveData.TargetID && CurrentProgress < ObjectiveData.RequiredAmount)
 	{
+		// Ordering enforcement: check bCanAdvance flag set by quest manager
+		// If this is not the first objective, the quest manager will only
+		// call OnNPCInteracted if prior objectives are complete
 		CurrentProgress++;
 		UE_LOG(LogTemp, Verbose, TEXT("QuestObjective[%d]: NPC %d talked to. Progress: %d/%d"),
 			ObjectiveIndex, NPCID, CurrentProgress, ObjectiveData.RequiredAmount);

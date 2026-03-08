@@ -32,6 +32,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RO Skill|MagnumBreak")
 	float FireEndowDuration;
 
+	virtual void OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
+
 protected:
 	virtual void OnCastComplete() override;
 

@@ -2,6 +2,7 @@
 
 #include "ROVendingSystem.h"
 #include "RagnarokUE/Items/ROInventoryComponent.h"
+#include "RagnarokUE/Data/ROConstants.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/GameStateBase.h"
 
@@ -45,6 +46,13 @@ bool UROVendingSystem::OpenShop(int32 PlayerID, const FString& Title, const TArr
 		}
 		if (!VendItem.Item.IsValid())
 		{
+			return false;
+		}
+		// Enforce maximum price cap to prevent INT32_MAX deadlock
+		if (static_cast<int64>(VendItem.Price) > ROConstants::MaxZeny)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Vending price %d exceeds maximum allowed (%lld)"),
+				VendItem.Price, ROConstants::MaxZeny);
 			return false;
 		}
 	}
@@ -176,7 +184,7 @@ bool UROVendingSystem::BuyFromShop(int32 BuyerID, int32 VendorID, int32 ItemInde
 		return false;
 	}
 
-	// Find and remove items from vendor's inventory by UniqueID (prevent duplication)
+	// Find the item in vendor's inventory by UniqueID (prevent duplication)
 	int32 VendorSlot = INDEX_NONE;
 	for (int32 i = 0; i < VendorInv->InventorySlots.Num(); ++i)
 	{
@@ -191,17 +199,24 @@ bool UROVendingSystem::BuyFromShop(int32 BuyerID, int32 VendorID, int32 ItemInde
 		UE_LOG(LogTemp, Warning, TEXT("Vending purchase failed: vendor no longer has the item in inventory."));
 		return false;
 	}
-	VendorInv->Internal_RemoveItem(VendorSlot, Amount);
 
-	// Add items to buyer's inventory (preserve refine, cards, etc)
+	// Re-verify buyer can receive BEFORE removing from vendor to avoid item loss
 	FROItemInstance PurchasedItem = VendItem.Item;
 	PurchasedItem.Amount = Amount;
+	if (!BuyerInv->CanAddItem(PurchasedItem.ItemID, Amount))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Buyer inventory full - purchase rejected"));
+		return false;
+	}
+
+	// Now safe to proceed - remove from vendor, then add to buyer
+	VendorInv->Internal_RemoveItem(VendorSlot, Amount);
 	int32 PlacedSlot = BuyerInv->Internal_PlaceItem(PurchasedItem);
 	if (PlacedSlot < 0)
 	{
-		// Placement failed — return item to vendor to avoid item loss
+		// Placement failed despite pre-check — return item to vendor to avoid item loss
+		UE_LOG(LogTemp, Error, TEXT("Vending purchase CRITICAL: placement failed after pre-check passed. Returning item to vendor."));
 		VendorInv->Internal_PlaceItem(PurchasedItem);
-		UE_LOG(LogTemp, Warning, TEXT("Vending purchase failed: could not place item in buyer inventory."));
 		return false;
 	}
 

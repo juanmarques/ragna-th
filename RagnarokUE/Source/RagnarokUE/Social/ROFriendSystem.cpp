@@ -112,6 +112,21 @@ bool UROFriendSystem::AreFriends(int32 PlayerID, int32 OtherID) const
 	return false;
 }
 
+void UROFriendSystem::RemovePlayer(int32 PlayerID)
+{
+	// Remove them from all other friend lists first
+	for (auto& Pair : FriendLists)
+	{
+		Pair.Value.Remove(PlayerID);
+	}
+
+	// Remove their own friend list
+	FriendLists.Remove(PlayerID);
+
+	// Remove from online tracking
+	OnlinePlayers.Remove(PlayerID);
+}
+
 void UROFriendSystem::SetPlayerOnline(int32 PlayerID)
 {
 	OnlinePlayers.Add(PlayerID);

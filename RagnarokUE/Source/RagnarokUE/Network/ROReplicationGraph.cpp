@@ -52,10 +52,15 @@ void UROReplicationGraph::RouteAddNetworkActorToNodes(const FNewReplicatedActorI
 		return;
 	}
 
-	// Emperium actors are always relevant to everyone during WoE
+	// FIX 10: Emperium actors use the spatial grid instead of always-relevant.
+	// This ensures they only replicate to clients on the same map / in proximity,
+	// rather than broadcasting to all connected clients across all maps.
 	if (ActorInfo.Actor->IsA<AROEmperiumActor>())
 	{
-		AlwaysRelevantNode->NotifyAddNetworkActor(ActorInfo);
+		if (GridNode)
+		{
+			GridNode->NotifyAddNetworkActor(ActorInfo);
+		}
 		return;
 	}
 
@@ -87,8 +92,17 @@ void UROReplicationGraph::RouteRemoveNetworkActorToNodes(const FNewReplicatedAct
 		return;
 	}
 
-	if (ActorInfo.Actor->IsA<AROEmperiumActor>() ||
-		ActorInfo.Actor->IsA<AGameStateBase>() ||
+	// FIX 10: Emperium uses the grid node, not always-relevant
+	if (ActorInfo.Actor->IsA<AROEmperiumActor>())
+	{
+		if (GridNode)
+		{
+			GridNode->NotifyRemoveNetworkActor(ActorInfo);
+		}
+		return;
+	}
+
+	if (ActorInfo.Actor->IsA<AGameStateBase>() ||
 		ActorInfo.Actor->IsA<APlayerState>() ||
 		ActorInfo.Actor->IsA<ALevelScriptActor>())
 	{

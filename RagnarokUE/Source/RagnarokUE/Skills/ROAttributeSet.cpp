@@ -102,6 +102,13 @@ void UROAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 				}
 			}
 		}
+		else if (LocalDamage < 0.0f)
+		{
+			// Negative damage means healing (e.g., elemental absorb)
+			const float HealAmount = FMath::Abs(LocalDamage);
+			const float NewHP = FMath::Min(GetMaxHP(), GetHP() + HealAmount);
+			SetHP(NewHP);
+		}
 	}
 	// Handle incoming healing meta attribute
 	else if (Data.EvaluatedData.Attribute == GetIncomingHealingAttribute())
@@ -126,15 +133,20 @@ void UROAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 		SetSP(FMath::Clamp(GetSP(), 0.0f, GetMaxSP()));
 	}
 
-	// Sync GAS attribute HP/SP back to the character's replicated properties
+	// Sync GAS attribute HP/SP back to the character's replicated properties.
+	// Only the server should write to replicated properties to avoid client-side desync.
 	if (UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent())
 	{
-		if (AROCharacterBase* Character = Cast<AROCharacterBase>(ASC->GetAvatarActor()))
+		AActor* OwningActor = ASC->GetOwnerActor();
+		if (OwningActor && OwningActor->HasAuthority())
 		{
-			Character->CurrentHP = FMath::RoundToInt32(GetHP());
-			Character->CurrentSP = FMath::RoundToInt32(GetSP());
-			Character->MaxHP = FMath::RoundToInt32(GetMaxHP());
-			Character->MaxSP = FMath::RoundToInt32(GetMaxSP());
+			if (AROCharacterBase* Character = Cast<AROCharacterBase>(ASC->GetAvatarActor()))
+			{
+				Character->CurrentHP = FMath::RoundToInt32(GetHP());
+				Character->CurrentSP = FMath::RoundToInt32(GetSP());
+				Character->MaxHP = FMath::RoundToInt32(GetMaxHP());
+				Character->MaxSP = FMath::RoundToInt32(GetMaxSP());
+			}
 		}
 	}
 }

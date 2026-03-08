@@ -160,9 +160,9 @@ struct RAGNAROKUE_API FROItemInstance
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	int32 ItemID = 0;
 
-	/** Stack amount (1 for equipment). */
+	/** Stack amount (1 for equipment, 0 for empty/default slots). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-	int32 Amount = 1;
+	int32 Amount = 0;
 
 	/** Refine level (+0 to +10, pre-renewal). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item", meta = (ClampMin = "0", ClampMax = "10"))
@@ -177,8 +177,20 @@ struct RAGNAROKUE_API FROItemInstance
 	FGuid UniqueID;
 
 	FROItemInstance()
+		: ItemID(0), Amount(0), RefineLevel(0)
 	{
-		UniqueID = FGuid::NewGuid();
+		// Don't generate a GUID for empty/default instances
+		// UniqueID will be invalid (all zeros) for empty slots
+	}
+
+	/** Factory method to create a new item instance with a valid GUID. */
+	static FROItemInstance CreateNew(int32 InItemID, int32 InAmount)
+	{
+		FROItemInstance Instance;
+		Instance.ItemID = InItemID;
+		Instance.Amount = InAmount;
+		Instance.UniqueID = FGuid::NewGuid();
+		return Instance;
 	}
 
 	bool IsValid() const
@@ -188,8 +200,8 @@ struct RAGNAROKUE_API FROItemInstance
 
 	bool IsEquipment() const
 	{
-		// An item is equipment if it's non-stackable (Amount == 1) and has card slots defined
-		return Amount == 1 && CardSlots.Num() > 0;
+		// An item is equipment if it's non-stackable (Amount == 1) with a valid item ID
+		return Amount == 1 && ItemID > 0;
 	}
 
 	bool operator==(const FROItemInstance& Other) const

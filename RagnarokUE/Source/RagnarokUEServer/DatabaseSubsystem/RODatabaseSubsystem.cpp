@@ -8,8 +8,18 @@ void URODatabaseSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
+	// FIX 15: Scan existing records to find max IDs and avoid collisions on restart
 	NextCharacterID = 1;
+	for (const auto& Pair : CharacterDatabase)
+	{
+		NextCharacterID = FMath::Max(NextCharacterID, Pair.Key + 1);
+	}
+
 	NextGuildID = 1;
+	for (const auto& Pair : GuildDatabase)
+	{
+		NextGuildID = FMath::Max(NextGuildID, Pair.Key + 1);
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("RODatabaseSubsystem: Initialized"));
 }
@@ -18,8 +28,12 @@ void URODatabaseSubsystem::Deinitialize()
 {
 	StopAutoSave();
 
-	// Final save of all dirty data
-	SaveAllDirtyCharacters();
+	// FIX 11: Check validity before attempting final save during shutdown.
+	// The world or subsystem may already be torn down at this point.
+	if (GetWorld() && DirtyCharacters.Num() > 0 && CharacterDatabase.Num() > 0)
+	{
+		SaveAllDirtyCharacters();
+	}
 
 	CharacterDatabase.Empty();
 	GuildDatabase.Empty();
@@ -75,19 +89,39 @@ TArray<FROCharacterSaveData> URODatabaseSubsystem::GetCharactersForAccount(int32
 	return Result;
 }
 
-bool URODatabaseSubsystem::DeleteCharacter(int32 CharacterID)
+bool URODatabaseSubsystem::DeleteCharacter(int32 CharacterID, int32 AccountID)
 {
-	if (CharacterDatabase.Remove(CharacterID) > 0)
+	// FIX 8: Verify the character belongs to the requesting account before deletion
+	const FROCharacterSaveData* CharData = CharacterDatabase.Find(CharacterID);
+	if (!CharData)
 	{
-		DirtyCharacters.Remove(CharacterID);
-		UE_LOG(LogTemp, Log, TEXT("RODatabaseSubsystem: Character %d deleted"), CharacterID);
-		return true;
+		UE_LOG(LogTemp, Warning, TEXT("RODatabaseSubsystem: Delete failed - Character %d not found"), CharacterID);
+		return false;
 	}
-	return false;
+
+	if (CharData->AccountID != AccountID)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RODatabaseSubsystem: Delete failed - Character %d does not belong to Account %d (actual owner: %d)"),
+			CharacterID, AccountID, CharData->AccountID);
+		return false;
+	}
+
+	CharacterDatabase.Remove(CharacterID);
+	DirtyCharacters.Remove(CharacterID);
+	UE_LOG(LogTemp, Log, TEXT("RODatabaseSubsystem: Character %d deleted by Account %d"), CharacterID, AccountID);
+	return true;
 }
 
 int32 URODatabaseSubsystem::CreateCharacter(int32 AccountID, const FString& CharacterName, EROJobClass StartingClass)
 {
+	// FIX 8: Validate that AccountID is a positive value (in a real implementation,
+	// verify it exists in the auth system's registered accounts)
+	if (AccountID <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RODatabaseSubsystem: CreateCharacter failed - invalid AccountID %d"), AccountID);
+		return 0;
+	}
+
 	if (!IsCharacterNameAvailable(CharacterName))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("RODatabaseSubsystem: Character name '%s' already taken"), *CharacterName);

@@ -166,7 +166,7 @@ void UROBTTask_PassiveFightBack::TickTask(UBehaviorTreeComponent& OwnerComp, uin
 
 			// Apply damage to target
 			FDamageEvent DamageEvent;
-			Target->TakeDamage(static_cast<float>(Monster->ATK), DamageEvent, AIController, Monster);
+			Target->TakeDamage(static_cast<float>(Monster->GetAttackDamage()), DamageEvent, AIController, Monster);
 			Monster->MarkAttackPerformed();
 		}
 	}

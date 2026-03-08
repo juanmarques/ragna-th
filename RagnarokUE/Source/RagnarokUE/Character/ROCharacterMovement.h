@@ -21,6 +21,8 @@ class RAGNAROKUE_API UROCharacterMovement : public UCharacterMovementComponent
 public:
 	UROCharacterMovement();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
 
@@ -43,8 +45,12 @@ public:
 	float BaseMovementSpeed;
 
 	/** Bonus movement speed from buffs (additive percentage, e.g. 0.25 = +25%). */
-	UPROPERTY(BlueprintReadWrite, Category="RO Movement")
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="RO Movement")
 	float MovementSpeedBonusPercent;
+
+	/** Set the movement speed bonus (server-only, clamped to 0-150%). */
+	UFUNCTION(BlueprintCallable, Category="RO Movement")
+	void SetMovementSpeedBonus(float NewBonus);
 
 	// ---- Functions ----
 

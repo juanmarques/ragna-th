@@ -50,11 +50,15 @@ protected:
 		Done
 	};
 
+	/** Maximum time (seconds) allowed for the Moving phase before forcing a timeout. */
+	static constexpr float MaxMoveTime = 10.0f;
+
 	/** Per-instance memory for this task node. */
 	struct FRoamTaskMemory
 	{
 		ERoamPhase Phase = ERoamPhase::Moving;
 		float WaitTimeRemaining = 0.0f;
 		FVector TargetLocation = FVector::ZeroVector;
+		float MoveTimer = 0.0f;
 	};
 };

@@ -157,7 +157,7 @@ void UROWidget_TradeWindow::OnZenyInputCommitted(const FText& Text, ETextCommit:
 
 	const FString ZenyStr = Text.ToString();
 	MyZeny = FCString::Atoi64(*ZenyStr);
-	MyZeny = FMath::Max(MyZeny, static_cast<int64>(0));
+	MyZeny = FMath::Clamp(MyZeny, static_cast<int64>(0), static_cast<int64>(1000000000)); // MaxZeny cap
 
 	OnTradeZenyChanged.Broadcast(MyZeny);
 }

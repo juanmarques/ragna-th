@@ -194,11 +194,13 @@ void URODamageExecution::Execute_Implementation(
 	}
 	else
 	{
-		// Misc damage - ignores DEF/MDEF
-		FinalDamage = FMath::Max(1.0f, SourceATK * SkillMod * ElementMod);
+		// Misc damage - ignores DEF/MDEF, allow negative for elemental absorb
+		FinalDamage = SourceATK * SkillMod * ElementMod;
 	}
 
-	// Apply final damage to the target's IncomingDamage meta attribute
+	// Apply final damage or healing to the target via meta attributes.
+	// Negative FinalDamage means the target absorbs the attack (elemental absorb).
+	// In that case, heal the target by the absolute value instead of dealing damage.
 	if (FinalDamage > 0.0f)
 	{
 		OutExecutionOutput.AddOutputModifier(
@@ -209,6 +211,18 @@ void URODamageExecution::Execute_Implementation(
 			)
 		);
 	}
+	else if (FinalDamage < 0.0f)
+	{
+		// Elemental absorb: heal by the absolute value
+		OutExecutionOutput.AddOutputModifier(
+			FGameplayModifierEvaluatedData(
+				UROAttributeSet::GetIncomingHealingAttribute(),
+				EGameplayModOp::Additive,
+				FMath::Abs(FinalDamage)
+			)
+		);
+	}
+	// FinalDamage == 0.0f: immunity / miss, no output
 }
 
 float URODamageExecution::CalculatePhysicalDamage(
@@ -216,10 +230,11 @@ float URODamageExecution::CalculatePhysicalDamage(
 	float TotalDEF, bool bIsCritical)
 {
 	// Pre-renewal RO Physical Damage Formula:
-	// FinalDamage = max(1, (ATK * SkillMod * ElementMod * SizeMod) - DEF)
-	// Critical: always uses max weapon ATK roll, ignores FLEE and DEF
+	// FinalDamage = (ATK * SkillMod - DEF) * ElementMod * SizeMod
+	// DEF is subtracted before elemental/size modifiers (pre-renewal order).
+	// Critical: always uses max weapon ATK roll, ignores FLEE and DEF.
 
-	float RawDamage = ATK * SkillMod * ElementMod * SizeMod;
+	float RawDamage = ATK * SkillMod;
 
 	if (!bIsCritical)
 	{
@@ -229,25 +244,38 @@ float URODamageExecution::CalculatePhysicalDamage(
 	// Critical hits: DEF is ignored. No multiplicative bonus in pre-renewal;
 	// the damage increase comes from always using max weapon ATK variance.
 
-	return FMath::Max(1.0f, RawDamage);
+	// Minimum 1 damage before modifiers (ensures non-zero base for element calc)
+	RawDamage = FMath::Max(1.0f, RawDamage);
+
+	// Apply elemental and size modifiers after DEF subtraction
+	RawDamage *= ElementMod;
+	RawDamage *= SizeMod;
+
+	// Allow negative values for elemental absorb, allow 0 for immunity.
+	// Caller handles negative (heal) and zero (no effect) appropriately.
+	return RawDamage;
 }
 
 float URODamageExecution::CalculateMagicalDamage(
 	float MATK, float SkillMod, float ElementMod, float MDEF)
 {
 	// RO Magical Damage Formula:
-	// FinalDamage = max(1, MATK * SkillMod * ElementMod - MDEF)
+	// FinalDamage = (MATK * SkillMod - MDEF) * ElementMod
 
-	const float RawDamage = MATK * SkillMod * ElementMod;
-	const float FinalDamage = RawDamage - MDEF;
+	float RawDamage = MATK * SkillMod;
+	RawDamage -= MDEF;
+	RawDamage = FMath::Max(1.0f, RawDamage);
+	RawDamage *= ElementMod;
 
-	return FMath::Max(1.0f, FinalDamage);
+	// Allow negative values for elemental absorb, allow 0 for immunity.
+	return RawDamage;
 }
 
 bool URODamageExecution::PerformHitCheck(float HIT, float FLEE)
 {
-	// RO Hit Formula: HitRate - FleeRate >= random(0, 100)
-	// HitRate = attacker's HIT, FleeRate = target's FLEE
+	// Pre-renewal base hit rate: 80% + HIT - FLEE.
+	// The +80 is the base hit rate constant from the original RO formula:
+	// HitRate = 80 + AttackerHIT - DefenderFLEE, clamped to [5, 95].
 	// Minimum 5% hit rate, maximum 95% hit rate
 	const float HitChance = FMath::Clamp(HIT - FLEE + 80.0f, 5.0f, 95.0f);
 	const float Roll = FMath::FRandRange(0.0f, 100.0f);

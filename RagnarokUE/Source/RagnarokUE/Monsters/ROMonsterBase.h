@@ -158,6 +158,9 @@ public:
 	UPROPERTY()
 	float LastAttackTime;
 
+	/** Timer handle for death destroy, stored as member so it can be cancelled. */
+	FTimerHandle DeathDestroyTimerHandle;
+
 	// ---- Delegates ----
 
 	UPROPERTY(BlueprintAssignable, Category = "Monster|Events")

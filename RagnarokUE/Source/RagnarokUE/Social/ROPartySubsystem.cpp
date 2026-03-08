@@ -123,27 +123,31 @@ void UROPartySubsystem::LeaveParty(int32 PartyID, int32 PlayerID)
 		return;
 	}
 
+	// Capture leader status before removal
+	const bool bWasLeader = (Party->LeaderPlayerID == PlayerID);
+
 	Party->MemberPlayerIDs.Remove(PlayerID);
 	PlayerPartyMap.Remove(PlayerID);
 
-	OnMemberLeft.Broadcast(PartyID, PlayerID);
-
-	// Capture remaining member count and leader status before any removal
 	const int32 RemainingMembers = Party->MemberPlayerIDs.Num();
-	const bool bWasLeader = (Party->LeaderPlayerID == PlayerID);
 
 	if (RemainingMembers == 0)
 	{
+		// Broadcast before removing the party
+		OnMemberLeft.Broadcast(PartyID, PlayerID);
 		// Party is now empty, remove it. Do not access Party pointer after this.
 		ActiveParties.Remove(PartyID);
 		return;
 	}
 
-	// If the leader left, assign a new leader
+	// Reassign leader FIRST if the leader left (before broadcasting)
 	if (bWasLeader)
 	{
 		Party->LeaderPlayerID = Party->MemberPlayerIDs[0];
 	}
+
+	// THEN broadcast member left — listeners will see the correct new leader
+	OnMemberLeft.Broadcast(PartyID, PlayerID);
 }
 
 void UROPartySubsystem::DisbandParty(int32 PartyID)
@@ -344,9 +348,18 @@ void UROPartySubsystem::DistributeExp(int32 PartyID, int64 BaseExp, int64 JobExp
 		const int32 ShareCount = LevelEligible.Num();
 		const int64 SharedBaseExp = BaseExp / ShareCount;
 		const int64 SharedJobExp = JobExp / ShareCount;
+		const int64 BaseRemainder = BaseExp % ShareCount;
+		const int64 JobRemainder = JobExp % ShareCount;
 
-		for (int32 MemberID : LevelEligible)
+		// Give remainder to a random eligible member to avoid truncation loss
+		const int32 BonusMemberIndex = FMath::RandRange(0, ShareCount - 1);
+
+		for (int32 i = 0; i < LevelEligible.Num(); ++i)
 		{
+			const int32 MemberID = LevelEligible[i];
+			const int64 MemberBaseExp = SharedBaseExp + (i == BonusMemberIndex ? BaseRemainder : 0);
+			const int64 MemberJobExp = SharedJobExp + (i == BonusMemberIndex ? JobRemainder : 0);
+
 			// Grant EXP via the leveling component
 			if (GS)
 			{
@@ -360,8 +373,8 @@ void UROPartySubsystem::DistributeExp(int32 PartyID, int64 BaseExp, int64 JobExp
 							UROLevelingComponent* LevelComp = MemberPawn->FindComponentByClass<UROLevelingComponent>();
 							if (LevelComp)
 							{
-								LevelComp->AddBaseExp(SharedBaseExp);
-								LevelComp->AddJobExp(SharedJobExp);
+								LevelComp->AddBaseExp(MemberBaseExp);
+								LevelComp->AddJobExp(MemberJobExp);
 							}
 						}
 						break;
@@ -370,7 +383,7 @@ void UROPartySubsystem::DistributeExp(int32 PartyID, int64 BaseExp, int64 JobExp
 			}
 
 			UE_LOG(LogTemp, Log, TEXT("Party EvenShare: Player %d receives BaseExp=%lld, JobExp=%lld"),
-				MemberID, SharedBaseExp, SharedJobExp);
+				MemberID, MemberBaseExp, MemberJobExp);
 		}
 	}
 	else
