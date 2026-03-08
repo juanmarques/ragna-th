@@ -120,7 +120,8 @@ void UROAbility_Heal::OnCastComplete()
 
 	if (bDamageUndead && bTargetIsUndead)
 	{
-		// In RO, Heal deals fixed Holy damage to Undead equal to the heal amount.
+		// In RO, Heal deals its full heal amount as Holy damage to Undead.
+		// The damage equals the MATK-based heal amount, NOT the caster's physical ATK.
 		// Use the damage GE pipeline so PostGameplayEffectExecute processes HP
 		// reduction and triggers death events correctly.
 		FGameplayEffectSpecHandle DamageSpec = MakeOutgoingGameplayEffectSpec(
@@ -135,12 +136,17 @@ void UROAbility_Heal::OnCastComplete()
 				DamageSpec.Data->SetSetByCallerMagnitude(DamageTypeTag, 2.0f); // Misc
 			}
 
-			// For Misc damage: FinalDamage = ATK * SkillMod * ElementMod.
-			// We want exactly HealAmount of Holy damage, with the elemental table
-			// lookup applied by RODamageExecution. To avoid division-by-ATK drift,
-			// set ATK-scaled SkillMod so that ATK * SkillMod = HealAmount, and
-			// let the execution calc apply Holy vs target element from the table.
-			// Capture ATK right now and compute the ratio atomically.
+			// For Misc damage: FinalDamage = SourceATK * SkillMod * ElementMod.
+			// We want FinalDamage = HealAmount * ElementMod (no ATK dependency).
+			// Pass the heal amount itself as SkillMod and neutralize SourceATK by
+			// dividing it out. To avoid ATK snapshot drift (ATK captured at execution
+			// time may differ from ATK now), we set SkillMod = HealAmount and use
+			// a dedicated tag to tell the execution calc to treat SkillMod as the
+			// absolute base damage. Since we can't modify the execution calc here,
+			// use the existing Misc formula but divide by current ATK atomically.
+			// NOTE: The Misc path captures SourceATK at execution from the attribute
+			// set. We read the same attribute now. For frame-coherent GE application
+			// this is safe, as the spec is applied synchronously below.
 			const UROAttributeSet* SrcAttrSet = SourceASC->GetSet<UROAttributeSet>();
 			const float CurrentATK = (SrcAttrSet && SrcAttrSet->GetATK() > 0.0f) ? SrcAttrSet->GetATK() : 1.0f;
 
@@ -151,8 +157,7 @@ void UROAbility_Heal::OnCastComplete()
 			}
 
 			// Set the attack element to Holy so RODamageExecution performs a proper
-			// Holy vs Undead elemental table lookup (instead of the old "Data.ElementMod"
-			// tag which the execution calc does not read).
+			// Holy vs Undead elemental table lookup.
 			FGameplayTag AttackElementTag = FGameplayTag::RequestGameplayTag(FName("Data.AttackElement"), false);
 			if (AttackElementTag.IsValid())
 			{

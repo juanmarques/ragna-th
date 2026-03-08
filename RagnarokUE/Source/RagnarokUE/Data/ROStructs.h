@@ -200,8 +200,9 @@ struct RAGNAROKUE_API FROItemInstance
 
 	bool IsEquipment() const
 	{
-		// An item is equipment if it's non-stackable (Amount == 1) with a valid item ID
-		return Amount == 1 && ItemID > 0;
+		// Equipment items in RO have IDs in the range 1100-2599
+		// (weapons 1100-1999, armor/shields/headgear/garments/footgear 2100-2599)
+		return ItemID >= 1100 && ItemID < 2600;
 	}
 
 	bool operator==(const FROItemInstance& Other) const

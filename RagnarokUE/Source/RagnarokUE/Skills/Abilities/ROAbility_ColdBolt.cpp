@@ -15,9 +15,9 @@ UROAbility_ColdBolt::UROAbility_ColdBolt()
 	SkillLevel = 1;
 	SkillElement = EROElement::Water;
 
-	// SP cost: 12 + 3 * Level
-	SPCostBase = 9.0f;
-	SPCostPerLevel = 3.0f;
+	// SP cost: 10 + 2 * Level (Lv1=12, Lv2=14, ... Lv10=30 per RO tables)
+	SPCostBase = 10.0f;
+	SPCostPerLevel = 2.0f;
 
 	VariableCastTimeBase = 0.7f;
 	FixedCastTime = 0.0f; // Pre-renewal has no fixed cast time

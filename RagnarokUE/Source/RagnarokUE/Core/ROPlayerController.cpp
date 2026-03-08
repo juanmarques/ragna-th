@@ -368,6 +368,9 @@ void AROPlayerController::ServerSelectTarget_Implementation(AActor* NewTarget)
 	{
 		SelectedTarget = nullptr;
 	}
+
+	// Broadcast on server so server-side systems listening to this delegate fire
+	OnTargetChanged.Broadcast(SelectedTarget);
 }
 
 bool AROPlayerController::ServerSelectTarget_Validate(AActor* NewTarget)

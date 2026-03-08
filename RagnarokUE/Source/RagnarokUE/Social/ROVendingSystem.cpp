@@ -49,9 +49,9 @@ bool UROVendingSystem::OpenShop(int32 PlayerID, const FString& Title, const TArr
 			return false;
 		}
 		// Enforce maximum price cap to prevent INT32_MAX deadlock
-		if (static_cast<int64>(VendItem.Price) > ROConstants::MaxZeny)
+		if (VendItem.Price > ROConstants::MaxZeny)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Vending price %d exceeds maximum allowed (%lld)"),
+			UE_LOG(LogTemp, Warning, TEXT("Vending price %d exceeds maximum allowed (%d)"),
 				VendItem.Price, ROConstants::MaxZeny);
 			return false;
 		}

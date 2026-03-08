@@ -32,10 +32,16 @@ UROAbility_MagnumBreak::UROAbility_MagnumBreak()
 
 void UROAbility_MagnumBreak::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
-	// Ensure fire endow timer is cleaned up when ability is removed (e.g. character destruction, disconnect)
+	// Ensure fire endow timer is cleaned up when ability is removed (e.g. character destruction, disconnect).
+	// Use the same timer manager path that was used to set the timer in ApplyFireEndow():
+	// AvatarActor->GetWorldTimerManager(). Validate the actor and its world before access.
 	if (ActorInfo && ActorInfo->AvatarActor.IsValid())
 	{
-		ActorInfo->AvatarActor->GetWorldTimerManager().ClearTimer(FireEndowTimerHandle);
+		AActor* Avatar = ActorInfo->AvatarActor.Get();
+		if (Avatar && Avatar->GetWorld())
+		{
+			Avatar->GetWorldTimerManager().ClearTimer(FireEndowTimerHandle);
+		}
 	}
 
 	Super::OnRemoveAbility(ActorInfo, Spec);

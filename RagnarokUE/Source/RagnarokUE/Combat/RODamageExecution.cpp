@@ -244,8 +244,8 @@ float URODamageExecution::CalculatePhysicalDamage(
 	// Critical hits: DEF is ignored. No multiplicative bonus in pre-renewal;
 	// the damage increase comes from always using max weapon ATK variance.
 
-	// Minimum 1 damage before modifiers (ensures non-zero base for element calc)
-	RawDamage = FMath::Max(1.0f, RawDamage);
+	// Do NOT clamp to 1 here -- allow negative values through so elemental
+	// absorb can produce negative damage after the elemental modifier.
 
 	// Apply elemental and size modifiers after DEF subtraction
 	RawDamage *= ElementMod;
@@ -264,7 +264,9 @@ float URODamageExecution::CalculateMagicalDamage(
 
 	float RawDamage = MATK * SkillMod;
 	RawDamage -= MDEF;
-	RawDamage = FMath::Max(1.0f, RawDamage);
+
+	// Do NOT clamp to 1 here -- allow negative values through so elemental
+	// absorb can produce negative damage after the elemental modifier.
 	RawDamage *= ElementMod;
 
 	// Allow negative values for elemental absorb, allow 0 for immunity.

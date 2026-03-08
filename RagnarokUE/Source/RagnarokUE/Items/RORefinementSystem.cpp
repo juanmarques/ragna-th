@@ -169,6 +169,7 @@ bool URORefinementSystem::AttemptRefine(UROInventoryComponent* Inventory, int32 
 		Item->Amount = 0;
 		Item->RefineLevel = 0;
 		Item->CardSlots.Empty();
+		Item->UniqueID.Invalidate();
 		return false;
 	}
 }

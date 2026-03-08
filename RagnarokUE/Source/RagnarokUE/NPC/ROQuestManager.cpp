@@ -356,17 +356,39 @@ void UROQuestManager::NotifyMonsterKilled(AROCharacterBase* Player, int32 Monste
 
 	for (auto& Pair : *QuestTrackers)
 	{
-		for (TObjectPtr<UROQuestObjective>& Tracker : Pair.Value)
+		TArray<TObjectPtr<UROQuestObjective>>& Trackers = Pair.Value;
+		for (int32 TrackerIdx = 0; TrackerIdx < Trackers.Num(); ++TrackerIdx)
 		{
-			if (Tracker)
+			TObjectPtr<UROQuestObjective>& Tracker = Trackers[TrackerIdx];
+			if (!Tracker)
 			{
-				int32 OldProgress = Tracker->GetCurrentProgress();
-				Tracker->OnMonsterKilled(MonsterID);
-				if (Tracker->GetCurrentProgress() != OldProgress)
+				continue;
+			}
+
+			// Enforce objective ordering: only advance this objective if all preceding ones are complete
+			if (TrackerIdx > 0)
+			{
+				bool bAllPriorComplete = true;
+				for (int32 PriorIdx = 0; PriorIdx < TrackerIdx; ++PriorIdx)
 				{
-					OnQuestObjectiveUpdated.Broadcast(Pair.Key, Tracker->GetObjectiveIndex(), Tracker->GetCurrentProgress());
-					SyncQuestProgress(PlayerKey, Pair.Key);
+					if (Trackers[PriorIdx] && !Trackers[PriorIdx]->CheckCompletion())
+					{
+						bAllPriorComplete = false;
+						break;
+					}
 				}
+				if (!bAllPriorComplete)
+				{
+					continue;
+				}
+			}
+
+			int32 OldProgress = Tracker->GetCurrentProgress();
+			Tracker->OnMonsterKilled(MonsterID);
+			if (Tracker->GetCurrentProgress() != OldProgress)
+			{
+				OnQuestObjectiveUpdated.Broadcast(Pair.Key, Tracker->GetObjectiveIndex(), Tracker->GetCurrentProgress());
+				SyncQuestProgress(PlayerKey, Pair.Key);
 			}
 		}
 	}
@@ -388,17 +410,39 @@ void UROQuestManager::NotifyItemCollected(AROCharacterBase* Player, int32 ItemID
 
 	for (auto& Pair : *QuestTrackers)
 	{
-		for (TObjectPtr<UROQuestObjective>& Tracker : Pair.Value)
+		TArray<TObjectPtr<UROQuestObjective>>& Trackers = Pair.Value;
+		for (int32 TrackerIdx = 0; TrackerIdx < Trackers.Num(); ++TrackerIdx)
 		{
-			if (Tracker)
+			TObjectPtr<UROQuestObjective>& Tracker = Trackers[TrackerIdx];
+			if (!Tracker)
 			{
-				int32 OldProgress = Tracker->GetCurrentProgress();
-				Tracker->OnItemCollected(ItemID, CurrentCount);
-				if (Tracker->GetCurrentProgress() != OldProgress)
+				continue;
+			}
+
+			// Enforce objective ordering: only advance this objective if all preceding ones are complete
+			if (TrackerIdx > 0)
+			{
+				bool bAllPriorComplete = true;
+				for (int32 PriorIdx = 0; PriorIdx < TrackerIdx; ++PriorIdx)
 				{
-					OnQuestObjectiveUpdated.Broadcast(Pair.Key, Tracker->GetObjectiveIndex(), Tracker->GetCurrentProgress());
-					SyncQuestProgress(PlayerKey, Pair.Key);
+					if (Trackers[PriorIdx] && !Trackers[PriorIdx]->CheckCompletion())
+					{
+						bAllPriorComplete = false;
+						break;
+					}
 				}
+				if (!bAllPriorComplete)
+				{
+					continue;
+				}
+			}
+
+			int32 OldProgress = Tracker->GetCurrentProgress();
+			Tracker->OnItemCollected(ItemID, CurrentCount);
+			if (Tracker->GetCurrentProgress() != OldProgress)
+			{
+				OnQuestObjectiveUpdated.Broadcast(Pair.Key, Tracker->GetObjectiveIndex(), Tracker->GetCurrentProgress());
+				SyncQuestProgress(PlayerKey, Pair.Key);
 			}
 		}
 	}
@@ -474,17 +518,39 @@ void UROQuestManager::NotifyLocationReached(AROCharacterBase* Player, FVector Lo
 
 	for (auto& Pair : *QuestTrackers)
 	{
-		for (TObjectPtr<UROQuestObjective>& Tracker : Pair.Value)
+		TArray<TObjectPtr<UROQuestObjective>>& Trackers = Pair.Value;
+		for (int32 TrackerIdx = 0; TrackerIdx < Trackers.Num(); ++TrackerIdx)
 		{
-			if (Tracker)
+			TObjectPtr<UROQuestObjective>& Tracker = Trackers[TrackerIdx];
+			if (!Tracker)
 			{
-				int32 OldProgress = Tracker->GetCurrentProgress();
-				Tracker->OnLocationReached(Location);
-				if (Tracker->GetCurrentProgress() != OldProgress)
+				continue;
+			}
+
+			// Enforce objective ordering: only advance this objective if all preceding ones are complete
+			if (TrackerIdx > 0)
+			{
+				bool bAllPriorComplete = true;
+				for (int32 PriorIdx = 0; PriorIdx < TrackerIdx; ++PriorIdx)
 				{
-					OnQuestObjectiveUpdated.Broadcast(Pair.Key, Tracker->GetObjectiveIndex(), Tracker->GetCurrentProgress());
-					SyncQuestProgress(PlayerKey, Pair.Key);
+					if (Trackers[PriorIdx] && !Trackers[PriorIdx]->CheckCompletion())
+					{
+						bAllPriorComplete = false;
+						break;
+					}
 				}
+				if (!bAllPriorComplete)
+				{
+					continue;
+				}
+			}
+
+			int32 OldProgress = Tracker->GetCurrentProgress();
+			Tracker->OnLocationReached(Location);
+			if (Tracker->GetCurrentProgress() != OldProgress)
+			{
+				OnQuestObjectiveUpdated.Broadcast(Pair.Key, Tracker->GetObjectiveIndex(), Tracker->GetCurrentProgress());
+				SyncQuestProgress(PlayerKey, Pair.Key);
 			}
 		}
 	}
@@ -506,17 +572,39 @@ void UROQuestManager::NotifySkillUsed(AROCharacterBase* Player, int32 SkillID)
 
 	for (auto& Pair : *QuestTrackers)
 	{
-		for (TObjectPtr<UROQuestObjective>& Tracker : Pair.Value)
+		TArray<TObjectPtr<UROQuestObjective>>& Trackers = Pair.Value;
+		for (int32 TrackerIdx = 0; TrackerIdx < Trackers.Num(); ++TrackerIdx)
 		{
-			if (Tracker)
+			TObjectPtr<UROQuestObjective>& Tracker = Trackers[TrackerIdx];
+			if (!Tracker)
 			{
-				int32 OldProgress = Tracker->GetCurrentProgress();
-				Tracker->OnSkillUsed(SkillID);
-				if (Tracker->GetCurrentProgress() != OldProgress)
+				continue;
+			}
+
+			// Enforce objective ordering: only advance this objective if all preceding ones are complete
+			if (TrackerIdx > 0)
+			{
+				bool bAllPriorComplete = true;
+				for (int32 PriorIdx = 0; PriorIdx < TrackerIdx; ++PriorIdx)
 				{
-					OnQuestObjectiveUpdated.Broadcast(Pair.Key, Tracker->GetObjectiveIndex(), Tracker->GetCurrentProgress());
-					SyncQuestProgress(PlayerKey, Pair.Key);
+					if (Trackers[PriorIdx] && !Trackers[PriorIdx]->CheckCompletion())
+					{
+						bAllPriorComplete = false;
+						break;
+					}
 				}
+				if (!bAllPriorComplete)
+				{
+					continue;
+				}
+			}
+
+			int32 OldProgress = Tracker->GetCurrentProgress();
+			Tracker->OnSkillUsed(SkillID);
+			if (Tracker->GetCurrentProgress() != OldProgress)
+			{
+				OnQuestObjectiveUpdated.Broadcast(Pair.Key, Tracker->GetObjectiveIndex(), Tracker->GetCurrentProgress());
+				SyncQuestProgress(PlayerKey, Pair.Key);
 			}
 		}
 	}

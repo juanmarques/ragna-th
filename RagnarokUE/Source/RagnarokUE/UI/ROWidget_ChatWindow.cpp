@@ -167,17 +167,13 @@ bool UROWidget_ChatWindow::ParseChatCommand(const FString& Input, EChatChannel& 
 		// Parse "name" format
 		if (Remainder.StartsWith(TEXT("\"")))
 		{
-			int32 EndQuote = INDEX_NONE;
-			if (Remainder.FindChar(TEXT('"'), EndQuote) && EndQuote > 0)
+			// Skip the opening quote and find the closing quote
+			const FString AfterFirstQuote = Remainder.Mid(1);
+			int32 CloseQuote = INDEX_NONE;
+			if (AfterFirstQuote.FindChar(TEXT('"'), CloseQuote) && CloseQuote > 0)
 			{
-				// Find the second quote
-				const FString AfterFirstQuote = Remainder.Mid(1);
-				int32 SecondQuote = INDEX_NONE;
-				if (AfterFirstQuote.FindChar(TEXT('"'), SecondQuote))
-				{
-					OutTargetName = AfterFirstQuote.Left(SecondQuote);
-					OutMessage = AfterFirstQuote.Mid(SecondQuote + 1).TrimStart();
-				}
+				OutTargetName = AfterFirstQuote.Left(CloseQuote);
+				OutMessage = AfterFirstQuote.Mid(CloseQuote + 1).TrimStart();
 			}
 		}
 		else
@@ -231,8 +227,8 @@ void UROWidget_ChatWindow::AppendMessageToLog(const FROChatMessage& Message)
 		return;
 	}
 
-	// Create a text block for this message with the scroll box as outer
-	UTextBlock* MsgText = NewObject<UTextBlock>(ChatLogScrollBox);
+	// Create a text block for this message with the owning widget as outer
+	UTextBlock* MsgText = NewObject<UTextBlock>(this);
 	if (!MsgText)
 	{
 		return;

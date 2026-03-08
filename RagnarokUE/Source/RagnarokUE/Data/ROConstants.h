@@ -70,7 +70,7 @@ namespace ROConstants
 	// ---- Currency ----
 
 	/** Maximum zeny a character can hold. */
-	constexpr int64 MaxZeny = 1000000000LL;
+	constexpr int32 MaxZeny = 1000000000;
 
 	// ---- Timing ----
 

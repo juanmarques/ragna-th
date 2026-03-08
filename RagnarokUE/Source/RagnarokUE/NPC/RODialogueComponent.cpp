@@ -41,10 +41,13 @@ FRODialogueNode URODialogueComponent::StartDialogue(AROCharacterBase* Player)
 	return DialogueTree[0];
 }
 
-FRODialogueNode URODialogueComponent::SelectChoice(int32 ChoiceIndex)
+FRODialogueNode URODialogueComponent::SelectChoice(int32 ChoiceIndex, AROCharacterBase* Player)
 {
-	// Use per-player session if available, fall back to legacy single-player state
-	AROCharacterBase* Player = CurrentPlayer;
+	// Use the provided player parameter; fall back to legacy CurrentPlayer only if not provided
+	if (!Player)
+	{
+		Player = CurrentPlayer;
+	}
 
 	// Find the active session for this player
 	FDialogueSession* Session = Player ? ActiveSessions.Find(Player) : nullptr;
@@ -85,7 +88,7 @@ FRODialogueNode URODialogueComponent::SelectChoice(int32 ChoiceIndex)
 	// Check if the choice ends dialogue
 	if (Choice.bEndsDialogue || Choice.NextNodeID < 0)
 	{
-		EndDialogue();
+		EndDialogue(Player);
 		return FRODialogueNode();
 	}
 
@@ -95,7 +98,7 @@ FRODialogueNode URODialogueComponent::SelectChoice(int32 ChoiceIndex)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("RODialogueComponent: Could not find node ID %d. Ending dialogue."),
 			Choice.NextNodeID);
-		EndDialogue();
+		EndDialogue(Player);
 		return FRODialogueNode();
 	}
 
@@ -133,32 +136,31 @@ FRODialogueNode URODialogueComponent::GetCurrentNode() const
 	return FRODialogueNode();
 }
 
-void URODialogueComponent::EndDialogue()
+void URODialogueComponent::EndDialogue(AROCharacterBase* Player)
 {
-	if (bIsDialogueActive)
+	// Use the provided player parameter; fall back to legacy CurrentPlayer only if not provided
+	if (!Player)
 	{
-		AROCharacterBase* Player = CurrentPlayer;
+		Player = CurrentPlayer;
+	}
 
-		// Clean up per-player session
-		if (Player)
-		{
-			ActiveSessions.Remove(Player);
-		}
+	// Clean up per-player session
+	if (Player)
+	{
+		ActiveSessions.Remove(Player);
+	}
 
-		// Update legacy state
-		bIsDialogueActive = false;
+	// If this was the legacy CurrentPlayer, clear legacy state
+	if (Player == CurrentPlayer)
+	{
 		CurrentPlayer = nullptr;
 		CurrentNodeIndex = 0;
-
-		// Check if any other sessions are still active
-		// (for the legacy bIsDialogueActive flag, only clear if no sessions remain)
-		if (ActiveSessions.Num() > 0)
-		{
-			bIsDialogueActive = true;
-		}
-
-		OnDialogueEnd.Broadcast(Player);
 	}
+
+	// Update legacy bIsDialogueActive based on remaining sessions
+	bIsDialogueActive = ActiveSessions.Num() > 0;
+
+	OnDialogueEnd.Broadcast(Player);
 }
 
 const FRODialogueNode* URODialogueComponent::FindNodeByID(int32 NodeID) const
