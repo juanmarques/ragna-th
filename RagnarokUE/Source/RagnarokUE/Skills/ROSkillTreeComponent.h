@@ -78,7 +78,7 @@ public:
 	 * Server-authoritative: learn or level up a skill.
 	 * Validates prerequisites, checks available skill points, and applies the change.
 	 */
-	UFUNCTION(Server, Reliable, BlueprintCallable)
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void ServerLearnSkill(int32 SkillID);
 
 	/**

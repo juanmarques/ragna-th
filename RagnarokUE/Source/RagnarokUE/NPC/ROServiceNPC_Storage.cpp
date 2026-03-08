@@ -235,6 +235,11 @@ bool AROServiceNPC_Storage::ServerWithdrawItem_Validate(int32 StorageSlot, int32
 	return Amount > 0 && StorageSlot >= 0;
 }
 
+bool AROServiceNPC_Storage::ServerCloseStorage_Validate()
+{
+	return true;
+}
+
 void AROServiceNPC_Storage::ServerCloseStorage_Implementation()
 {
 	if (CurrentStorageUser)

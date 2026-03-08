@@ -3,6 +3,7 @@
 #include "ROAbility_Hiding.h"
 #include "AbilitySystemComponent.h"
 #include "RagnarokUE/Skills/ROAttributeSet.h"
+#include "RagnarokUE/Character/ROCharacterBase.h"
 
 UROAbility_Hiding::UROAbility_Hiding()
 {
@@ -124,9 +125,26 @@ void UROAbility_Hiding::OnSPDrainTick()
 		return;
 	}
 
-	// Deduct SP
+	// Deduct SP using SetNumericAttributeBase to persist across recalculations
 	const float NewSP = CurrentSP - DrainAmount;
-	ASC->ApplyModToAttribute(UROAttributeSet::GetSPAttribute(), EGameplayModOp::Override, NewSP);
+	ASC->SetNumericAttributeBase(UROAttributeSet::GetSPAttribute(), NewSP);
+
+	// Sync back to replicated property since SetNumericAttributeBase bypasses PostGameplayEffectExecute
+	if (AROCharacterBase* Character = Cast<AROCharacterBase>(CachedActorInfo->AvatarActor.Get()))
+	{
+		Character->CurrentSP = FMath::RoundToInt32(NewSP);
+	}
+}
+
+void UROAbility_Hiding::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	// Ensure timer is cleaned up when ability is removed (e.g. character destruction, disconnect)
+	if (bIsHiding)
+	{
+		EndHiding();
+	}
+
+	Super::OnRemoveAbility(ActorInfo, Spec);
 }
 
 float UROAbility_Hiding::GetSPDrainPerTick() const

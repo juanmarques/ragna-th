@@ -232,7 +232,7 @@ int32 URODamageFormulas::CalculateMaxSP(int32 BaseLevel, int32 INT, EROJobClass 
 	const float JobMod = GetJobSPModifier(Job);
 	const float BaseSP = 10.0f + static_cast<float>(BaseLevel) * JobMod;
 	const float INTMultiplier = 1.0f + static_cast<float>(INT) / 100.0f;
-	const int32 INTBonus = (INT / 6) * (INT / 6);
+	const int32 INTBonus = (INT / 5) * (INT / 5);
 	return FMath::Max(1, static_cast<int32>(BaseSP * INTMultiplier) + INTBonus);
 }
 
