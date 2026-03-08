@@ -38,9 +38,10 @@ int32 URODamageFormulas::CalculateHardDEF(int32 EquipDEF)
 
 int32 URODamageFormulas::CalculateSoftDEF(int32 VIT)
 {
-	// VIT + floor(VIT/5)^2, treated as percentage reduction
-	const int32 VitBonus = (VIT / 5) * (VIT / 5);
-	return FMath::Clamp(VIT + VitBonus, 0, 100);
+	// Pre-renewal: VIT + floor(VIT/2) + floor(VIT^2/100)
+	const int32 VitHalf = VIT / 2;
+	const int32 VitSquared = (VIT * VIT) / 100;
+	return FMath::Max(0, VIT + VitHalf + VitSquared);
 }
 
 int32 URODamageFormulas::CalculateSoftMDEF(int32 INT, int32 VIT, int32 DEX)
@@ -68,8 +69,8 @@ int32 URODamageFormulas::CalculateFleeRate(int32 AGI, int32 LUK, int32 BaseLevel
 
 float URODamageFormulas::CalculateCritRate(int32 LUK)
 {
-	// Formula: LUK * 0.3 + 1
-	return LUK * 0.3f + 1.0f;
+	// Pre-renewal formula: 1 + floor(LUK/3) (integer division)
+	return 1.0f + static_cast<float>(LUK / 3);
 }
 
 // ============================================================================
@@ -453,15 +454,15 @@ const TArray<TArray<TArray<float>>>& URODamageFormulas::GetElementalTable()
 		// vs Ghost Lv1-4
 		T[2][8][0] = 1.00f; T[2][8][1] = 0.75f; T[2][8][2] = 0.50f; T[2][8][3] = 0.25f;
 		// vs Undead Lv1-4
-		T[2][9][0] = 1.00f; T[2][9][1] = 1.00f; T[2][9][2] = 0.75f; T[2][9][3] = 0.50f;
+		T[2][9][0] = 1.00f; T[2][9][1] = 1.00f; T[2][9][2] = 1.00f; T[2][9][3] = 1.00f;
 
 		// =====================================================================
 		// Fire attacking
 		// =====================================================================
 		// vs Neutral Lv1-4
 		T[3][0][0] = 1.00f; T[3][0][1] = 1.00f; T[3][0][2] = 1.00f; T[3][0][3] = 1.00f;
-		// vs Water Lv1-4
-		T[3][1][0] = 0.75f; T[3][1][1] = 0.50f; T[3][1][2] = 0.25f; T[3][1][3] = 0.00f;
+		// vs Water Lv1-4 (Fire is weak against Water)
+		T[3][1][0] = 0.50f; T[3][1][1] = 0.25f; T[3][1][2] = 0.00f; T[3][1][3] = -0.25f;
 		// vs Earth Lv1-4
 		T[3][2][0] = 1.50f; T[3][2][1] = 1.75f; T[3][2][2] = 2.00f; T[3][2][3] = 2.00f;
 		// vs Fire Lv1-4
@@ -477,7 +478,7 @@ const TArray<TArray<TArray<float>>>& URODamageFormulas::GetElementalTable()
 		// vs Ghost Lv1-4
 		T[3][8][0] = 1.00f; T[3][8][1] = 0.75f; T[3][8][2] = 0.50f; T[3][8][3] = 0.25f;
 		// vs Undead Lv1-4
-		T[3][9][0] = 1.50f; T[3][9][1] = 1.75f; T[3][9][2] = 2.00f; T[3][9][3] = 2.00f;
+		T[3][9][0] = 1.25f; T[3][9][1] = 1.50f; T[3][9][2] = 1.75f; T[3][9][3] = 2.00f;
 
 		// =====================================================================
 		// Wind attacking
@@ -487,7 +488,7 @@ const TArray<TArray<TArray<float>>>& URODamageFormulas::GetElementalTable()
 		// vs Water Lv1-4
 		T[4][1][0] = 1.50f; T[4][1][1] = 1.75f; T[4][1][2] = 2.00f; T[4][1][3] = 2.00f;
 		// vs Earth Lv1-4
-		T[4][2][0] = 0.75f; T[4][2][1] = 0.50f; T[4][2][2] = 0.25f; T[4][2][3] = 0.00f;
+		T[4][2][0] = 0.50f; T[4][2][1] = 0.25f; T[4][2][2] = 0.00f; T[4][2][3] = -0.25f;
 		// vs Fire Lv1-4
 		T[4][3][0] = 1.00f; T[4][3][1] = 1.00f; T[4][3][2] = 1.00f; T[4][3][3] = 1.00f;
 		// vs Wind Lv1-4
@@ -501,7 +502,7 @@ const TArray<TArray<TArray<float>>>& URODamageFormulas::GetElementalTable()
 		// vs Ghost Lv1-4
 		T[4][8][0] = 1.00f; T[4][8][1] = 0.75f; T[4][8][2] = 0.50f; T[4][8][3] = 0.25f;
 		// vs Undead Lv1-4
-		T[4][9][0] = 1.00f; T[4][9][1] = 1.00f; T[4][9][2] = 0.75f; T[4][9][3] = 0.50f;
+		T[4][9][0] = 1.00f; T[4][9][1] = 1.00f; T[4][9][2] = 1.25f; T[4][9][3] = 1.50f;
 
 		// =====================================================================
 		// Poison attacking
@@ -509,17 +510,17 @@ const TArray<TArray<TArray<float>>>& URODamageFormulas::GetElementalTable()
 		// vs Neutral Lv1-4
 		T[5][0][0] = 1.00f; T[5][0][1] = 1.00f; T[5][0][2] = 1.00f; T[5][0][3] = 1.00f;
 		// vs Water Lv1-4
-		T[5][1][0] = 1.00f; T[5][1][1] = 0.75f; T[5][1][2] = 0.50f; T[5][1][3] = 0.25f;
+		T[5][1][0] = 1.00f; T[5][1][1] = 1.00f; T[5][1][2] = 1.00f; T[5][1][3] = 1.00f;
 		// vs Earth Lv1-4
-		T[5][2][0] = 1.00f; T[5][2][1] = 0.75f; T[5][2][2] = 0.50f; T[5][2][3] = 0.25f;
+		T[5][2][0] = 1.00f; T[5][2][1] = 1.00f; T[5][2][2] = 1.00f; T[5][2][3] = 1.00f;
 		// vs Fire Lv1-4
-		T[5][3][0] = 1.00f; T[5][3][1] = 0.75f; T[5][3][2] = 0.50f; T[5][3][3] = 0.25f;
+		T[5][3][0] = 1.00f; T[5][3][1] = 1.00f; T[5][3][2] = 1.00f; T[5][3][3] = 1.00f;
 		// vs Wind Lv1-4
-		T[5][4][0] = 1.00f; T[5][4][1] = 0.75f; T[5][4][2] = 0.50f; T[5][4][3] = 0.25f;
+		T[5][4][0] = 1.00f; T[5][4][1] = 1.00f; T[5][4][2] = 1.00f; T[5][4][3] = 1.00f;
 		// vs Poison Lv1-4
 		T[5][5][0] = 0.00f; T[5][5][1] = 0.00f; T[5][5][2] = 0.00f; T[5][5][3] = -0.25f;
 		// vs Holy Lv1-4
-		T[5][6][0] = 0.75f; T[5][6][1] = 0.50f; T[5][6][2] = 0.25f; T[5][6][3] = 0.00f;
+		T[5][6][0] = 0.50f; T[5][6][1] = 0.25f; T[5][6][2] = 0.00f; T[5][6][3] = 0.00f;
 		// vs Shadow Lv1-4
 		T[5][7][0] = 0.50f; T[5][7][1] = 0.25f; T[5][7][2] = 0.00f; T[5][7][3] = -0.25f;
 		// vs Ghost Lv1-4
@@ -589,7 +590,7 @@ const TArray<TArray<TArray<float>>>& URODamageFormulas::GetElementalTable()
 		// vs Wind Lv1-4
 		T[8][4][0] = 1.00f; T[8][4][1] = 0.75f; T[8][4][2] = 0.50f; T[8][4][3] = 0.25f;
 		// vs Poison Lv1-4
-		T[8][5][0] = 1.00f; T[8][5][1] = 0.75f; T[8][5][2] = 0.50f; T[8][5][3] = 0.25f;
+		T[8][5][0] = 0.75f; T[8][5][1] = 0.50f; T[8][5][2] = 0.25f; T[8][5][3] = 0.00f;
 		// vs Holy Lv1-4
 		T[8][6][0] = 0.75f; T[8][6][1] = 0.50f; T[8][6][2] = 0.25f; T[8][6][3] = 0.00f;
 		// vs Shadow Lv1-4
@@ -615,7 +616,7 @@ const TArray<TArray<TArray<float>>>& URODamageFormulas::GetElementalTable()
 		// vs Poison Lv1-4
 		T[9][5][0] = -0.25f; T[9][5][1] = -0.50f; T[9][5][2] = -0.75f; T[9][5][3] = -1.00f;
 		// vs Holy Lv1-4
-		T[9][6][0] = 1.25f; T[9][6][1] = 1.50f; T[9][6][2] = 1.75f; T[9][6][3] = 2.00f;
+		T[9][6][0] = 1.00f; T[9][6][1] = 1.25f; T[9][6][2] = 1.50f; T[9][6][3] = 1.75f;
 		// vs Shadow Lv1-4
 		T[9][7][0] = 1.00f; T[9][7][1] = 1.25f; T[9][7][2] = 1.50f; T[9][7][3] = 1.75f;
 		// vs Ghost Lv1-4
@@ -695,12 +696,11 @@ int32 URODamageFormulas::CalculatePhysicalDamage(
 		TotalATK -= static_cast<float>(CalculateHardDEF(TargetHardDEF));
 	}
 
-	// Step 7: Apply Soft DEF percentage reduction
+	// Step 7: Subtract Soft DEF (flat reduction from VIT)
 	// Critical hits also ignore soft DEF
 	if (!bIsCritical)
 	{
-		const float SoftDEFReduction = 1.0f - (static_cast<float>(TargetSoftDEF) / 100.0f);
-		TotalATK *= FMath::Max(0.0f, SoftDEFReduction);
+		TotalATK -= static_cast<float>(TargetSoftDEF);
 	}
 
 	// Minimum damage is 1
@@ -733,9 +733,8 @@ int32 URODamageFormulas::CalculateMagicalDamage(
 	// Step 5: Subtract Hard MDEF (flat reduction)
 	TotalDmg -= static_cast<float>(FMath::Max(0, TargetMDEF_Hard));
 
-	// Step 6: Apply Soft MDEF percentage reduction
-	const float SoftMDEFReduction = 1.0f - (static_cast<float>(TargetMDEF_Soft) / 100.0f);
-	TotalDmg *= FMath::Max(0.0f, SoftMDEFReduction);
+	// Step 6: Subtract Soft MDEF (flat reduction from INT)
+	TotalDmg -= static_cast<float>(TargetMDEF_Soft);
 
 	// Minimum damage is 1
 	return FMath::Max(1, static_cast<int32>(TotalDmg));

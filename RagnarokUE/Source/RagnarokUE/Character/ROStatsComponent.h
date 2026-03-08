@@ -125,7 +125,7 @@ public:
 	// ---- Functions ----
 
 	/** Server-authoritative stat allocation. Validates cost, deducts points, increments stat. */
-	UFUNCTION(Server, Reliable, WithValidation, Category="Stats")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerAllocateStat(EROStat Stat);
 
 	/** Get the base value of a stat. */

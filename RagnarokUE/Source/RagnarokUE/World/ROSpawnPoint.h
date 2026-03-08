@@ -9,6 +9,7 @@
 #include "ROSpawnPoint.generated.h"
 
 class AROCharacterBase;
+class UBillboardComponent;
 
 /**
  * AROSpawnPoint

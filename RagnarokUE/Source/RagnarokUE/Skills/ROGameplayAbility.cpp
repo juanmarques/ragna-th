@@ -37,9 +37,9 @@ float UROGameplayAbility::GetVariableCastTime(int32 DEX, int32 INT_Stat) const
 		return 0.0f;
 	}
 
-	// RO formula: VariableCastTime * (1 - sqrt((DEX*2 + INT) / 530))
-	const float StatSum = static_cast<float>(DEX * 2 + INT_Stat);
-	const float Reduction = FMath::Sqrt(FMath::Clamp(StatSum / 530.0f, 0.0f, 1.0f));
+	// Pre-renewal RO formula: CastTime * (1 - DEX/150)
+	// At 150 DEX, cast time is fully reduced to 0 (instant cast)
+	const float Reduction = FMath::Clamp(static_cast<float>(DEX) / 150.0f, 0.0f, 1.0f);
 	const float Result = VariableCastTimeBase * (1.0f - Reduction);
 	return FMath::Max(0.0f, Result);
 }
@@ -127,6 +127,8 @@ void UROGameplayAbility::ActivateAbility(
 		UROCastingComponent* CastComp = ActorInfo->AvatarActor->FindComponentByClass<UROCastingComponent>();
 		if (CastComp)
 		{
+			CastComp->OnCastComplete.RemoveDynamic(this, &UROGameplayAbility::OnCastComplete);
+			CastComp->OnCastInterrupted.RemoveDynamic(this, &UROGameplayAbility::OnCastInterrupted);
 			CastComp->OnCastComplete.AddDynamic(this, &UROGameplayAbility::OnCastComplete);
 			CastComp->OnCastInterrupted.AddDynamic(this, &UROGameplayAbility::OnCastInterrupted);
 			CastComp->StartCasting(VarCast, FixedCastTime, SkillID);

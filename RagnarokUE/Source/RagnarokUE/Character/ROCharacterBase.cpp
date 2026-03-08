@@ -5,12 +5,14 @@
 #include "ROJobComponent.h"
 #include "ROLevelingComponent.h"
 #include "ROCharacterMovement.h"
-#include "AbilitySystemComponent.h"
+#include "RagnarokUE/Skills/ROAbilitySystemComponent.h"
+#include "RagnarokUE/Skills/ROAttributeSet.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
+#include "Components/CapsuleComponent.h"
 
 AROCharacterBase::AROCharacterBase(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UROCharacterMovement>(
@@ -25,15 +27,14 @@ AROCharacterBase::AROCharacterBase(const FObjectInitializer& ObjectInitializer)
 	StatsComponent = CreateDefaultSubobject<UROStatsComponent>(TEXT("StatsComponent"));
 	JobComponent = CreateDefaultSubobject<UROJobComponent>(TEXT("JobComponent"));
 	LevelingComponent = CreateDefaultSubobject<UROLevelingComponent>(TEXT("LevelingComponent"));
-	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent = CreateDefaultSubobject<UROAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 
 	// AbilitySystemComponent replication mode
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
-	// AttributeSet will be created in BeginPlay or via Blueprint
-	// Forward declared from Skills/ - created as a subobject if class is available
-	AttributeSet = nullptr;
+	// Create the AttributeSet as a subobject so GAS can find it
+	AttributeSet = CreateDefaultSubobject<UROAttributeSet>(TEXT("AttributeSet"));
 
 	// ---- Camera Setup (Isometric RO-style) ----
 
