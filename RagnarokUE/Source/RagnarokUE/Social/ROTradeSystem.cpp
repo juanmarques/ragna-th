@@ -33,6 +33,22 @@ int32 UROTradeSystem::InitiateTrade(int32 InitiatorID, int32 TargetID)
 		return 0;
 	}
 
+	// Prevent multiple pending trade requests from the same initiator
+	if (PendingRequests.Contains(InitiatorID))
+	{
+		return 0;
+	}
+
+	// Check initiator doesn't already have a pending outgoing request
+	for (const auto& Pair : PendingRequests)
+	{
+		const FROTradeSession* ExistingTrade = ActiveTrades.Find(Pair.Value);
+		if (ExistingTrade && ExistingTrade->Player1ID == InitiatorID)
+		{
+			return 0;
+		}
+	}
+
 	FROTradeSession NewTrade;
 	NewTrade.TradeID = NextTradeID++;
 	NewTrade.Player1ID = InitiatorID;
@@ -177,6 +193,17 @@ bool UROTradeSystem::SetTradeZeny(int32 TradeID, int32 PlayerID, int32 Amount)
 	if (Amount < 0)
 	{
 		return false;
+	}
+
+	// Verify the player actually has this much Zeny (prevent scam/griefing)
+	APawn* PlayerPawn = FindPlayerPawnByID(PlayerID);
+	if (PlayerPawn)
+	{
+		UROInventoryComponent* Inventory = PlayerPawn->FindComponentByClass<UROInventoryComponent>();
+		if (Inventory && Inventory->Zeny < Amount)
+		{
+			return false;
+		}
 	}
 
 	// Cannot modify after locking

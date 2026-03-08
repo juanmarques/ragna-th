@@ -89,7 +89,7 @@ void UROGameInstance::DisconnectFromServer()
 
 	// Use UE travel to disconnect any active net connection
 	UWorld* World = GetWorld();
-	if (World)
+	if (World && GEngine)
 	{
 		GEngine->SetClientTravel(World, TEXT(""), TRAVEL_Absolute);
 	}
@@ -123,6 +123,11 @@ bool UROGameInstance::InitiateNetworkConnection()
 	}
 
 	const FString TravelURL = FString::Printf(TEXT("%s:%d"), *ServerIP, ServerPort);
+	if (!GEngine)
+	{
+		UE_LOG(LogRagnarokUE, Error, TEXT("InitiateNetworkConnection – GEngine is null."));
+		return false;
+	}
 	GEngine->SetClientTravel(World, *TravelURL, TRAVEL_Absolute);
 	return true;
 }

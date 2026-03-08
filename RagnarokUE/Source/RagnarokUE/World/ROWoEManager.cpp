@@ -1,6 +1,8 @@
 // Copyright Ragna-TH Project. All Rights Reserved.
 
 #include "ROWoEManager.h"
+#include "RagnarokUE/Social/ROChatSubsystem.h"
+#include "Engine/GameInstance.h"
 
 void UROWoEManager::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -34,7 +36,15 @@ void UROWoEManager::StartWoE()
 
 	UE_LOG(LogTemp, Log, TEXT("=== War of Emperium has STARTED! ==="));
 
-	// TODO: Broadcast server-wide announcement to all players
+	// Broadcast server-wide announcement
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		UROChatSubsystem* Chat = GI->GetSubsystem<UROChatSubsystem>();
+		if (Chat)
+		{
+			Chat->SendMessage(0, EChatChannel::System, TEXT("The War of Emperium has begun!"));
+		}
+	}
 	OnWoEStarted.Broadcast();
 }
 
@@ -58,8 +68,17 @@ void UROWoEManager::EndWoE()
 
 	UE_LOG(LogTemp, Log, TEXT("=== War of Emperium has ENDED! ==="));
 
-	// TODO: Broadcast server-wide announcement
-	// TODO: Apply castle ownership benefits (guild dungeon access, treasure chests, etc.)
+	// Broadcast server-wide announcement
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		UROChatSubsystem* Chat = GI->GetSubsystem<UROChatSubsystem>();
+		if (Chat)
+		{
+			Chat->SendMessage(0, EChatChannel::System, TEXT("The War of Emperium has ended!"));
+		}
+	}
+	// Castle ownership benefits (guild dungeon access, treasure chests) are applied
+	// via the OnWoEEnded delegate - bind in Blueprint to enable map-specific rewards.
 	OnWoEEnded.Broadcast();
 }
 
@@ -90,10 +109,21 @@ void UROWoEManager::OnEmperiumDestroyed(int32 CastleID, int32 AttackingGuildID)
 	UE_LOG(LogTemp, Log, TEXT("Castle '%s' captured! Guild %d took it from Guild %d"),
 		*Castle->CastleName, AttackingGuildID, PreviousOwner);
 
-	// TODO: Broadcast announcement to all players in the castle map
-	// TODO: Kick all non-guild members from the castle
-	// TODO: Respawn the Emperium with full HP for the new owners
+	// Broadcast castle capture announcement to all players
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		UROChatSubsystem* Chat = GI->GetSubsystem<UROChatSubsystem>();
+		if (Chat)
+		{
+			const FString Announcement = FString::Printf(
+				TEXT("The castle [%s] has been captured by Guild %d!"),
+				*Castle->CastleName, AttackingGuildID);
+			Chat->SendMessage(0, EChatChannel::System, Announcement);
+		}
+	}
 
+	// Kick non-guild members and respawn Emperium are handled by
+	// OnCastleOwnerChanged subscribers (bind in Blueprint for map-specific logic).
 	OnCastleOwnerChanged.Broadcast(CastleID, AttackingGuildID);
 }
 

@@ -354,7 +354,7 @@ bool AROPlayerController::ServerSetDestination_Validate(const FVector& Destinati
 void AROPlayerController::ServerSelectTarget_Implementation(AActor* NewTarget)
 {
 	// Validate that the target is a legitimate actor in the world
-	if (NewTarget && !NewTarget->IsPendingKillPending())
+	if (NewTarget && IsValid(NewTarget))
 	{
 		SelectedTarget = NewTarget;
 		UE_LOG(LogRagnarokUE, Verbose,
@@ -432,13 +432,13 @@ bool AROPlayerController::ServerUseSkill_Validate(int32 SkillID, int32 SkillLeve
 	{
 		return false;
 	}
-	if (SkillLevel < 1 || SkillLevel > 10)
+	if (SkillLevel < 1 || SkillLevel > 50)
 	{
 		return false;
 	}
 
-	// Validate target is not pending kill (null is valid for self/ground skills)
-	if (Target && Target->IsPendingKillPending())
+	// Validate target is not being destroyed (null is valid for self/ground skills)
+	if (Target && !IsValid(Target))
 	{
 		return false;
 	}
@@ -553,7 +553,13 @@ bool AROPlayerController::TraceUnderCursor(FHitResult& OutHit) const
 	QueryParams.AddIgnoredActor(GetPawn());
 	QueryParams.bTraceComplex = false;
 
-	return GetWorld()->LineTraceSingleByChannel(
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	return World->LineTraceSingleByChannel(
 		OutHit,
 		TraceStart,
 		TraceEnd,

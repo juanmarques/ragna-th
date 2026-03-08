@@ -47,28 +47,28 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Stats")
 	int32 MaxHP;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Stats")
 	int32 ATK;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Stats")
 	int32 ATKMin;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Stats")
 	int32 ATKMax;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Stats")
 	int32 MATK;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Stats")
 	int32 DEF;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Stats")
 	int32 MDEF;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Stats")
 	int32 HIT;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Stats")
 	int32 FLEE;
 
 	// ---- Element & Type ----
@@ -76,13 +76,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Element")
 	EROElement Element;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Element")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Element")
 	EROElementLevel ElementLevel;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Type")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Type")
 	EROMonsterSize Size;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Type")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Monster|Type")
 	EROMonsterRace Race;
 
 	// ---- Behavior ----

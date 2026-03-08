@@ -196,13 +196,21 @@ bool UROPartySubsystem::KickFromParty(int32 PartyID, int32 KickerID, int32 Targe
 	return true;
 }
 
-void UROPartySubsystem::SetExpShareMode(int32 PartyID, bool bEvenShare)
+void UROPartySubsystem::SetExpShareMode(int32 PartyID, int32 RequestorID, bool bEvenShare)
 {
 	FROPartyInfo* Party = ActiveParties.Find(PartyID);
-	if (Party)
+	if (!Party)
 	{
-		Party->bEvenShare = bEvenShare;
+		return;
 	}
+
+	// Only the party leader can change EXP share mode
+	if (Party->LeaderPlayerID != RequestorID)
+	{
+		return;
+	}
+
+	Party->bEvenShare = bEvenShare;
 }
 
 FROPartyInfo UROPartySubsystem::GetPartyInfo(int32 PartyID) const

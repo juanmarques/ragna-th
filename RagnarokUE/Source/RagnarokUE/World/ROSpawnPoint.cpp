@@ -2,6 +2,7 @@
 
 #include "ROSpawnPoint.h"
 #include "Components/BillboardComponent.h"
+#include "RagnarokUE/Character/ROCharacterBase.h"
 
 AROSpawnPoint::AROSpawnPoint()
 {
@@ -27,16 +28,12 @@ void AROSpawnPoint::SetPlayerSpawnPoint(AActor* Player)
 		return;
 	}
 
-	// TODO: Store the spawn point on the player character.
-	// In the full implementation, the AROCharacterBase should have a SavedSpawnMapID and
-	// SavedSpawnLocation property that we set here.
-	// Example:
-	//   AROCharacterBase* ROChar = Cast<AROCharacterBase>(Player);
-	//   if (ROChar)
-	//   {
-	//       ROChar->SavedSpawnMapID = MapID;
-	//       ROChar->SavedSpawnLocation = GetActorLocation();
-	//   }
+	AROCharacterBase* ROChar = Cast<AROCharacterBase>(Player);
+	if (ROChar)
+	{
+		ROChar->SavedSpawnMapID = MapID;
+		ROChar->SavedSpawnLocation = GetActorLocation();
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("Spawn point '%s' on map '%s' saved for player %s"),
 		*SpawnName, *MapID.ToString(), *Player->GetName());

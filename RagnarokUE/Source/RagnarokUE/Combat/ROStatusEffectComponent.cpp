@@ -8,13 +8,19 @@
 UROStatusEffectComponent::UROStatusEffectComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bStartWithTickEnabled = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false; // Enabled on server only in BeginPlay
 	SetIsReplicatedByDefault(true);
 }
 
 void UROStatusEffectComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Only tick on server — clients don't process status effects
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		SetComponentTickEnabled(true);
+	}
 }
 
 void UROStatusEffectComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -87,6 +93,14 @@ bool UROStatusEffectComponent::ApplyStatusEffect(EROStatusEffect Effect, float D
 		ActiveEffectsArray[ExistingIdx].RemainingDuration = Duration;
 		ActiveEffectsArray[ExistingIdx].TotalDuration = Duration;
 		ActiveEffectsArray[ExistingIdx].Level = FMath::Max(ActiveEffectsArray[ExistingIdx].Level, Level);
+
+		// Reset Stone Curse phase state so reapplication restarts from Phase 1
+		if (Effect == EROStatusEffect::Stone)
+		{
+			ActiveEffectsArray[ExistingIdx].bStoneCurseHardened = false;
+			ActiveEffectsArray[ExistingIdx].StonePhaseTimer = 0.0f;
+		}
+
 		return true;
 	}
 

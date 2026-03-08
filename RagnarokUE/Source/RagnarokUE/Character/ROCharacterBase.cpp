@@ -67,6 +67,13 @@ AROCharacterBase::AROCharacterBase(const FObjectInitializer& ObjectInitializer)
 	MaxSP = 0;
 	bIsDead = false;
 	bIsSitting = false;
+	bPvPEnabled = false;
+	bTeleportBlocked = false;
+	bInTown = false;
+	bInGuildZone = false;
+	GuildZoneOwnerID = 0;
+	SavedSpawnMapID = FName(TEXT("prontera"));
+	SavedSpawnLocation = FVector::ZeroVector;
 }
 
 void AROCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -173,12 +180,14 @@ void AROCharacterBase::OnRep_bIsDead()
 	if (bIsDead)
 	{
 		// Play death animation on client
-		// Disable collision
+		// Disable collision (capsule + mesh, consistent with Die())
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 	else
 	{
-		// Restore after respawn
+		// Restore after respawn (capsule + mesh, consistent with Respawn())
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	}
 }
@@ -193,6 +202,11 @@ void AROCharacterBase::OnRep_bIsSitting()
 void AROCharacterBase::Die()
 {
 	if (bIsDead)
+	{
+		return;
+	}
+
+	if (!HasAuthority())
 	{
 		return;
 	}
@@ -218,8 +232,9 @@ void AROCharacterBase::Die()
 		DisableInput(PC);
 	}
 
-	// Disable collision
+	// Disable collision (capsule + mesh, consistent with OnRep_bIsDead)
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	UE_LOG(LogTemp, Log, TEXT("ROCharacterBase: %s has died."), *GetName());
 }
@@ -241,8 +256,9 @@ void AROCharacterBase::Respawn(FVector RespawnLocation)
 	CurrentHP = FMath::Max(1, MaxHP / 2);
 	CurrentSP = FMath::Max(0, MaxSP / 2);
 
-	// Re-enable collision
+	// Re-enable collision (capsule + mesh, consistent with Die())
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
 	// Re-enable input
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -297,14 +313,16 @@ float AROCharacterBase::TakeDamage(float DamageAmount, struct FDamageEvent const
 	//    is expected to be computed by the combat system before calling TakeDamage.
 	//    DamageAmount here is the final post-calculation damage.
 
-	// 2. Apply damage reduction from sitting (sitting characters take more damage in RO)
+	// 2. Apply sitting penalty: in RO, sitting characters take double damage from player attacks only
 	float FinalDamage = DamageAmount;
 	if (bIsSitting)
 	{
-		// In RO, sitting characters take double damage from players
-		// We keep this as a simple multiplier; combat system can override
-		FinalDamage *= 2.0f;
-		StandUp(); // Getting hit forces you to stand
+		// Only apply 2x penalty if damage source is a player-controlled character
+		if (EventInstigator && EventInstigator->IsPlayerController())
+		{
+			FinalDamage *= 2.0f;
+		}
+		StandUp(); // Getting hit forces you to stand regardless of source
 	}
 
 	// 3. Ensure minimum 1 damage (RO always does at least 1 unless Miss)

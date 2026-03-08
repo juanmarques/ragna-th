@@ -3,6 +3,7 @@
 #include "ROAbility_Hiding.h"
 #include "AbilitySystemComponent.h"
 #include "RagnarokUE/Skills/ROAttributeSet.h"
+#include "RagnarokUE/Character/ROCharacterBase.h"
 
 UROAbility_Hiding::UROAbility_Hiding()
 {
@@ -54,11 +55,18 @@ void UROAbility_Hiding::OnCastComplete()
 		ASC->AddLooseGameplayTag(HidingTag);
 	}
 
-	// Start SP drain timer
+	// Start SP drain timer (use weak pointer to avoid crash if ability is destroyed while timer pending)
 	if (CachedActorInfo->AvatarActor.IsValid())
 	{
+		TWeakObjectPtr<UROAbility_Hiding> WeakThis(this);
 		FTimerDelegate TimerDelegate;
-		TimerDelegate.BindUObject(this, &UROAbility_Hiding::OnSPDrainTick);
+		TimerDelegate.BindLambda([WeakThis]()
+		{
+			if (WeakThis.IsValid())
+			{
+				WeakThis->OnSPDrainTick();
+			}
+		});
 
 		CachedActorInfo->AvatarActor->GetWorldTimerManager().SetTimer(
 			SPDrainTimerHandle, TimerDelegate, SPDrainTickInterval, true);
@@ -124,9 +132,26 @@ void UROAbility_Hiding::OnSPDrainTick()
 		return;
 	}
 
-	// Deduct SP
+	// Deduct SP using SetNumericAttributeBase to persist across recalculations
 	const float NewSP = CurrentSP - DrainAmount;
-	ASC->ApplyModToAttribute(UROAttributeSet::GetSPAttribute(), EGameplayModOp::Override, NewSP);
+	ASC->SetNumericAttributeBase(UROAttributeSet::GetSPAttribute(), NewSP);
+
+	// Sync back to replicated property since SetNumericAttributeBase bypasses PostGameplayEffectExecute
+	if (AROCharacterBase* Character = Cast<AROCharacterBase>(CachedActorInfo->AvatarActor.Get()))
+	{
+		Character->CurrentSP = FMath::RoundToInt32(NewSP);
+	}
+}
+
+void UROAbility_Hiding::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	// Ensure timer is cleaned up when ability is removed (e.g. character destruction, disconnect)
+	if (bIsHiding)
+	{
+		EndHiding();
+	}
+
+	Super::OnRemoveAbility(ActorInfo, Spec);
 }
 
 float UROAbility_Hiding::GetSPDrainPerTick() const
