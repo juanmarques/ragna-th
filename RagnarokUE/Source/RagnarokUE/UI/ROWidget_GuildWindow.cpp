@@ -104,6 +104,11 @@ void UROWidget_GuildWindow::OnLeaveGuildClicked()
 
 void UROWidget_GuildWindow::OnExpTaxSliderChanged(float Value)
 {
+	if (!bIsGuildMaster)
+	{
+		return;
+	}
+
 	const int32 TaxPercent = FMath::RoundToInt(Value * 100.0f);
 
 	if (Text_ExpTaxValue)

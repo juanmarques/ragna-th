@@ -10,6 +10,8 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "RagnarokUE/Skills/ROSkillTreeComponent.h"
+#include "AbilitySystemComponent.h"
 
 // ---------------------------------------------------------------
 // Construction
@@ -218,10 +220,20 @@ void AROPlayerController::RotateCamera(float YawDelta)
 void AROPlayerController::SelectTarget(AActor* NewTarget)
 {
 	AActor* OldTarget = SelectedTarget;
-	SelectedTarget = NewTarget;
 
 	if (OldTarget != NewTarget)
 	{
+		// Only the server should modify the replicated property directly
+		if (HasAuthority())
+		{
+			SelectedTarget = NewTarget;
+		}
+		else
+		{
+			// On the client, send to server and let replication update SelectedTarget
+			ServerSelectTarget(NewTarget);
+		}
+
 		OnTargetChanged.Broadcast(NewTarget);
 
 		if (NewTarget)
@@ -231,12 +243,6 @@ void AROPlayerController::SelectTarget(AActor* NewTarget)
 		else
 		{
 			UE_LOG(LogRagnarokUE, Log, TEXT("SelectTarget – Target cleared."));
-		}
-
-		// Notify server
-		if (!HasAuthority())
-		{
-			ServerSelectTarget(NewTarget);
 		}
 	}
 }
@@ -376,13 +382,47 @@ void AROPlayerController::ServerUseSkill_Implementation(int32 SkillID, int32 Ski
 		SkillLevel,
 		Target ? *Target->GetName() : TEXT("Self/Ground"));
 
-	// TODO: Route to the skill system component on the pawn.
-	// APawn* ControlledPawn = GetPawn();
-	// if (ControlledPawn)
-	// {
-	//     UROSkillComponent* SkillComp = ControlledPawn->FindComponentByClass<UROSkillComponent>();
-	//     if (SkillComp) { SkillComp->ExecuteSkill(SkillID, SkillLevel, Target); }
-	// }
+	APawn* ControlledPawn = GetPawn();
+	if (!ControlledPawn)
+	{
+		return;
+	}
+
+	// Validate the player has learned this skill at the requested level
+	UROSkillTreeComponent* SkillTree = ControlledPawn->FindComponentByClass<UROSkillTreeComponent>();
+	if (!SkillTree)
+	{
+		UE_LOG(LogRagnarokUE, Warning, TEXT("ServerUseSkill – No SkillTreeComponent on pawn."));
+		return;
+	}
+
+	const int32 LearnedLevel = SkillTree->GetSkillLevel(SkillID);
+	if (LearnedLevel <= 0)
+	{
+		UE_LOG(LogRagnarokUE, Warning, TEXT("ServerUseSkill – Player has not learned skill %d."), SkillID);
+		return;
+	}
+
+	// Clamp requested level to what the player has actually learned
+	const int32 ActualLevel = FMath::Min(SkillLevel, LearnedLevel);
+
+	// Activate the skill via the Ability System Component
+	UAbilitySystemComponent* ASC = ControlledPawn->FindComponentByClass<UAbilitySystemComponent>();
+	if (ASC)
+	{
+		// Store the target for the ability to pick up
+		SelectedTarget = Target;
+
+		// Find the ability spec by skill ID tag
+		FGameplayTag SkillTag = FGameplayTag::RequestGameplayTag(
+			FName(*FString::Printf(TEXT("Skill.ID.%d"), SkillID)), false);
+		if (SkillTag.IsValid())
+		{
+			FGameplayTagContainer TagContainer;
+			TagContainer.AddTag(SkillTag);
+			ASC->TryActivateAbilitiesByTag(TagContainer);
+		}
+	}
 }
 
 bool AROPlayerController::ServerUseSkill_Validate(int32 SkillID, int32 SkillLevel, AActor* Target)
@@ -392,10 +432,17 @@ bool AROPlayerController::ServerUseSkill_Validate(int32 SkillID, int32 SkillLeve
 	{
 		return false;
 	}
-	if (SkillLevel < 1 || SkillLevel > 20)
+	if (SkillLevel < 1 || SkillLevel > 10)
 	{
 		return false;
 	}
+
+	// Validate target is not pending kill (null is valid for self/ground skills)
+	if (Target && Target->IsPendingKillPending())
+	{
+		return false;
+	}
+
 	return true;
 }
 

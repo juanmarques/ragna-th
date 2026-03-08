@@ -31,16 +31,14 @@ void UROWidget_Hotbar::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
 
-	// Tick cooldowns for the current row
-	const int32 RowOffset = CurrentRow * SLOTS_PER_ROW;
+	// Tick cooldowns for ALL rows (cooldowns are global, not per-visible-row)
 	bool bNeedsRefresh = false;
 
-	for (int32 i = 0; i < SLOTS_PER_ROW; ++i)
+	for (int32 i = 0; i < AllSlots.Num(); ++i)
 	{
-		const int32 SlotIdx = RowOffset + i;
-		if (AllSlots.IsValidIndex(SlotIdx) && AllSlots[SlotIdx].CooldownRemaining > 0.0f)
+		if (AllSlots[i].CooldownRemaining > 0.0f)
 		{
-			AllSlots[SlotIdx].CooldownRemaining = FMath::Max(0.0f, AllSlots[SlotIdx].CooldownRemaining - InDeltaTime);
+			AllSlots[i].CooldownRemaining = FMath::Max(0.0f, AllSlots[i].CooldownRemaining - InDeltaTime);
 			bNeedsRefresh = true;
 		}
 	}

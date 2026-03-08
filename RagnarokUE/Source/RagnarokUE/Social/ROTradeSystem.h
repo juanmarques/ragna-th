@@ -6,6 +6,7 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "RagnarokUE/Data/ROEnums.h"
 #include "RagnarokUE/Data/ROStructs.h"
+#include "GameFramework/GameStateBase.h"
 #include "ROTradeSystem.generated.h"
 
 /** Represents an active trade session between two players. */
@@ -167,4 +168,7 @@ protected:
 	TMap<int32, int32> PlayerTradeMap;
 
 	int32 NextTradeID = 1;
+
+	/** Find a player's pawn by their PlayerState ID. Returns nullptr if not found. */
+	APawn* FindPlayerPawnByID(int32 PlayerID) const;
 };

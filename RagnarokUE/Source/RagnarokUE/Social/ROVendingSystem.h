@@ -123,4 +123,7 @@ protected:
 	/** All active vending shops, keyed by VendorPlayerID. */
 	UPROPERTY()
 	TMap<int32, FROVendingShop> ActiveShops;
+
+	/** Find a player's pawn by their PlayerState ID. Returns nullptr if not found. */
+	APawn* FindPlayerPawnByID(int32 PlayerID) const;
 };
