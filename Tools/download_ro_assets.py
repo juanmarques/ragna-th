@@ -2,13 +2,15 @@
 """
 Ragnarok Online Asset Downloader for Ragna-TH Project
 
-Downloads item icons, skill icons, and monster sprites from publicly available
-Ragnarok Online community resources and saves them as PNGs in the UE5 Content
-directory structure.
+Downloads the COMPLETE set of item icons, skill icons, and monster sprites
+from publicly available Ragnarok Online community resources.
 
 Usage:
-    python3 Tools/download_ro_assets.py [--all] [--items] [--skills] [--monsters] [--elements]
-    python3 Tools/download_ro_assets.py --all --output-dir /path/to/RagnarokUE/Content
+    python3 Tools/download_ro_assets.py --all          # Full RO asset set
+    python3 Tools/download_ro_assets.py --items        # All item icons only
+    python3 Tools/download_ro_assets.py --skills       # All skill icons only
+    python3 Tools/download_ro_assets.py --monsters     # All monster sprites only
+    python3 Tools/download_ro_assets.py --workers 8    # Parallel downloads
 
 Sources:
     - Item icons: static.divine-pride.net
@@ -23,13 +25,15 @@ import time
 import urllib.request
 import urllib.error
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 # CDN URL patterns
-ITEM_ICON_URL = "https://static.divine-pride.net/images/items/item/{item_id}.png"
-ITEM_COLLECTION_URL = "https://static.divine-pride.net/images/items/collection/{item_id}.png"
-SKILL_ICON_URL = "https://static.divine-pride.net/images/skills/{skill_id}.png"
-MONSTER_IMAGE_URL = "https://static.divine-pride.net/images/mobs/png/{monster_id}.png"
+ITEM_ICON_URL = "https://static.divine-pride.net/images/items/item/{id}.png"
+ITEM_COLLECTION_URL = "https://static.divine-pride.net/images/items/collection/{id}.png"
+SKILL_ICON_URL = "https://static.divine-pride.net/images/skills/{id}.png"
+MONSTER_IMAGE_URL = "https://static.divine-pride.net/images/mobs/png/{id}.png"
 
 # Default output relative to project root
 DEFAULT_CONTENT_DIR = os.path.join(
@@ -37,225 +41,223 @@ DEFAULT_CONTENT_DIR = os.path.join(
     "RagnarokUE", "Content"
 )
 
-# All IDs used in the Ragna-TH codebase
-ITEM_IDS = {
-    # Consumables
-    501: "Red_Potion",
-    505: "Blue_Potion",
-    512: "Apple",
-    515: "Meat",
-    511: "Green_Herb",
-    601: "Wing_of_Fly",
-    619: "Old_Card_Album",
-    620: "Orange_Juice",
-    713: "Empty_Bottle",
-    741: "Unripe_Apple",
-    # Materials
-    705: "Clover",
-    908: "Spawn",
-    909: "Jellopy",
-    910: "Insect_Feeler",
-    914: "Fluff",
-    915: "Chrysalis",
-    917: "Feather_of_Birds",
-    918: "Singing_Plant",
-    924: "Worm_Peeling",
-    935: "Shell",
-    938: "Sticky_Mucus",
-    940: "Grasshoppers_Leg",
-    943: "Iron",
-    949: "Feather",
-    999: "Steel",
-    # Equipment
-    1101: "Sword",
-    1201: "Knife",
-    1301: "Axe",
-    1402: "Violin",
-    1501: "Mace",
-    1601: "Rod",
-    1701: "Bow",
-    1750: "Arrow",
-    # Armor
-    1019: "Wooden_Mail",
-    # Cards
-    4001: "Poring_Card",
-    4002: "Fabre_Card",
-    4003: "Pupa_Card",
-    4004: "Willow_Card",
-    4005: "Condor_Card",
-    4006: "Lunatic_Card",
-    4007: "Roda_Frog_Card",
-    4018: "Steel_Chonchon_Card",
-    4020: "Thief_Bug_Card",
-    4021: "Rocker_Card",
-    4033: "Drops_Card",
-    # Quest items
-    7001: "Swordsman_Badge",
-    7002: "Mage_Test_Reagent",
-}
+# ============================================================================
+# Complete Ragnarok Online ID ranges
+# ============================================================================
 
-SKILL_IDS = {
-    5: "Bash",
-    7: "Magnum_Break",
-    19: "Fire_Bolt",
-    20: "Cold_Bolt",
-    21: "Lightning_Bolt",
-    28: "Heal",
-    42: "Discount",
-    46: "Double_Strafe",
-    51: "Hiding",
-}
+# Items: 501-30000 covers all classic through renewal items
+# Major ranges:
+#   501-999    Usable items (potions, herbs, cooking materials)
+#   1000-1999  Weapons & shields
+#   2000-2999  Armor, garments, shoes, accessories
+#   3000-3999  Taming items, misc
+#   4000-4999  Cards
+#   5000-5999  Headgears (upper)
+#   6000-6999  Delay-consume, shadow gear, costume
+#   7000-7999  Etc items (quest, crafting)
+#   10000-19999 Renewal items
+#   20000-30000 Extended renewal items
+ITEM_RANGES = [
+    (501, 1000),      # Usable items
+    (1000, 2000),     # Weapons & shields
+    (2000, 3000),     # Armor & accessories
+    (3000, 4000),     # Taming, misc
+    (4000, 5000),     # Cards
+    (5000, 6000),     # Headgears
+    (6000, 7000),     # Shadow/costume gear
+    (7000, 8000),     # Etc items
+    (10000, 20000),   # Renewal items
+    (20000, 32000),   # Extended renewal
+]
 
-MONSTER_IDS = {
-    1002: "Poring",
-    1007: "Fabre",
-    1008: "Pupa",
-    1009: "Condor",
-    1010: "Willow",
-    1012: "Roda_Frog",
-    1031: "Poporing",
-    1042: "Steel_Chonchon",
-    1051: "Thief_Bug",
-    1052: "Rocker",
-    1063: "Lunatic",
-    1113: "Drops",
-}
+# Skills: 1-3036 covers all skills through 4th jobs
+SKILL_RANGES = [
+    (1, 700),         # 1st/2nd class skills + homunculus
+    (700, 1500),      # Extended/3rd class skills
+    (1500, 2600),     # 3rd class / rebellion / summoner
+    (2600, 3100),     # 4th class skills
+    (3100, 3600),     # Extended 4th
+    (4000, 4300),     # Soul linker / star gladiator extended
+    (5000, 5300),     # Newer skills
+    (8000, 8500),     # Special/event skills
+]
 
-# Element names for UI icons (these use skill-like icons in RO)
+# Monsters: 1001-4000 covers classic + renewal mobs
+MONSTER_RANGES = [
+    (1001, 2000),     # Classic monsters (Prontera, Payon, etc.)
+    (2000, 2500),     # Episode monsters (Rachel, Veins, etc.)
+    (2500, 3000),     # Bio Lab, Instances
+    (3000, 3600),     # Renewal monsters
+    (3600, 4100),     # Extended renewal
+]
+
+# Element names for UI icons
 ELEMENT_NAMES = [
     "Neutral", "Water", "Earth", "Fire", "Wind",
     "Poison", "Holy", "Shadow", "Ghost", "Undead"
 ]
 
+# Thread-safe counters
+_print_lock = threading.Lock()
 
-def download_file(url, output_path, retries=3, delay=1.0):
-    """Download a file with retry logic and exponential backoff."""
+
+def download_file(url, output_path, retries=2, delay=0.5):
+    """Download a file with retry logic."""
     for attempt in range(retries):
         try:
             req = urllib.request.Request(url, headers={
                 "User-Agent": "RagnaTH-AssetDownloader/1.0"
             })
-            with urllib.request.urlopen(req, timeout=15) as response:
+            with urllib.request.urlopen(req, timeout=10) as response:
                 data = response.read()
-                if len(data) < 100:  # Likely an error page
+                if len(data) < 100:  # Likely an error/placeholder
                     return False
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 with open(output_path, "wb") as f:
                     f.write(data)
                 return True
-        except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return False  # Asset doesn't exist, no retry
             if attempt < retries - 1:
-                wait = delay * (2 ** attempt)
-                time.sleep(wait)
+                time.sleep(delay * (2 ** attempt))
             else:
                 return False
-        except Exception:
-            return False
+        except (urllib.error.URLError, Exception):
+            if attempt < retries - 1:
+                time.sleep(delay * (2 ** attempt))
+            else:
+                return False
     return False
 
 
-def download_items(content_dir, include_collection=False):
-    """Download item icons."""
+def download_range(url_template, output_dir, id_start, id_end,
+                   category_name, workers=4, rate_limit=0.05):
+    """Download assets for a range of IDs using parallel workers."""
+    success, fail, skip, not_found = 0, 0, 0, 0
+
+    def fetch_one(asset_id):
+        filename = f"{asset_id}.png"
+        path = os.path.join(output_dir, filename)
+
+        if os.path.exists(path):
+            return ("skip", asset_id)
+
+        url = url_template.format(id=asset_id)
+        if download_file(url, path):
+            return ("ok", asset_id)
+        else:
+            return ("miss", asset_id)
+
+    total = id_end - id_start
+    batch_size = 100
+    current = id_start
+
+    while current < id_end:
+        batch_end = min(current + batch_size, id_end)
+        ids = range(current, batch_end)
+
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(fetch_one, i): i for i in ids}
+            for future in as_completed(futures):
+                status, aid = future.result()
+                if status == "ok":
+                    success += 1
+                elif status == "skip":
+                    skip += 1
+                else:
+                    not_found += 1
+
+        # Progress update every batch
+        done = current - id_start + batch_size
+        with _print_lock:
+            print(f"\r  {category_name}: {min(done, total)}/{total} scanned "
+                  f"({success} new, {skip} cached, {not_found} N/A)", end="", flush=True)
+
+        current = batch_end
+        time.sleep(rate_limit)  # Small pause between batches
+
+    print()  # Newline after progress
+    return success, fail, skip, not_found
+
+
+def download_items(content_dir, workers=4):
+    """Download all item icons across full RO ID ranges."""
     icon_dir = os.path.join(content_dir, "Items", "Icons")
-    collection_dir = os.path.join(content_dir, "Items", "Collection")
-    success, fail = 0, 0
+    total_success, total_skip, total_na = 0, 0, 0
 
-    print(f"\n--- Downloading {len(ITEM_IDS)} item icons ---")
-    for item_id, name in sorted(ITEM_IDS.items()):
-        filename = f"{item_id}_{name}.png"
+    print(f"\n{'='*60}")
+    print(f"  DOWNLOADING COMPLETE ITEM ICON SET")
+    print(f"{'='*60}")
 
-        # Item icon (24x24)
-        url = ITEM_ICON_URL.format(item_id=item_id)
-        path = os.path.join(icon_dir, filename)
-        if os.path.exists(path):
-            print(f"  [SKIP] {filename} (already exists)")
-            success += 1
-            continue
+    for start, end in ITEM_RANGES:
+        print(f"\n  Range {start}-{end}:")
+        s, _, sk, na = download_range(
+            ITEM_ICON_URL, icon_dir, start, end,
+            f"Items {start}-{end}", workers
+        )
+        total_success += s
+        total_skip += sk
+        total_na += na
 
-        if download_file(url, path):
-            print(f"  [OK]   {filename}")
-            success += 1
-        else:
-            print(f"  [FAIL] {filename} ({url})")
-            fail += 1
-
-        # Collection image (75x100)
-        if include_collection:
-            col_url = ITEM_COLLECTION_URL.format(item_id=item_id)
-            col_path = os.path.join(collection_dir, filename)
-            if not os.path.exists(col_path):
-                download_file(col_url, col_path)
-
-        time.sleep(0.2)  # Rate limiting
-
-    print(f"Items: {success} downloaded, {fail} failed")
-    return success, fail
+    print(f"\n  Items total: {total_success} new + {total_skip} cached "
+          f"({total_na} not available)")
+    return total_success + total_skip, 0
 
 
-def download_skills(content_dir):
-    """Download skill icons."""
+def download_skills(content_dir, workers=4):
+    """Download all skill icons."""
     skill_dir = os.path.join(content_dir, "UI", "Icons", "Skills")
-    success, fail = 0, 0
+    total_success, total_skip, total_na = 0, 0, 0
 
-    print(f"\n--- Downloading {len(SKILL_IDS)} skill icons ---")
-    for skill_id, name in sorted(SKILL_IDS.items()):
-        filename = f"{skill_id}_{name}.png"
-        url = SKILL_ICON_URL.format(skill_id=skill_id)
-        path = os.path.join(skill_dir, filename)
+    print(f"\n{'='*60}")
+    print(f"  DOWNLOADING COMPLETE SKILL ICON SET")
+    print(f"{'='*60}")
 
-        if os.path.exists(path):
-            print(f"  [SKIP] {filename} (already exists)")
-            success += 1
-            continue
+    for start, end in SKILL_RANGES:
+        print(f"\n  Range {start}-{end}:")
+        s, _, sk, na = download_range(
+            SKILL_ICON_URL, skill_dir, start, end,
+            f"Skills {start}-{end}", workers
+        )
+        total_success += s
+        total_skip += sk
+        total_na += na
 
-        if download_file(url, path):
-            print(f"  [OK]   {filename}")
-            success += 1
-        else:
-            print(f"  [FAIL] {filename} ({url})")
-            fail += 1
-        time.sleep(0.2)
-
-    print(f"Skills: {success} downloaded, {fail} failed")
-    return success, fail
+    print(f"\n  Skills total: {total_success} new + {total_skip} cached "
+          f"({total_na} not available)")
+    return total_success + total_skip, 0
 
 
-def download_monsters(content_dir):
-    """Download monster sprites."""
+def download_monsters(content_dir, workers=4):
+    """Download all monster sprites."""
     monster_dir = os.path.join(content_dir, "Monsters", "Icons")
-    success, fail = 0, 0
+    total_success, total_skip, total_na = 0, 0, 0
 
-    print(f"\n--- Downloading {len(MONSTER_IDS)} monster sprites ---")
-    for monster_id, name in sorted(MONSTER_IDS.items()):
-        filename = f"{monster_id}_{name}.png"
-        url = MONSTER_IMAGE_URL.format(monster_id=monster_id)
-        path = os.path.join(monster_dir, filename)
+    print(f"\n{'='*60}")
+    print(f"  DOWNLOADING COMPLETE MONSTER SPRITE SET")
+    print(f"{'='*60}")
 
-        if os.path.exists(path):
-            print(f"  [SKIP] {filename} (already exists)")
-            success += 1
-            continue
+    for start, end in MONSTER_RANGES:
+        print(f"\n  Range {start}-{end}:")
+        s, _, sk, na = download_range(
+            MONSTER_IMAGE_URL, monster_dir, start, end,
+            f"Monsters {start}-{end}", workers
+        )
+        total_success += s
+        total_skip += sk
+        total_na += na
 
-        if download_file(url, path):
-            print(f"  [OK]   {filename}")
-            success += 1
-        else:
-            print(f"  [FAIL] {filename} ({url})")
-            fail += 1
-        time.sleep(0.2)
-
-    print(f"Monsters: {success} downloaded, {fail} failed")
-    return success, fail
+    print(f"\n  Monsters total: {total_success} new + {total_skip} cached "
+          f"({total_na} not available)")
+    return total_success + total_skip, 0
 
 
 def generate_element_placeholders(content_dir):
-    """Generate simple colored placeholder PNGs for element icons.
-    These are 24x24 solid-color squares since there's no standard
-    CDN source for element icons."""
+    """Generate colored placeholder PNGs for element icons."""
     element_dir = os.path.join(content_dir, "UI", "Icons", "Elements")
     os.makedirs(element_dir, exist_ok=True)
 
-    # Element -> RGB color mapping
     colors = {
         "Neutral": (200, 200, 200),
         "Water": (64, 128, 255),
@@ -277,19 +279,17 @@ def generate_element_placeholders(content_dir):
         path = os.path.join(element_dir, filename)
 
         if os.path.exists(path):
-            print(f"  [SKIP] {filename} (already exists)")
+            print(f"  [SKIP] {filename}")
             success += 1
             continue
 
-        # Create a minimal 24x24 PNG (uncompressed)
         r, g, b = colors.get(elem, (128, 128, 128))
         png_data = create_minimal_png(24, 24, r, g, b)
         with open(path, "wb") as f:
             f.write(png_data)
-        print(f"  [OK]   {filename} (placeholder)")
+        print(f"  [OK]   {filename}")
         success += 1
 
-    print(f"Elements: {success} generated")
     return success, 0
 
 
@@ -303,53 +303,87 @@ def create_minimal_png(width, height, r, g, b):
         crc = struct.pack(">I", zlib.crc32(c) & 0xFFFFFFFF)
         return struct.pack(">I", len(data)) + c + crc
 
-    # PNG signature
     sig = b"\x89PNG\r\n\x1a\n"
-
-    # IHDR: width, height, 8-bit RGB, no interlace
     ihdr_data = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
     ihdr = chunk(b"IHDR", ihdr_data)
 
-    # IDAT: pixel data (filter byte 0 + RGB for each row)
     raw_rows = b""
     for _ in range(height):
-        raw_rows += b"\x00"  # filter: none
+        raw_rows += b"\x00"
         raw_rows += bytes([r, g, b]) * width
     compressed = zlib.compress(raw_rows)
     idat = chunk(b"IDAT", compressed)
-
-    # IEND
     iend = chunk(b"IEND", b"")
 
     return sig + ihdr + idat + iend
 
 
 def write_asset_manifest(content_dir):
-    """Write a JSON manifest mapping IDs to downloaded asset paths."""
-    manifest = {
-        "items": {str(k): f"Items/Icons/{k}_{v}.png" for k, v in ITEM_IDS.items()},
-        "skills": {str(k): f"UI/Icons/Skills/{k}_{v}.png" for k, v in SKILL_IDS.items()},
-        "monsters": {str(k): f"Monsters/Icons/{k}_{v}.png" for k, v in MONSTER_IDS.items()},
-        "elements": {str(i): f"UI/Icons/Elements/{i}_{e}.png" for i, e in enumerate(ELEMENT_NAMES)},
-    }
+    """Scan all downloaded PNGs and write the asset manifest."""
+    manifest = {"items": {}, "skills": {}, "monsters": {}, "elements": {}}
+
+    # Scan items
+    items_dir = os.path.join(content_dir, "Items", "Icons")
+    if os.path.isdir(items_dir):
+        for f in os.listdir(items_dir):
+            if f.endswith(".png"):
+                item_id = f.split("_")[0] if "_" in f else f.replace(".png", "")
+                manifest["items"][item_id] = f"Items/Icons/{f}"
+
+    # Scan skills
+    skills_dir = os.path.join(content_dir, "UI", "Icons", "Skills")
+    if os.path.isdir(skills_dir):
+        for f in os.listdir(skills_dir):
+            if f.endswith(".png"):
+                skill_id = f.split("_")[0] if "_" in f else f.replace(".png", "")
+                manifest["skills"][skill_id] = f"UI/Icons/Skills/{f}"
+
+    # Scan monsters
+    monsters_dir = os.path.join(content_dir, "Monsters", "Icons")
+    if os.path.isdir(monsters_dir):
+        for f in os.listdir(monsters_dir):
+            if f.endswith(".png"):
+                mon_id = f.split("_")[0] if "_" in f else f.replace(".png", "")
+                manifest["monsters"][mon_id] = f"Monsters/Icons/{f}"
+
+    # Scan elements
+    elements_dir = os.path.join(content_dir, "UI", "Icons", "Elements")
+    if os.path.isdir(elements_dir):
+        for f in os.listdir(elements_dir):
+            if f.endswith(".png"):
+                elem_id = f.split("_")[0] if "_" in f else f.replace(".png", "")
+                manifest["elements"][elem_id] = f"UI/Icons/Elements/{f}"
 
     manifest_path = os.path.join(content_dir, "Data", "asset_manifest.json")
     os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
     with open(manifest_path, "w") as f:
-        json.dump(manifest, f, indent=2)
-    print(f"\nAsset manifest written to: {manifest_path}")
+        json.dump(manifest, f, indent=2, sort_keys=True)
+
+    total = sum(len(v) for v in manifest.values())
+    print(f"\nAsset manifest: {total} entries written to {manifest_path}")
+    print(f"  Items: {len(manifest['items'])}")
+    print(f"  Skills: {len(manifest['skills'])}")
+    print(f"  Monsters: {len(manifest['monsters'])}")
+    print(f"  Elements: {len(manifest['elements'])}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Download Ragnarok Online assets for Ragna-TH")
-    parser.add_argument("--all", action="store_true", help="Download all asset types")
-    parser.add_argument("--items", action="store_true", help="Download item icons")
-    parser.add_argument("--skills", action="store_true", help="Download skill icons")
-    parser.add_argument("--monsters", action="store_true", help="Download monster sprites")
-    parser.add_argument("--elements", action="store_true", help="Generate element icon placeholders")
-    parser.add_argument("--collection", action="store_true", help="Also download item collection images")
+    parser = argparse.ArgumentParser(
+        description="Download COMPLETE Ragnarok Online assets for Ragna-TH")
+    parser.add_argument("--all", action="store_true",
+                        help="Download all asset types (full RO set)")
+    parser.add_argument("--items", action="store_true",
+                        help="Download all item icons (IDs 501-32000)")
+    parser.add_argument("--skills", action="store_true",
+                        help="Download all skill icons (IDs 1-8500)")
+    parser.add_argument("--monsters", action="store_true",
+                        help="Download all monster sprites (IDs 1001-4100)")
+    parser.add_argument("--elements", action="store_true",
+                        help="Generate element icon placeholders")
+    parser.add_argument("--workers", type=int, default=4,
+                        help="Number of parallel download workers (default: 4)")
     parser.add_argument("--output-dir", default=DEFAULT_CONTENT_DIR,
-                        help=f"Content output directory (default: {DEFAULT_CONTENT_DIR})")
+                        help=f"Content output directory")
 
     args = parser.parse_args()
 
@@ -357,23 +391,26 @@ def main():
         args.all = True
 
     content_dir = args.output_dir
-    print(f"Ragna-TH Asset Downloader")
+    workers = args.workers
+
+    print(f"Ragna-TH Complete Asset Downloader")
     print(f"Output: {content_dir}")
+    print(f"Workers: {workers}")
 
     total_success, total_fail = 0, 0
 
     if args.all or args.items:
-        s, f = download_items(content_dir, args.collection)
+        s, f = download_items(content_dir, workers)
         total_success += s
         total_fail += f
 
     if args.all or args.skills:
-        s, f = download_skills(content_dir)
+        s, f = download_skills(content_dir, workers)
         total_success += s
         total_fail += f
 
     if args.all or args.monsters:
-        s, f = download_monsters(content_dir)
+        s, f = download_monsters(content_dir, workers)
         total_success += s
         total_fail += f
 
@@ -384,11 +421,11 @@ def main():
 
     write_asset_manifest(content_dir)
 
-    print(f"\n{'='*50}")
-    print(f"Total: {total_success} assets, {total_fail} failures")
-    print(f"{'='*50}")
+    print(f"\n{'='*60}")
+    print(f"  COMPLETE: {total_success} total assets available")
+    print(f"{'='*60}")
 
-    return 0 if total_fail == 0 else 1
+    return 0
 
 
 if __name__ == "__main__":
