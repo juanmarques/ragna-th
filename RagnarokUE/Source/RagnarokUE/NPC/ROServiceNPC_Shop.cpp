@@ -29,9 +29,10 @@ void AROServiceNPC_Shop::OnInteract_Implementation(AROCharacterBase* Interactor)
 
 void AROServiceNPC_Shop::ServerBuyItem_Implementation(int32 ShopIndex, int32 Amount)
 {
-	if (!CurrentShopUser)
+	if (!IsValid(CurrentShopUser))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Shop NPC: No active shop user for purchase."));
+		CurrentShopUser = nullptr;
 		return;
 	}
 
@@ -104,9 +105,10 @@ bool AROServiceNPC_Shop::ServerBuyItem_Validate(int32 ShopIndex, int32 Amount)
 
 void AROServiceNPC_Shop::ServerSellItem_Implementation(int32 InventorySlot, int32 Amount)
 {
-	if (!CurrentShopUser)
+	if (!IsValid(CurrentShopUser))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Shop NPC: No active shop user for sale."));
+		CurrentShopUser = nullptr;
 		return;
 	}
 

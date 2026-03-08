@@ -805,8 +805,8 @@ int32 URODamageFormulas::CalculatePhysicalDamage(
 	// Critical hits also ignore soft DEF
 	if (!bIsCritical)
 	{
-		// Pre-renewal: soft DEF has random variance (rnd() % softDEF)
-		const int32 EffectiveSoftDEF = (TargetSoftDEF > 0) ? FMath::RandRange(0, TargetSoftDEF) : 0;
+		// Pre-renewal: soft DEF has random variance (rnd() % softDEF), range [0, softDEF-1]
+		const int32 EffectiveSoftDEF = (TargetSoftDEF > 0) ? FMath::RandRange(0, TargetSoftDEF - 1) : 0;
 		TotalATK -= static_cast<float>(EffectiveSoftDEF);
 	}
 
