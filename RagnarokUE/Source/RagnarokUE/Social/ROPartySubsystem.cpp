@@ -1,6 +1,10 @@
 // Copyright Ragna-TH Project. All Rights Reserved.
 
 #include "ROPartySubsystem.h"
+#include "RagnarokUE/Core/ROPlayerState.h"
+#include "RagnarokUE/Character/ROLevelingComponent.h"
+#include "GameFramework/GameStateBase.h"
+#include "GameFramework/PlayerState.h"
 
 void UROPartySubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -237,11 +241,42 @@ void UROPartySubsystem::DistributeExp(int32 PartyID, int64 BaseExp, int64 JobExp
 
 	TArray<int32> EligibleMembers;
 
+	// Find eligible members: must be within ShareRadius of the kill location
+	const UWorld* World = GetWorld();
+	AGameStateBase* GS = World ? World->GetGameState() : nullptr;
+
 	for (int32 MemberID : Party->MemberPlayerIDs)
 	{
-		// TODO: Query actual player positions and base levels from the world.
-		// For the subsystem logic, we assume all members are eligible placeholders.
-		// In production, filter by distance <= ShareRadius from KillLocation.
+		if (!GS)
+		{
+			// Fallback: include all members if we can't query positions
+			EligibleMembers.Add(MemberID);
+			continue;
+		}
+
+		// Look up the member's pawn by PlayerState ID
+		APawn* MemberPawn = nullptr;
+		for (APlayerState* PS : GS->PlayerArray)
+		{
+			if (PS && PS->GetPlayerId() == MemberID)
+			{
+				MemberPawn = PS->GetPawn();
+				break;
+			}
+		}
+
+		if (!MemberPawn)
+		{
+			continue; // Player not found or offline
+		}
+
+		// Distance check: must be within ShareRadius of the kill
+		const float Distance = FVector::Dist(MemberPawn->GetActorLocation(), KillLocation);
+		if (Distance > ShareRadius)
+		{
+			continue; // Too far away
+		}
+
 		EligibleMembers.Add(MemberID);
 	}
 
@@ -254,15 +289,71 @@ void UROPartySubsystem::DistributeExp(int32 PartyID, int64 BaseExp, int64 JobExp
 	{
 		// Even Share: split EXP evenly among eligible members within the level range.
 		// In RO, if level difference > 15, that member gets no share.
-		// TODO: Filter by base level difference <= EvenShareLevelRange.
-
-		const int32 ShareCount = FMath::Max(1, EligibleMembers.Num());
-		const int64 SharedBaseExp = BaseExp / ShareCount;
-		const int64 SharedJobExp = JobExp / ShareCount;
+		// First, determine the highest base level among eligible members.
+		int32 HighestLevel = 0;
+		TMap<int32, int32> MemberLevels;
 
 		for (int32 MemberID : EligibleMembers)
 		{
-			// TODO: Call leveling component to grant SharedBaseExp, SharedJobExp to MemberID.
+			int32 MemberLevel = 1;
+			if (GS)
+			{
+				for (APlayerState* PS : GS->PlayerArray)
+				{
+					if (PS && PS->GetPlayerId() == MemberID)
+					{
+						AROPlayerState* ROPS = Cast<AROPlayerState>(PS);
+						if (ROPS)
+						{
+							MemberLevel = ROPS->GetBaseLevel();
+						}
+						break;
+					}
+				}
+			}
+			MemberLevels.Add(MemberID, MemberLevel);
+			HighestLevel = FMath::Max(HighestLevel, MemberLevel);
+		}
+
+		// Filter out members whose level difference exceeds EvenShareLevelRange
+		TArray<int32> LevelEligible;
+		for (int32 MemberID : EligibleMembers)
+		{
+			const int32* Level = MemberLevels.Find(MemberID);
+			if (Level && (HighestLevel - *Level) <= EvenShareLevelRange)
+			{
+				LevelEligible.Add(MemberID);
+			}
+		}
+
+		const int32 ShareCount = FMath::Max(1, LevelEligible.Num());
+		const int64 SharedBaseExp = BaseExp / ShareCount;
+		const int64 SharedJobExp = JobExp / ShareCount;
+
+		for (int32 MemberID : LevelEligible)
+		{
+			// Grant EXP via the leveling component
+			if (GS)
+			{
+				for (APlayerState* PS : GS->PlayerArray)
+				{
+					if (PS && PS->GetPlayerId() == MemberID)
+					{
+						APawn* MemberPawn = PS->GetPawn();
+						if (MemberPawn)
+						{
+							UROLevelingComponent* LevelComp = MemberPawn->FindComponentByClass<UROLevelingComponent>();
+							if (LevelComp)
+							{
+								LevelComp->AddBaseExp(SharedBaseExp);
+								LevelComp->AddJobExp(SharedJobExp);
+							}
+						}
+						break;
+					}
+				}
+			}
+
 			UE_LOG(LogTemp, Log, TEXT("Party EvenShare: Player %d receives BaseExp=%lld, JobExp=%lld"),
 				MemberID, SharedBaseExp, SharedJobExp);
 		}
