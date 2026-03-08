@@ -5,6 +5,11 @@
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
 #include "Components/ProgressBar.h"
+#include "AbilitySystemComponent.h"
+#include "RagnarokUE/Items/ROItemDatabase.h"
+#include "RagnarokUE/Items/ROItemBase.h"
+#include "RagnarokUE/Skills/ROGameplayAbility.h"
+#include "RagnarokUE/Skills/ROAbilitySystemComponent.h"
 
 UROWidget_Hotbar::UROWidget_Hotbar(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -59,7 +64,28 @@ void UROWidget_Hotbar::AssignSkillToSlot(int32 SlotIndex, int32 SkillID)
 	Slot.ID = SkillID;
 	Slot.StackCount = 0;
 
-	// TODO: Look up skill data to populate Icon, Level, SPCost from skill database
+	// Look up skill data from the owning player's ability system component
+	if (APawn* OwningPawn = GetOwningPlayerPawn())
+	{
+		if (UAbilitySystemComponent* ASC = OwningPawn->FindComponentByClass<UAbilitySystemComponent>())
+		{
+			TArray<FGameplayAbilitySpec>& Specs = ASC->GetActivatableAbilities();
+			for (const FGameplayAbilitySpec& Spec : Specs)
+			{
+				if (const UROGameplayAbility* ROAbility = Cast<UROGameplayAbility>(Spec.Ability))
+				{
+					if (ROAbility->SkillID == SkillID)
+					{
+						Slot.Level = Spec.Level;
+						Slot.SPCost = FMath::RoundToInt32(ROAbility->GetSPCost());
+						Slot.Icon = ROAbility->SkillIcon.LoadSynchronous();
+						break;
+					}
+				}
+			}
+		}
+	}
+
 	RefreshDisplay();
 }
 
@@ -77,7 +103,18 @@ void UROWidget_Hotbar::AssignItemToSlot(int32 SlotIndex, int32 ItemID)
 	Slot.Level = 0;
 	Slot.SPCost = 0;
 
-	// TODO: Look up item data to populate Icon, StackCount from inventory
+	// Look up item data from the item database to populate icon
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UROItemDatabase* ItemDB = GI->GetSubsystem<UROItemDatabase>())
+		{
+			if (const UROItemBase* ItemData = ItemDB->GetItemData(ItemID))
+			{
+				Slot.Icon = ItemData->Icon.LoadSynchronous();
+			}
+		}
+	}
+
 	RefreshDisplay();
 }
 
