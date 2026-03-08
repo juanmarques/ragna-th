@@ -203,6 +203,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Monster")
 	void ResetToIdle();
 
+	/** Get attack damage for this hit, rolling between ATKMin and ATKMax. */
+	UFUNCTION(BlueprintCallable, Category = "Monster|Combat")
+	int32 GetAttackDamage() const;
+
+	/** Check if a monster skill's conditions are met (HP%, range, etc.). */
+	UFUNCTION(BlueprintCallable, Category = "Monster|Skills")
+	bool CheckSkillConditions(const FROMonsterSkillEntry& SkillEntry, AActor* Target) const;
+
 	/** Can this monster currently attack (attack speed gating). */
 	UFUNCTION(BlueprintCallable, Category = "Monster|Combat")
 	bool CanAttack() const;

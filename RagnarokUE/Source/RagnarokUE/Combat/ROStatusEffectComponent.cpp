@@ -64,12 +64,27 @@ bool UROStatusEffectComponent::ApplyStatusEffect(EROStatusEffect Effect, float D
 		}
 	}
 
+	// OPT1 mutual exclusion: remove any existing OPT1 effect before applying a new one
+	if (IsOPT1Effect(Effect))
+	{
+		for (int32 i = ActiveEffectsArray.Num() - 1; i >= 0; --i)
+		{
+			if (IsOPT1Effect(ActiveEffectsArray[i].Effect) && ActiveEffectsArray[i].Effect != Effect)
+			{
+				EROStatusEffect OldEffect = ActiveEffectsArray[i].Effect;
+				RemoveStatusTag(OldEffect);
+				ActiveEffectsArray.RemoveAt(i);
+				OnStatusEffectChanged.Broadcast(OldEffect, false);
+			}
+		}
+	}
+
 	// Check if already active - refresh duration if so
 	int32 ExistingIdx = FindEffectIndex(Effect);
 	if (ExistingIdx != INDEX_NONE)
 	{
-		// Refresh: take the longer remaining duration
-		ActiveEffectsArray[ExistingIdx].RemainingDuration = FMath::Max(ActiveEffectsArray[ExistingIdx].RemainingDuration, Duration);
+		// Refresh: reset to new full duration
+		ActiveEffectsArray[ExistingIdx].RemainingDuration = Duration;
 		ActiveEffectsArray[ExistingIdx].TotalDuration = Duration;
 		ActiveEffectsArray[ExistingIdx].Level = FMath::Max(ActiveEffectsArray[ExistingIdx].Level, Level);
 		return true;
@@ -138,7 +153,27 @@ int32 UROStatusEffectComponent::GetEffectLevel(EROStatusEffect Effect) const
 
 bool UROStatusEffectComponent::CanAct() const
 {
-	// Cannot act while stunned, frozen, or stone cursed
+	// Cannot act while stunned, frozen, sleeping, or stone cursed (Phase 2 only)
+	if (HasStatusEffect(EROStatusEffect::Stun)
+		|| HasStatusEffect(EROStatusEffect::Freeze)
+		|| HasStatusEffect(EROStatusEffect::Sleep))
+	{
+		return false;
+	}
+
+	// Stone only blocks actions in Phase 2 (hardened)
+	int32 StoneIdx = FindEffectIndex(EROStatusEffect::Stone);
+	if (StoneIdx != INDEX_NONE && ActiveEffectsArray[StoneIdx].bStoneCurseHardened)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool UROStatusEffectComponent::CanAttack() const
+{
+	// Cannot attack while stunned, frozen, sleeping, or stone cursed (both phases)
 	return !HasStatusEffect(EROStatusEffect::Stun)
 		&& !HasStatusEffect(EROStatusEffect::Freeze)
 		&& !HasStatusEffect(EROStatusEffect::Stone)
@@ -153,8 +188,7 @@ bool UROStatusEffectComponent::CanCast() const
 
 bool UROStatusEffectComponent::CanMove() const
 {
-	// Cannot move while unable to act (stun/freeze/stone/sleep)
-	return CanAct();
+	return CanAct() && !HasStatusEffect(EROStatusEffect::Fear);
 }
 
 TArray<FROActiveStatusEffect> UROStatusEffectComponent::GetAllActiveEffects() const
@@ -183,6 +217,40 @@ void UROStatusEffectComponent::ProcessPeriodicEffects(float DeltaTime)
 
 			switch (ActiveEffect.Effect)
 			{
+			case EROStatusEffect::Stone:
+			{
+				// Stone Curse two-phase mechanic
+				ActiveEffect.StonePhaseTimer += StatusTickInterval;
+				if (!ActiveEffect.bStoneCurseHardened)
+				{
+					// Phase 1 (soft stone): lasts 3 seconds, can move but can't attack/cast
+					if (ActiveEffect.StonePhaseTimer >= 3.0f)
+					{
+						ActiveEffect.bStoneCurseHardened = true;
+						ActiveEffect.StonePhaseTimer = 0.0f;
+						// Element changes to Earth Lv1 (store original element to restore on removal)
+					}
+				}
+				else
+				{
+					// Phase 2 (hard stone): drain 1% HP every 5 seconds
+					if (ActiveEffect.StonePhaseTimer >= 5.0f)
+					{
+						ActiveEffect.StonePhaseTimer -= 5.0f;
+						if (ASC)
+						{
+							const UROAttributeSet* AttrSet = ASC->GetSet<UROAttributeSet>();
+							if (AttrSet)
+							{
+								const float StoneDamage = AttrSet->GetMaxHP() * 0.01f;
+								const float NewHP = FMath::Max(1.0f, AttrSet->GetHP() - StoneDamage);
+								ASC->ApplyModToAttribute(UROAttributeSet::GetHPAttribute(), EGameplayModOp::Override, NewHP);
+							}
+						}
+					}
+				}
+				break;
+			}
 			case EROStatusEffect::Poison:
 			{
 				// Pre-renewal Poison: MaxHP * 1.5% + 2 per tick, cannot drop below 25% MaxHP
@@ -216,7 +284,7 @@ void UROStatusEffectComponent::ProcessPeriodicEffects(float DeltaTime)
 			}
 			case EROStatusEffect::Bleeding:
 			{
-				// Bleeding: prevents natural HP regen and drains small amount
+				// Bleeding: HP drain + blocks HP/SP natural regen (regen blocked via Status.Bleeding tag)
 				if (ASC)
 				{
 					const UROAttributeSet* AttrSet = ASC->GetSet<UROAttributeSet>();
@@ -227,6 +295,17 @@ void UROStatusEffectComponent::ProcessPeriodicEffects(float DeltaTime)
 						ASC->ApplyModToAttribute(UROAttributeSet::GetHPAttribute(), EGameplayModOp::Override, NewHP);
 					}
 				}
+				break;
+			}
+			case EROStatusEffect::Curse:
+			{
+				// Curse: LUK→0 and movement speed -10% (applied once on application, handled via tag)
+				// Periodic: no tick damage, but we enforce effects
+				break;
+			}
+			case EROStatusEffect::Confusion:
+			{
+				// Confusion: randomize movement direction (handled by movement component checking tag)
 				break;
 			}
 			default:
@@ -296,6 +375,57 @@ FName UROStatusEffectComponent::GetTagNameForEffect(EROStatusEffect Effect)
 	case EROStatusEffect::Hallucination:return FName("Status.Hallucination");
 	default:                            return FName("Status.Unknown");
 	}
+}
+
+bool UROStatusEffectComponent::IsOPT1Effect(EROStatusEffect Effect)
+{
+	return Effect == EROStatusEffect::Stun
+		|| Effect == EROStatusEffect::Freeze
+		|| Effect == EROStatusEffect::Stone
+		|| Effect == EROStatusEffect::Sleep;
+}
+
+bool UROStatusEffectComponent::ApplyStatusEffectWithResist(EROStatusEffect Effect, float Duration, int32 Level,
+	float BaseChance, int32 TargetVIT, int32 TargetINT, int32 TargetLUK, int32 TargetBaseLevel)
+{
+	float Resistance = 0.0f;
+	switch (Effect)
+	{
+	case EROStatusEffect::Stun:
+		Resistance = TargetVIT * 1.0f; // VIT reduces stun chance
+		break;
+	case EROStatusEffect::Freeze:
+	case EROStatusEffect::Stone:
+		Resistance = TargetINT * 0.5f + TargetVIT * 0.3f; // MDEF-like resistance
+		break;
+	case EROStatusEffect::Sleep:
+		Resistance = TargetINT * 1.0f;
+		break;
+	case EROStatusEffect::Blind:
+		Resistance = TargetINT * 0.5f + TargetVIT * 0.3f;
+		break;
+	case EROStatusEffect::Silence:
+		Resistance = TargetVIT * 0.5f + TargetINT * 0.3f;
+		break;
+	case EROStatusEffect::Curse:
+		Resistance = TargetLUK * 1.0f;
+		break;
+	case EROStatusEffect::Poison:
+	case EROStatusEffect::DeadlyPoison:
+		Resistance = TargetVIT * 0.5f + TargetLUK * 0.3f;
+		break;
+	case EROStatusEffect::Bleeding:
+		Resistance = TargetVIT * 0.5f + TargetLUK * 0.5f;
+		break;
+	case EROStatusEffect::Confusion:
+		Resistance = TargetINT * 0.5f + TargetLUK * 0.5f;
+		break;
+	default:
+		Resistance = 0.0f;
+		break;
+	}
+	float AdjustedChance = FMath::Max(5.0f, BaseChance - Resistance);
+	return ApplyStatusEffect(Effect, Duration, Level, AdjustedChance);
 }
 
 int32 UROStatusEffectComponent::FindEffectIndex(EROStatusEffect Effect) const

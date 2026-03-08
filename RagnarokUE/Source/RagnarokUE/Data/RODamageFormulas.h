@@ -99,7 +99,7 @@ public:
 	 * This is the weapon-type delay used in ASPD calculations.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "RO|Damage")
-	static int32 GetBaseASPDForJob(EROJobClass Job);
+	static int32 GetBaseASPDForJob(EROJobClass Job, EROWeaponType WeaponType = EROWeaponType::Dagger);
 
 	/**
 	 * Calculate ASPD (attacks per second scaled to 200).
@@ -137,6 +137,18 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "RO|Damage")
 	static float GetElementalModifier(EROElement AtkElement, EROElement DefElement, EROElementLevel DefLevel);
+
+	// ============================
+	// Size Modifiers
+	// ============================
+
+	/**
+	 * Get the weapon-type size penalty modifier.
+	 * Different weapon types have different effectiveness against monster sizes.
+	 * @return Damage multiplier (e.g., 1.0 = full damage, 0.75 = 75%)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "RO|Damage")
+	static float GetWeaponSizeModifier(EROWeaponType WeaponType, EROMonsterSize TargetSize);
 
 	// ============================
 	// Stat Point Cost
@@ -180,7 +192,8 @@ public:
 		EROElementLevel DefElementLevel,
 		float SizeModifier,
 		float RaceModifier,
-		bool bIsCritical);
+		bool bIsCritical,
+		float CardFixModifier = 1.0f);
 
 	/**
 	 * Calculate final magical damage.
@@ -203,9 +216,13 @@ public:
 		EROElement AtkElement,
 		EROElement DefElement,
 		EROElementLevel DefElementLevel,
-		float RaceModifier);
+		float RaceModifier,
+		float CardFixModifier = 1.0f);
 
 private:
+	/** Get weapon ASPD offset. Higher values = slower attack speed. */
+	static int32 GetWeaponASPDOffset(EROWeaponType WeaponType);
+
 	/** Get job-specific HP modifier. Higher for tanky jobs like Knight. */
 	static float GetJobHPModifier(EROJobClass Job);
 
