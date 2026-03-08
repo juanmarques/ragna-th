@@ -11,6 +11,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
+#include "Components/CapsuleComponent.h"
 
 AROCharacterBase::AROCharacterBase(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UROCharacterMovement>(

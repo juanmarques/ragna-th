@@ -38,9 +38,9 @@ int32 URODamageFormulas::CalculateHardDEF(int32 EquipDEF)
 
 int32 URODamageFormulas::CalculateSoftDEF(int32 VIT)
 {
-	// VIT + floor(VIT/5)^2, treated as percentage reduction
+	// VIT + floor(VIT/5)^2, flat damage reduction subtracted after hard DEF
 	const int32 VitBonus = (VIT / 5) * (VIT / 5);
-	return FMath::Clamp(VIT + VitBonus, 0, 100);
+	return FMath::Max(0, VIT + VitBonus);
 }
 
 int32 URODamageFormulas::CalculateSoftMDEF(int32 INT, int32 VIT, int32 DEX)
@@ -695,12 +695,11 @@ int32 URODamageFormulas::CalculatePhysicalDamage(
 		TotalATK -= static_cast<float>(CalculateHardDEF(TargetHardDEF));
 	}
 
-	// Step 7: Apply Soft DEF percentage reduction
+	// Step 7: Subtract Soft DEF (flat reduction from VIT)
 	// Critical hits also ignore soft DEF
 	if (!bIsCritical)
 	{
-		const float SoftDEFReduction = 1.0f - (static_cast<float>(TargetSoftDEF) / 100.0f);
-		TotalATK *= FMath::Max(0.0f, SoftDEFReduction);
+		TotalATK -= static_cast<float>(TargetSoftDEF);
 	}
 
 	// Minimum damage is 1
@@ -733,9 +732,8 @@ int32 URODamageFormulas::CalculateMagicalDamage(
 	// Step 5: Subtract Hard MDEF (flat reduction)
 	TotalDmg -= static_cast<float>(FMath::Max(0, TargetMDEF_Hard));
 
-	// Step 6: Apply Soft MDEF percentage reduction
-	const float SoftMDEFReduction = 1.0f - (static_cast<float>(TargetMDEF_Soft) / 100.0f);
-	TotalDmg *= FMath::Max(0.0f, SoftMDEFReduction);
+	// Step 6: Subtract Soft MDEF (flat reduction from INT)
+	TotalDmg -= static_cast<float>(TargetMDEF_Soft);
 
 	// Minimum damage is 1
 	return FMath::Max(1, static_cast<int32>(TotalDmg));
