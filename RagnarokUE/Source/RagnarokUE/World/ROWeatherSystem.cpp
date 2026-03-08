@@ -6,7 +6,7 @@ void UROWeatherSystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	InitializeDefaultConfigs();
-	CurrentWeather = EROWeather::Clear;
+	CurrentWeather = EROWeatherType::Clear;
 	bWeatherTimerActive = false;
 }
 
@@ -16,14 +16,14 @@ void UROWeatherSystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UROWeatherSystem::SetWeather(EROWeather Weather)
+void UROWeatherSystem::SetWeather(EROWeatherType Weather)
 {
 	if (CurrentWeather == Weather)
 	{
 		return;
 	}
 
-	const EROWeather OldWeather = CurrentWeather;
+	const EROWeatherType OldWeather = CurrentWeather;
 	CurrentWeather = Weather;
 
 	UE_LOG(LogTemp, Log, TEXT("Weather changed: %d -> %d"), static_cast<uint8>(OldWeather), static_cast<uint8>(Weather));
@@ -36,7 +36,7 @@ void UROWeatherSystem::SetWeather(EROWeather Weather)
 	OnWeatherChanged.Broadcast(OldWeather, Weather);
 }
 
-EROWeather UROWeatherSystem::GetCurrentWeather() const
+EROWeatherType UROWeatherSystem::GetCurrentWeather() const
 {
 	return CurrentWeather;
 }
@@ -64,7 +64,7 @@ void UROWeatherSystem::TickWeather(float DeltaTime)
 	if (TimeUntilNextChange <= 0.0f)
 	{
 		// Transition to a new random weather
-		const EROWeather NewWeather = SelectRandomWeather();
+		const EROWeatherType NewWeather = SelectRandomWeather();
 		SetWeather(NewWeather);
 		TimeUntilNextChange = CalculateNextChangeTime();
 	}
@@ -101,12 +101,12 @@ FROMapWeatherConfig UROWeatherSystem::GetMapWeatherConfig(FName MapID) const
 	return FROMapWeatherConfig();
 }
 
-EROWeather UROWeatherSystem::SelectRandomWeather() const
+EROWeatherType UROWeatherSystem::SelectRandomWeather() const
 {
 	const FROMapWeatherConfig* Config = MapWeatherConfigs.Find(ActiveMapID);
 	if (!Config || Config->WeatherWeights.Num() == 0)
 	{
-		return EROWeather::Clear;
+		return EROWeatherType::Clear;
 	}
 
 	// Calculate total weight
@@ -118,7 +118,7 @@ EROWeather UROWeatherSystem::SelectRandomWeather() const
 
 	if (TotalWeight <= 0.0f)
 	{
-		return EROWeather::Clear;
+		return EROWeatherType::Clear;
 	}
 
 	// Random selection based on weights
@@ -132,7 +132,7 @@ EROWeather UROWeatherSystem::SelectRandomWeather() const
 		}
 	}
 
-	return EROWeather::Clear;
+	return EROWeatherType::Clear;
 }
 
 float UROWeatherSystem::CalculateNextChangeTime() const
@@ -152,10 +152,10 @@ void UROWeatherSystem::InitializeDefaultConfigs()
 	{
 		FROMapWeatherConfig Config;
 		Config.MapID = FName(TEXT("prontera"));
-		Config.WeatherWeights.Add(EROWeather::Clear, 50.0f);
-		Config.WeatherWeights.Add(EROWeather::Cloudy, 25.0f);
-		Config.WeatherWeights.Add(EROWeather::Rain, 15.0f);
-		Config.WeatherWeights.Add(EROWeather::Foggy, 10.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Clear, 50.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Clouds, 25.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Rain, 15.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Fog, 10.0f);
 		Config.MinWeatherDuration = 180.0f;
 		Config.MaxWeatherDuration = 600.0f;
 		MapWeatherConfigs.Add(Config.MapID, Config);
@@ -166,11 +166,11 @@ void UROWeatherSystem::InitializeDefaultConfigs()
 	{
 		FROMapWeatherConfig Config;
 		Config.MapID = FName(*FString::Printf(TEXT("prt_fild%02d"), i));
-		Config.WeatherWeights.Add(EROWeather::Clear, 45.0f);
-		Config.WeatherWeights.Add(EROWeather::Cloudy, 25.0f);
-		Config.WeatherWeights.Add(EROWeather::Rain, 20.0f);
-		Config.WeatherWeights.Add(EROWeather::Storm, 5.0f);
-		Config.WeatherWeights.Add(EROWeather::Foggy, 5.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Clear, 45.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Clouds, 25.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Rain, 20.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Storm, 5.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Fog, 5.0f);
 		Config.MinWeatherDuration = 120.0f;
 		Config.MaxWeatherDuration = 480.0f;
 		MapWeatherConfigs.Add(Config.MapID, Config);
@@ -182,7 +182,7 @@ void UROWeatherSystem::InitializeDefaultConfigs()
 		FROMapWeatherConfig Config;
 		Config.MapID = FName(*FString::Printf(TEXT("prt_sewb%d"), i));
 		Config.bForcedWeather = true;
-		Config.ForcedWeatherType = EROWeather::Foggy;
+		Config.ForcedWeatherType = EROWeatherType::Fog;
 		MapWeatherConfigs.Add(Config.MapID, Config);
 	}
 
@@ -190,10 +190,10 @@ void UROWeatherSystem::InitializeDefaultConfigs()
 	{
 		FROMapWeatherConfig Config;
 		Config.MapID = FName(TEXT("izlude"));
-		Config.WeatherWeights.Add(EROWeather::Clear, 55.0f);
-		Config.WeatherWeights.Add(EROWeather::Cloudy, 20.0f);
-		Config.WeatherWeights.Add(EROWeather::Rain, 15.0f);
-		Config.WeatherWeights.Add(EROWeather::Storm, 10.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Clear, 55.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Clouds, 20.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Rain, 15.0f);
+		Config.WeatherWeights.Add(EROWeatherType::Storm, 10.0f);
 		Config.MinWeatherDuration = 150.0f;
 		Config.MaxWeatherDuration = 500.0f;
 		MapWeatherConfigs.Add(Config.MapID, Config);
@@ -205,7 +205,7 @@ void UROWeatherSystem::InitializeDefaultConfigs()
 		FROMapWeatherConfig Config;
 		Config.MapID = FName(*FString::Printf(TEXT("iz_dun%02d"), i));
 		Config.bForcedWeather = true;
-		Config.ForcedWeatherType = EROWeather::Foggy;
+		Config.ForcedWeatherType = EROWeatherType::Fog;
 		MapWeatherConfigs.Add(Config.MapID, Config);
 	}
 }

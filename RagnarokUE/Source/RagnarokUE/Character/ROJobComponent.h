@@ -40,7 +40,7 @@ public:
 	// ---- Functions ----
 
 	/** Request a job change on the server. Validates prerequisites. */
-	UFUNCTION(Server, Reliable, WithValidation, Category="Job")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRequestJobChange(EROJobClass NewJob);
 
 	/** Check if the character can change from CurrentJobClass to TargetJob. */

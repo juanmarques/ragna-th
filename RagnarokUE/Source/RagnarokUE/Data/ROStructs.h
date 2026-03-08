@@ -164,8 +164,8 @@ struct RAGNAROKUE_API FROItemInstance
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	int32 Amount = 1;
 
-	/** Refine level (+0 to +20). */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item", meta = (ClampMin = "0", ClampMax = "20"))
+	/** Refine level (+0 to +10, pre-renewal). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item", meta = (ClampMin = "0", ClampMax = "10"))
 	int32 RefineLevel = 0;
 
 	/** Card IDs socketed into this item (up to 4 slots). */
@@ -188,7 +188,8 @@ struct RAGNAROKUE_API FROItemInstance
 
 	bool IsEquipment() const
 	{
-		return Amount == 1 && CardSlots.Num() >= 0;
+		// An item is equipment if it's non-stackable (Amount == 1) and has card slots defined
+		return Amount == 1 && CardSlots.Num() > 0;
 	}
 
 	bool operator==(const FROItemInstance& Other) const

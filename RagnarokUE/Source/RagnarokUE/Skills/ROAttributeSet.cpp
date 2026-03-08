@@ -4,6 +4,7 @@
 #include "GameplayEffectExtension.h"
 #include "AbilitySystemComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "RagnarokUE/Character/ROCharacterBase.h"
 
 UROAttributeSet::UROAttributeSet()
 {
@@ -123,6 +124,18 @@ void UROAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 	else if (Data.EvaluatedData.Attribute == GetSPAttribute())
 	{
 		SetSP(FMath::Clamp(GetSP(), 0.0f, GetMaxSP()));
+	}
+
+	// Sync GAS attribute HP/SP back to the character's replicated properties
+	if (UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent())
+	{
+		if (AROCharacterBase* Character = Cast<AROCharacterBase>(ASC->GetAvatarActor()))
+		{
+			Character->CurrentHP = FMath::RoundToInt32(GetHP());
+			Character->CurrentSP = FMath::RoundToInt32(GetSP());
+			Character->MaxHP = FMath::RoundToInt32(GetMaxHP());
+			Character->MaxSP = FMath::RoundToInt32(GetMaxSP());
+		}
 	}
 }
 
