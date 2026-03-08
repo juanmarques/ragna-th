@@ -40,7 +40,7 @@ private:
 	float GetDamageModifier() const;
 
 	/** Apply fire element endow to self. */
-	void ApplyFireEndow() const;
+	void ApplyFireEndow();
 
 	/** Timer handle for fire endow expiry, stored to clear on re-use. */
 	FTimerHandle FireEndowTimerHandle;
