@@ -147,13 +147,15 @@ EROJobTier UROJobComponent::GetJobTier(EROJobClass Job)
 		return EROJobTier::Second;
 
 	case EROJobClass::HighNovice:
+		return EROJobTier::Novice_Tier;
+
 	case EROJobClass::HighSwordsman:
 	case EROJobClass::HighMagician:
 	case EROJobClass::HighArcher:
 	case EROJobClass::HighThief:
 	case EROJobClass::HighMerchant:
 	case EROJobClass::HighAcolyte:
-		return EROJobTier::Transcendent;
+		return EROJobTier::First;
 
 	case EROJobClass::LordKnight:
 	case EROJobClass::Paladin:

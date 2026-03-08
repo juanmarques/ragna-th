@@ -17,6 +17,8 @@ AROMonsterBase::AROMonsterBase()
 	HP = 100;
 	MaxHP = 100;
 	ATK = 1;
+	ATKMin = 1;
+	ATKMax = 1;
 	MATK = 0;
 	DEF = 0;
 	MDEF = 0;
@@ -67,8 +69,9 @@ void AROMonsterBase::InitializeFromData(const FROMonsterData& Data)
 	DisplayName = Data.DisplayName;
 	MaxHP = Data.HP;
 	HP = MaxHP;
-	// ATK uses average of min/max for the stored value; actual damage rolls between min and max
-	ATK = (Data.ATKMin + Data.ATKMax) / 2;
+	ATKMin = Data.ATKMin;
+	ATKMax = Data.ATKMax;
+	ATK = FMath::RandRange(Data.ATKMin, Data.ATKMax);
 	MATK = Data.MATK;
 	DEF = Data.DEF;
 	MDEF = Data.MDEF;

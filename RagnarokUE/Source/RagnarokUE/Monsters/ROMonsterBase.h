@@ -51,6 +51,12 @@ public:
 	int32 ATK;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	int32 ATKMin;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	int32 ATKMax;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
 	int32 MATK;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
@@ -136,6 +142,10 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Monster|State")
 	FVector SpawnLocation;
+
+	/** Index into the spawn manager's SpawnDefinitions array. Used to track which definition spawned this monster. */
+	UPROPERTY()
+	int32 SpawnDefIndex = -1;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Monster|State")
 	TObjectPtr<AActor> CurrentTarget;
