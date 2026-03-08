@@ -5,6 +5,7 @@
 #include "RagnarokUE/Combat/ROCastingComponent.h"
 #include "RagnarokUE/Character/ROStatsComponent.h"
 #include "RagnarokUE/Character/ROCharacterBase.h"
+#include "RagnarokUE/Core/ROPlayerController.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayTagContainer.h"
 
@@ -21,6 +22,7 @@ UROGameplayAbility::UROGameplayAbility()
 	SkillID = 0;
 	SkillName = NAME_None;
 	CachedActorInfo = nullptr;
+	bRequiresTarget = false;
 
 	// Default instancing policy: one instance per actor
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -102,6 +104,17 @@ bool UROGameplayAbility::CanActivateAbility(
 	if (HasStatusEffectTag(ActorInfo, FName("Status.Stone")))
 	{
 		return false;
+	}
+
+	// Validate target exists for skills that require one (prevents wasting SP/cooldown)
+	if (bRequiresTarget && ActorInfo && ActorInfo->AvatarActor.IsValid())
+	{
+		APawn* Pawn = Cast<APawn>(ActorInfo->AvatarActor.Get());
+		AROPlayerController* PC = Pawn ? Cast<AROPlayerController>(Pawn->GetController()) : nullptr;
+		if (!PC || !PC->SelectedTarget)
+		{
+			return false;
+		}
 	}
 
 	return true;

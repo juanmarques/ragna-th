@@ -25,6 +25,7 @@ UROAbility_FireBolt::UROAbility_FireBolt()
 	CooldownDuration = 0.3f;
 
 	BoltInterval = 0.15f;
+	bRequiresTarget = true;
 }
 
 void UROAbility_FireBolt::OnCastComplete()

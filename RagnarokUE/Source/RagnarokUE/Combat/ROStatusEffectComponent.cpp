@@ -93,6 +93,14 @@ bool UROStatusEffectComponent::ApplyStatusEffect(EROStatusEffect Effect, float D
 		ActiveEffectsArray[ExistingIdx].RemainingDuration = Duration;
 		ActiveEffectsArray[ExistingIdx].TotalDuration = Duration;
 		ActiveEffectsArray[ExistingIdx].Level = FMath::Max(ActiveEffectsArray[ExistingIdx].Level, Level);
+
+		// Reset Stone Curse phase state so reapplication restarts from Phase 1
+		if (Effect == EROStatusEffect::Stone)
+		{
+			ActiveEffectsArray[ExistingIdx].bStoneCurseHardened = false;
+			ActiveEffectsArray[ExistingIdx].StonePhaseTimer = 0.0f;
+		}
+
 		return true;
 	}
 
