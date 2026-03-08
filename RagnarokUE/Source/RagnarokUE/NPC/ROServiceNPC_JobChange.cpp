@@ -178,11 +178,12 @@ void AROServiceNPC_JobChange::ExecuteJobChange(AROCharacterBase* Player)
 	const EROJobClass OldJob = JobComp->CurrentJobClass;
 	const bool bIsOptimal = (LevelComp->JobLevel >= OptimalJobLevel);
 
-	// Execute job change through the job component (handles replication, validation, etc.)
-	JobComp->ServerRequestJobChange(TargetJobClass);
-
-	// Reset job level to 1 (handled by JobComponent/LevelingComponent internally)
-	LevelComp->ResetJobLevel();
+	// Execute job change directly (we already validated prerequisites above).
+	// Do NOT call ServerRequestJobChange — that's a client RPC which would
+	// re-validate and adds unnecessary overhead when called from server code.
+	// ExecuteJobChange already resets the job level internally, so no separate
+	// ResetJobLevel call is needed.
+	JobComp->ExecuteJobChange(TargetJobClass);
 
 	// Grant initial skill points
 	int32 SkillPointsToGrant = InitialSkillPoints;
