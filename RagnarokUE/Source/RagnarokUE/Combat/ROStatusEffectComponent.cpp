@@ -196,6 +196,28 @@ TArray<FROActiveStatusEffect> UROStatusEffectComponent::GetAllActiveEffects() co
 	return ActiveEffectsArray;
 }
 
+bool UROStatusEffectComponent::GetElementOverride(EROElement& OutElement, EROElementLevel& OutLevel) const
+{
+	// Stone Curse Phase 2: element becomes Earth Lv1
+	int32 StoneIdx = FindEffectIndex(EROStatusEffect::Stone);
+	if (StoneIdx != INDEX_NONE && ActiveEffectsArray[StoneIdx].bStoneCurseHardened)
+	{
+		OutElement = EROElement::Earth;
+		OutLevel = EROElementLevel::Level1;
+		return true;
+	}
+
+	// Freeze: element becomes Water Lv1
+	if (HasStatusEffect(EROStatusEffect::Freeze))
+	{
+		OutElement = EROElement::Water;
+		OutLevel = EROElementLevel::Level1;
+		return true;
+	}
+
+	return false;
+}
+
 void UROStatusEffectComponent::ProcessPeriodicEffects(float DeltaTime)
 {
 	for (int32 i = 0; i < ActiveEffectsArray.Num(); ++i)
@@ -228,7 +250,7 @@ void UROStatusEffectComponent::ProcessPeriodicEffects(float DeltaTime)
 					{
 						ActiveEffect.bStoneCurseHardened = true;
 						ActiveEffect.StonePhaseTimer = 0.0f;
-						// Element changes to Earth Lv1 (store original element to restore on removal)
+						// Element overridden to Earth Lv1 via GetElementOverride()
 					}
 				}
 				else
