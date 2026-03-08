@@ -182,6 +182,15 @@ void AROMonsterBase::AddThreat(AActor* Attacker, float Amount)
 		return;
 	}
 
+	// Clean up stale entries from destroyed actors
+	for (auto It = ThreatTable.CreateIterator(); It; ++It)
+	{
+		if (!IsValid(It->Key.Get()))
+		{
+			It.RemoveCurrent();
+		}
+	}
+
 	if (float* Existing = ThreatTable.Find(Attacker))
 	{
 		*Existing += Amount;
