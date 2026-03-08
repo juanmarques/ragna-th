@@ -666,7 +666,7 @@ def download_ui_assets(content_dir, workers=4):
     return success + skip, 0
 
 
-def generate_element_placeholders(content_dir):
+def generate_element_placeholders(content_dir, workers=4):
     """Generate colored placeholder PNGs for element icons."""
     element_dir = os.path.join(content_dir, "UI", "Icons", "Elements")
     os.makedirs(element_dir, exist_ok=True)
