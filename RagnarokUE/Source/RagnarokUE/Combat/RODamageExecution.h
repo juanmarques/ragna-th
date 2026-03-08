@@ -11,10 +11,10 @@
  * URODamageExecution
  * Gameplay Effect Execution Calculation implementing the full Ragnarok Online damage formula.
  *
- * Physical damage:
- *   FinalDamage = max(1, (ATK * SkillMod * ElementMod * SizeMod) - (HardDEF * (1 - SoftDEF/100)))
+ * Physical damage (pre-renewal):
+ *   FinalDamage = max(1, (ATK * SkillMod * ElementMod * SizeMod) - DEF)
  *   Hit check: HitRate - FleeRate >= random(0,100)
- *   Critical: CritRate > random(0,100) -> +40% damage, ignore flee
+ *   Critical: CritRate > random(0,100) -> +40% damage, ignore flee and DEF
  *
  * Magical damage:
  *   FinalDamage = max(1, MATK * SkillMod * ElementMod - MDEF)
@@ -47,7 +47,7 @@ private:
 	 */
 	static float CalculatePhysicalDamage(
 		float ATK, float SkillMod, float ElementMod, float SizeMod,
-		float HardDEF, float SoftDEF, bool bIsCritical);
+		float TotalDEF, bool bIsCritical);
 
 	/**
 	 * Calculate magical damage using the RO formula.
