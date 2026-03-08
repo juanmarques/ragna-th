@@ -66,6 +66,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RO Skill")
 	FName SkillName;
 
+	/** Icon texture for this skill (used in hotbar, skill window, cast bar). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RO Skill")
+	TSoftObjectPtr<UTexture2D> SkillIcon;
+
 	// --- Computed Getters ---
 
 	/** Calculate total SP cost at current skill level. */
