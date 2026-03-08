@@ -29,6 +29,12 @@ void UROSkillTreeComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(UROSkillTreeComponent, CurrentJobClass);
 }
 
+bool UROSkillTreeComponent::ServerLearnSkill_Validate(int32 SkillID)
+{
+	// Basic sanity check: skill ID must be positive
+	return SkillID > 0;
+}
+
 void UROSkillTreeComponent::ServerLearnSkill_Implementation(int32 SkillID)
 {
 	// Validate skill exists

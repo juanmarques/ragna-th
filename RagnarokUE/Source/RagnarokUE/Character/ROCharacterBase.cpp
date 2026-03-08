@@ -173,12 +173,14 @@ void AROCharacterBase::OnRep_bIsDead()
 	if (bIsDead)
 	{
 		// Play death animation on client
-		// Disable collision
+		// Disable collision (capsule + mesh, consistent with Die())
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 	else
 	{
-		// Restore after respawn
+		// Restore after respawn (capsule + mesh, consistent with Respawn())
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	}
 }
@@ -304,14 +306,16 @@ float AROCharacterBase::TakeDamage(float DamageAmount, struct FDamageEvent const
 	//    is expected to be computed by the combat system before calling TakeDamage.
 	//    DamageAmount here is the final post-calculation damage.
 
-	// 2. Apply damage reduction from sitting (sitting characters take more damage in RO)
+	// 2. Apply sitting penalty: in RO, sitting characters take double damage from player attacks only
 	float FinalDamage = DamageAmount;
 	if (bIsSitting)
 	{
-		// In RO, sitting characters take double damage from players
-		// We keep this as a simple multiplier; combat system can override
-		FinalDamage *= 2.0f;
-		StandUp(); // Getting hit forces you to stand
+		// Only apply 2x penalty if damage source is a player-controlled character
+		if (EventInstigator && EventInstigator->IsPlayerController())
+		{
+			FinalDamage *= 2.0f;
+		}
+		StandUp(); // Getting hit forces you to stand regardless of source
 	}
 
 	// 3. Ensure minimum 1 damage (RO always does at least 1 unless Miss)
