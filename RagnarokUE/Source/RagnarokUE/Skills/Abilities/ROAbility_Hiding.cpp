@@ -55,11 +55,18 @@ void UROAbility_Hiding::OnCastComplete()
 		ASC->AddLooseGameplayTag(HidingTag);
 	}
 
-	// Start SP drain timer
+	// Start SP drain timer (use weak pointer to avoid crash if ability is destroyed while timer pending)
 	if (CachedActorInfo->AvatarActor.IsValid())
 	{
+		TWeakObjectPtr<UROAbility_Hiding> WeakThis(this);
 		FTimerDelegate TimerDelegate;
-		TimerDelegate.BindUObject(this, &UROAbility_Hiding::OnSPDrainTick);
+		TimerDelegate.BindLambda([WeakThis]()
+		{
+			if (WeakThis.IsValid())
+			{
+				WeakThis->OnSPDrainTick();
+			}
+		});
 
 		CachedActorInfo->AvatarActor->GetWorldTimerManager().SetTimer(
 			SPDrainTimerHandle, TimerDelegate, SPDrainTickInterval, true);

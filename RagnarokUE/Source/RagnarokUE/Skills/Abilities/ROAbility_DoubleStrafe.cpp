@@ -22,6 +22,7 @@ UROAbility_DoubleStrafe::UROAbility_DoubleStrafe()
 	VariableCastTimeBase = 0.0f;
 	FixedCastTime = 0.0f;
 	CooldownDuration = 0.3f;
+	bRequiresTarget = true;
 }
 
 bool UROAbility_DoubleStrafe::CanActivateAbility(

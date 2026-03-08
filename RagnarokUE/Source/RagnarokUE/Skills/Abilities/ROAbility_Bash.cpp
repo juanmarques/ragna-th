@@ -28,6 +28,7 @@ UROAbility_Bash::UROAbility_Bash()
 	CooldownDuration = 0.5f;
 
 	StunChanceBase = 5.0f;
+	bRequiresTarget = true;
 	StunDuration = 5.0f;
 }
 
