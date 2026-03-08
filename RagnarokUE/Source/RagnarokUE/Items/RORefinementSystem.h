@@ -47,7 +47,7 @@ public:
 
 	/**
 	 * Get the ATK/DEF bonus for a given refine level and weapon level.
-	 * @param RefineLevel The refine level (+0 to +20).
+	 * @param RefineLevel The refine level (+0 to +10).
 	 * @param WeaponLevel 0 for armor (DEF bonus), 1-4 for weapons (ATK bonus).
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Refinement")
