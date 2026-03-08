@@ -4,6 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "RagnarokUE/Skills/ROAttributeSet.h"
 #include "RagnarokUE/Combat/ROHealGameplayEffect.h"
+#include "RagnarokUE/Combat/RODamageGameplayEffect.h"
 #include "RagnarokUE/Character/ROStatsComponent.h"
 #include "RagnarokUE/Character/ROLevelingComponent.h"
 #include "RagnarokUE/Core/ROPlayerController.h"
@@ -120,11 +121,40 @@ void UROAbility_Heal::OnCastComplete()
 	if (bDamageUndead && bTargetIsUndead)
 	{
 		// In RO, Heal deals fixed Holy damage to Undead equal to the heal amount.
-		// This bypasses ATK/DEF entirely. Apply directly as IncomingDamage.
-		TargetASC->ApplyModToAttribute(
-			UROAttributeSet::GetIncomingDamageAttribute(),
-			EGameplayModOp::Additive,
-			HealAmount);
+		// Use the damage GE pipeline so PostGameplayEffectExecute processes HP
+		// reduction and triggers death events correctly.
+		FGameplayEffectSpecHandle DamageSpec = MakeOutgoingGameplayEffectSpec(
+			URODamageGameplayEffect::StaticClass(), SkillLevel);
+
+		if (DamageSpec.IsValid())
+		{
+			// Use Misc damage type (2) to bypass ATK/DEF calculation
+			FGameplayTag DamageTypeTag = FGameplayTag::RequestGameplayTag(FName("Data.DamageType"), false);
+			if (DamageTypeTag.IsValid())
+			{
+				DamageSpec.Data->SetSetByCallerMagnitude(DamageTypeTag, 2.0f); // Misc
+			}
+
+			// SkillMod carries the heal amount as a flat multiplier
+			// Since Misc damage = ATK * SkillMod * ElementMod, and we want
+			// fixed HealAmount damage, set SkillMod = HealAmount / SourceATK
+			const UROAttributeSet* SrcAttrSet = SourceASC->GetSet<UROAttributeSet>();
+			const float SourceATK = (SrcAttrSet && SrcAttrSet->GetATK() > 0.0f) ? SrcAttrSet->GetATK() : 1.0f;
+
+			FGameplayTag SkillModTag = FGameplayTag::RequestGameplayTag(FName("Data.SkillMod"), false);
+			if (SkillModTag.IsValid())
+			{
+				DamageSpec.Data->SetSetByCallerMagnitude(SkillModTag, HealAmount / SourceATK);
+			}
+
+			FGameplayTag ElementModTag = FGameplayTag::RequestGameplayTag(FName("Data.ElementMod"), false);
+			if (ElementModTag.IsValid())
+			{
+				DamageSpec.Data->SetSetByCallerMagnitude(ElementModTag, 1.0f); // Holy vs Undead
+			}
+
+			SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
+		}
 	}
 	else
 	{

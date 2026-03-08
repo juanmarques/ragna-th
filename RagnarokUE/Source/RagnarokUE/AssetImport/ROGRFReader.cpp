@@ -151,7 +151,8 @@ bool FROGRFReader::ExtractFile(const FString& InternalPath, TArray<uint8>& OutDa
 		return true;
 	}
 
-	// Decompress
+	// Decompress - pass only CompressedSize bytes to zlib (ignore alignment padding)
+	CompressedData.SetNum(Entry->CompressedSize);
 	return DecompressZlib(CompressedData, OutData, Entry->UncompressedSize);
 }
 

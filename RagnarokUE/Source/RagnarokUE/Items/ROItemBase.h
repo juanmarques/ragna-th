@@ -69,6 +69,26 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	int32 RequiredLevel;
 
+	/** Job classes allowed to equip this item. Empty = all jobs allowed. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	TArray<EROJobClass> AllowedJobs;
+
+	/** If true, this item cannot be traded to other players. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	bool bNoTrade = false;
+
+	/** If true, this item cannot be dropped on the ground. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	bool bNoDrop = false;
+
+	/** If true, this item cannot be placed in storage. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	bool bNoStore = false;
+
+	/** If true, this item cannot be sold to NPCs. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	bool bNoSell = false;
+
 	// --- UPrimaryDataAsset Interface ---
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override;
 };

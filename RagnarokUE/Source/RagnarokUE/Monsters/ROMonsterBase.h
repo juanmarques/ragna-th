@@ -51,6 +51,12 @@ public:
 	int32 ATK;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	int32 ATKMin;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
+	int32 ATKMax;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
 	int32 MATK;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Monster|Stats")
@@ -137,6 +143,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Monster|State")
 	FVector SpawnLocation;
 
+	/** Index into the spawn manager's SpawnDefinitions array. Used to track which definition spawned this monster. */
+	UPROPERTY()
+	int32 SpawnDefIndex = -1;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Monster|State")
 	TObjectPtr<AActor> CurrentTarget;
 
@@ -192,6 +202,14 @@ public:
 	/** Reset monster to full HP and clear state (used on return-to-home). */
 	UFUNCTION(BlueprintCallable, Category = "Monster")
 	void ResetToIdle();
+
+	/** Get attack damage for this hit, rolling between ATKMin and ATKMax. */
+	UFUNCTION(BlueprintCallable, Category = "Monster|Combat")
+	int32 GetAttackDamage() const;
+
+	/** Check if a monster skill's conditions are met (HP%, range, etc.). */
+	UFUNCTION(BlueprintCallable, Category = "Monster|Skills")
+	bool CheckSkillConditions(const FROMonsterSkillEntry& SkillEntry, AActor* Target) const;
 
 	/** Can this monster currently attack (attack speed gating). */
 	UFUNCTION(BlueprintCallable, Category = "Monster|Combat")

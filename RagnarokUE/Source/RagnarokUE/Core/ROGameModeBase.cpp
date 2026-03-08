@@ -187,14 +187,16 @@ void AROGameModeBase::HandlePlayerDeath(APlayerController* DeadController, ACont
 
 	// Queue respawn after the configured delay
 	FTimerHandle RespawnTimerHandle;
-	FTimerDelegate RespawnDelegate;
-	RespawnDelegate.BindUFunction(this, FName("RespawnPlayer"), DeadController);
+	TWeakObjectPtr<APlayerController> WeakDeadController(DeadController);
 
 	GetWorldTimerManager().SetTimer(
 		RespawnTimerHandle,
-		[this, DeadController]()
+		[this, WeakDeadController]()
 		{
-			RespawnPlayer(DeadController);
+			if (APlayerController* PC = WeakDeadController.Get())
+			{
+				RespawnPlayer(PC);
+			}
 		},
 		RespawnDelay,
 		false

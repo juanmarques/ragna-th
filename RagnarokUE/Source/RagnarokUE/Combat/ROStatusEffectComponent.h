@@ -35,6 +35,15 @@ struct FROActiveStatusEffect
 	/** Tick accumulator for periodic effects. */
 	UPROPERTY()
 	float TickAccumulator = 0.0f;
+
+	/** For Stone Curse: true when in Phase 2 (full petrification), false when in Phase 1 (soft stone). */
+	UPROPERTY()
+	bool bStoneCurseHardened = false;
+
+	/** Time spent in current Stone Curse phase. */
+	UPROPERTY()
+	float StonePhaseTimer = 0.0f;
+
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStatusEffectChanged, EROStatusEffect, Effect, bool, bApplied);
@@ -70,6 +79,26 @@ public:
 	bool ApplyStatusEffect(EROStatusEffect Effect, float Duration, int32 Level = 1, float Chance = 100.0f);
 
 	/**
+	 * Apply a status effect with stat-based resistance calculation.
+	 * @param Effect - The status effect to apply
+	 * @param Duration - Duration in seconds
+	 * @param Level - Effect level/intensity
+	 * @param BaseChance - Base success chance 0-100
+	 * @param TargetVIT - target's VIT stat for resistance calc
+	 * @param TargetINT - target's INT stat for resistance calc
+	 * @param TargetLUK - target's LUK stat for resistance calc
+	 * @param TargetBaseLevel - target's base level
+	 * @return True if the effect was successfully applied
+	 */
+	UFUNCTION(BlueprintCallable, Category = "RO|StatusEffects")
+	bool ApplyStatusEffectWithResist(EROStatusEffect Effect, float Duration, int32 Level,
+		float BaseChance, int32 TargetVIT, int32 TargetINT, int32 TargetLUK, int32 TargetBaseLevel);
+
+	/** Check if an effect is an OPT1 type (mutually exclusive: Stone, Freeze, Stun, Sleep). */
+	UFUNCTION(BlueprintCallable, Category = "RO|StatusEffects")
+	static bool IsOPT1Effect(EROStatusEffect Effect);
+
+	/**
 	 * Remove a specific status effect.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "RO|StatusEffects")
@@ -100,10 +129,16 @@ public:
 	int32 GetEffectLevel(EROStatusEffect Effect) const;
 
 	/**
-	 * Check if the character can act (not stunned, frozen, or stone cursed).
+	 * Check if the character can act (blocked by: Stun, Freeze, Sleep, Stone Phase 2).
 	 */
 	UFUNCTION(BlueprintCallable, Category = "RO|StatusEffects")
 	bool CanAct() const;
+
+	/**
+	 * Check if character can attack (blocked by soft stone phase 1 + anything that blocks CanAct).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "RO|StatusEffects")
+	bool CanAttack() const;
 
 	/**
 	 * Check if the character can cast spells (not silenced).
@@ -112,7 +147,7 @@ public:
 	bool CanCast() const;
 
 	/**
-	 * Check if the character can move (not stunned, frozen, stone cursed, or rooted).
+	 * Check if the character can move (not unable to act, not feared).
 	 */
 	UFUNCTION(BlueprintCallable, Category = "RO|StatusEffects")
 	bool CanMove() const;
@@ -122,6 +157,15 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "RO|StatusEffects")
 	TArray<FROActiveStatusEffect> GetAllActiveEffects() const;
+
+	/**
+	 * Get the element override from status effects (e.g., Stone Curse → Earth Lv1, Freeze → Water Lv1).
+	 * @param OutElement - overridden element if applicable
+	 * @param OutLevel - overridden element level if applicable
+	 * @return True if an element override is active
+	 */
+	UFUNCTION(BlueprintCallable, Category = "RO|StatusEffects")
+	bool GetElementOverride(EROElement& OutElement, EROElementLevel& OutLevel) const;
 
 	// --- Delegates ---
 

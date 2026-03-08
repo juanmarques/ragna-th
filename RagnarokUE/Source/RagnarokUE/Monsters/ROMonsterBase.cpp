@@ -17,6 +17,8 @@ AROMonsterBase::AROMonsterBase()
 	HP = 100;
 	MaxHP = 100;
 	ATK = 1;
+	ATKMin = 1;
+	ATKMax = 1;
 	MATK = 0;
 	DEF = 0;
 	MDEF = 0;
@@ -67,8 +69,10 @@ void AROMonsterBase::InitializeFromData(const FROMonsterData& Data)
 	DisplayName = Data.DisplayName;
 	MaxHP = Data.HP;
 	HP = MaxHP;
-	// ATK uses average of min/max for the stored value; actual damage rolls between min and max
-	ATK = (Data.ATKMin + Data.ATKMax) / 2;
+	ATKMin = Data.ATKMin;
+	ATKMax = Data.ATKMax;
+	// ATK is rolled per-attack via GetAttackDamage(), store max for reference
+	ATK = Data.ATKMax;
 	MATK = Data.MATK;
 	DEF = Data.DEF;
 	MDEF = Data.MDEF;
@@ -178,6 +182,15 @@ void AROMonsterBase::AddThreat(AActor* Attacker, float Amount)
 		return;
 	}
 
+	// Clean up stale entries from destroyed actors
+	for (auto It = ThreatTable.CreateIterator(); It; ++It)
+	{
+		if (!IsValid(It->Key.Get()))
+		{
+			It.RemoveCurrent();
+		}
+	}
+
 	if (float* Existing = ThreatTable.Find(Attacker))
 	{
 		*Existing += Amount;
@@ -252,6 +265,50 @@ void AROMonsterBase::MarkAttackPerformed()
 	{
 		LastAttackTime = World->GetTimeSeconds();
 	}
+}
+
+int32 AROMonsterBase::GetAttackDamage() const
+{
+	// Roll between ATKMin and ATKMax each attack for proper damage variance
+	return FMath::RandRange(ATKMin, ATKMax);
+}
+
+bool AROMonsterBase::CheckSkillConditions(const FROMonsterSkillEntry& SkillEntry, AActor* Target) const
+{
+	// Check cooldown
+	if (!IsSkillReady(SkillEntry.SkillID))
+	{
+		return false;
+	}
+
+	// Check HP threshold
+	if (MaxHP > 0)
+	{
+		const float HPPercent = (static_cast<float>(HP) / static_cast<float>(MaxHP)) * 100.0f;
+		if (HPPercent > SkillEntry.HPThresholdPercent)
+		{
+			return false;
+		}
+	}
+
+	// Check range to target
+	if (Target)
+	{
+		const float DistToTarget = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
+		if (DistToTarget > SkillEntry.Range)
+		{
+			return false;
+		}
+	}
+
+	// Roll use chance
+	const float Roll = FMath::FRandRange(0.0f, 100.0f);
+	if (Roll > SkillEntry.UseChance)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void AROMonsterBase::OnRep_HP()
