@@ -156,17 +156,23 @@ bool UROVendingSystem::BuyFromShop(int32 BuyerID, int32 VendorID, int32 ItemInde
 		return false;
 	}
 
+	// Add items to buyer's inventory first (preserve refine, cards, etc)
+	FROItemInstance PurchasedItem = VendItem.Item;
+	PurchasedItem.Amount = Amount;
+	int32 PlacedSlot = BuyerInv->Internal_PlaceItem(PurchasedItem);
+	if (PlacedSlot < 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Vending purchase failed: could not place item in buyer inventory."));
+		return false;
+	}
+
 	// Deduct Zeny from buyer, add to vendor
 	BuyerInv->RemoveZeny(TotalCostInt);
 	VendorInv->AddZeny(TotalCostInt);
 
-	// Add items to buyer's inventory (preserve refine, cards, etc)
-	FROItemInstance PurchasedItem = VendItem.Item;
-	PurchasedItem.Amount = Amount;
-	BuyerInv->Internal_PlaceItem(PurchasedItem);
-
-	// Update weights
+	// Update weights for both parties
 	BuyerInv->UpdateWeight();
+	VendorInv->UpdateWeight();
 
 	UE_LOG(LogTemp, Log, TEXT("Player %d bought %d x Item %d from Player %d's shop for %d Zeny"),
 		BuyerID, Amount, VendItem.Item.ItemID, VendorID, TotalCostInt);
