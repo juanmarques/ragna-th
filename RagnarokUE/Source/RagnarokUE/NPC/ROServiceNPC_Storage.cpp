@@ -170,7 +170,7 @@ void AROServiceNPC_Storage::ServerDepositItem_Implementation(int32 InventorySlot
 
 bool AROServiceNPC_Storage::ServerDepositItem_Validate(int32 InventorySlot, int32 Amount)
 {
-	return Amount > 0 && InventorySlot >= 0;
+	return Amount > 0 && InventorySlot >= 0 && InventorySlot < 100;
 }
 
 void AROServiceNPC_Storage::ServerWithdrawItem_Implementation(int32 StorageSlot, int32 Amount)
