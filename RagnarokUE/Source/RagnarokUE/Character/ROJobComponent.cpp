@@ -276,6 +276,8 @@ int32 UROJobComponent::GetRequiredJobLevelForChange(EROJobTier TargetTier)
 {
 	switch (TargetTier)
 	{
+	case EROJobTier::Novice_Tier:
+		return 50; // 2nd class needs max job level for rebirth to High Novice
 	case EROJobTier::First:
 		return 10; // Novice needs job level 10
 	case EROJobTier::Second:

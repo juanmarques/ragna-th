@@ -228,7 +228,4 @@ private:
 
 	/** Get job-specific SP modifier. Higher for caster jobs like Wizard. */
 	static float GetJobSPModifier(EROJobClass Job);
-
-	/** Internal: Initialize and return the elemental table. */
-	static const TArray<TArray<TArray<float>>>& GetElementalTable();
 };

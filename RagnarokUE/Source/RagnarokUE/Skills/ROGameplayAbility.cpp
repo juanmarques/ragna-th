@@ -4,6 +4,8 @@
 #include "ROAttributeSet.h"
 #include "RagnarokUE/Combat/ROCastingComponent.h"
 #include "RagnarokUE/Character/ROStatsComponent.h"
+#include "RagnarokUE/Character/ROCharacterBase.h"
+#include "RagnarokUE/Core/ROPlayerController.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayTagContainer.h"
 
@@ -20,6 +22,7 @@ UROGameplayAbility::UROGameplayAbility()
 	SkillID = 0;
 	SkillName = NAME_None;
 	CachedActorInfo = nullptr;
+	bRequiresTarget = false;
 
 	// Default instancing policy: one instance per actor
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -101,6 +104,17 @@ bool UROGameplayAbility::CanActivateAbility(
 	if (HasStatusEffectTag(ActorInfo, FName("Status.Stone")))
 	{
 		return false;
+	}
+
+	// Validate target exists for skills that require one (prevents wasting SP/cooldown)
+	if (bRequiresTarget && ActorInfo && ActorInfo->AvatarActor.IsValid())
+	{
+		APawn* Pawn = Cast<APawn>(ActorInfo->AvatarActor.Get());
+		AROPlayerController* PC = Pawn ? Cast<AROPlayerController>(Pawn->GetController()) : nullptr;
+		if (!PC || !PC->SelectedTarget)
+		{
+			return false;
+		}
 	}
 
 	return true;
@@ -219,7 +233,7 @@ void UROGameplayAbility::OnCastInterrupted()
 
 void UROGameplayAbility::DeductSP(const FGameplayAbilityActorInfo* ActorInfo, float Amount)
 {
-	if (!ActorInfo || !ActorInfo->AbilitySystemComponent.IsValid())
+	if (!ActorInfo || !ActorInfo->AbilitySystemComponent.IsValid() || Amount <= 0.0f)
 	{
 		return;
 	}
@@ -231,8 +245,21 @@ void UROGameplayAbility::DeductSP(const FGameplayAbilityActorInfo* ActorInfo, fl
 		const float CurrentSP = AttrSet->GetSP();
 		const float NewSP = FMath::Max(0.0f, CurrentSP - Amount);
 
-		// Apply SP change via a direct modifier
-		ASC->ApplyModToAttribute(UROAttributeSet::GetSPAttribute(), EGameplayModOp::Override, NewSP);
+		// Set the base value directly so the change persists, replicates, and triggers
+		// PreAttributeChange clamping. ApplyModToAttribute with Override only adds an
+		// aggregator modifier which doesn't reliably persist across recalculations.
+		ASC->SetNumericAttributeBase(UROAttributeSet::GetSPAttribute(), NewSP);
+
+		// Sync the GAS attribute back to the character's replicated CurrentSP property.
+		// PostGameplayEffectExecute handles this for GE-driven changes, but
+		// SetNumericAttributeBase bypasses that path.
+		if (AActor* AvatarActor = ASC->GetAvatarActor())
+		{
+			if (AROCharacterBase* Character = Cast<AROCharacterBase>(AvatarActor))
+			{
+				Character->CurrentSP = FMath::RoundToInt32(AttrSet->GetSP());
+			}
+		}
 	}
 }
 

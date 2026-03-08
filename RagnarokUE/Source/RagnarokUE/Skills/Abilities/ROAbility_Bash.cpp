@@ -28,6 +28,7 @@ UROAbility_Bash::UROAbility_Bash()
 	CooldownDuration = 0.5f;
 
 	StunChanceBase = 5.0f;
+	bRequiresTarget = true;
 	StunDuration = 5.0f;
 }
 
@@ -93,10 +94,10 @@ void UROAbility_Bash::OnCastComplete()
 			DamageSpecHandle.Data->SetSetByCallerMagnitude(DamageTypeTag, 0.0f); // Physical
 		}
 
-		FGameplayTag ElementModTag = FGameplayTag::RequestGameplayTag(FName("Data.ElementMod"), false);
-		if (ElementModTag.IsValid())
+		FGameplayTag AttackElementTag = FGameplayTag::RequestGameplayTag(FName("Data.AttackElement"), false);
+		if (AttackElementTag.IsValid())
 		{
-			DamageSpecHandle.Data->SetSetByCallerMagnitude(ElementModTag, 1.0f); // Neutral
+			DamageSpecHandle.Data->SetSetByCallerMagnitude(AttackElementTag, static_cast<float>(SkillElement));
 		}
 
 		FGameplayTag SizeModTag = FGameplayTag::RequestGameplayTag(FName("Data.SizeMod"), false);

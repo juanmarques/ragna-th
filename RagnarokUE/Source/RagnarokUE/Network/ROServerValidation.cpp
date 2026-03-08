@@ -155,8 +155,13 @@ FROValidationResult UROServerValidation::ValidateCooldown(
 		return FROValidationResult::Success();
 	}
 
-	const float ElapsedTime = CurrentTime - LastUseTime;
-	const float AdjustedCooldown = RequiredCooldown - CooldownToleranceSeconds;
+	float ElapsedTime = CurrentTime - LastUseTime;
+	if (ElapsedTime < 0.0f)
+	{
+		// Server time wrapped (day cycle reset), treat as cooldown elapsed
+		return FROValidationResult::Success();
+	}
+	const float AdjustedCooldown = FMath::Max(0.0f, RequiredCooldown - CooldownToleranceSeconds);
 
 	if (ElapsedTime < AdjustedCooldown)
 	{

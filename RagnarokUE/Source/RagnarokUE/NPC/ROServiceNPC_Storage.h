@@ -54,7 +54,7 @@ public:
 	void ServerWithdrawItem(int32 StorageSlot, int32 Amount);
 
 	/** Close the storage window for the current user. */
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerCloseStorage();
 
 	// ---- Queries ----

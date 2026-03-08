@@ -22,6 +22,7 @@ UROAbility_DoubleStrafe::UROAbility_DoubleStrafe()
 	VariableCastTimeBase = 0.0f;
 	FixedCastTime = 0.0f;
 	CooldownDuration = 0.3f;
+	bRequiresTarget = true;
 }
 
 bool UROAbility_DoubleStrafe::CanActivateAbility(
@@ -106,10 +107,10 @@ void UROAbility_DoubleStrafe::OnCastComplete()
 			DamageSpec.Data->SetSetByCallerMagnitude(DamageTypeTag, 0.0f); // Physical
 		}
 
-		FGameplayTag ElementModTag = FGameplayTag::RequestGameplayTag(FName("Data.ElementMod"), false);
-		if (ElementModTag.IsValid())
+		FGameplayTag AttackElementTag = FGameplayTag::RequestGameplayTag(FName("Data.AttackElement"), false);
+		if (AttackElementTag.IsValid())
 		{
-			DamageSpec.Data->SetSetByCallerMagnitude(ElementModTag, 1.0f);
+			DamageSpec.Data->SetSetByCallerMagnitude(AttackElementTag, static_cast<float>(SkillElement));
 		}
 
 		FGameplayTag SizeModTag = FGameplayTag::RequestGameplayTag(FName("Data.SizeMod"), false);

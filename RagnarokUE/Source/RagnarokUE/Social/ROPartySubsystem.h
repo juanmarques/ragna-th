@@ -82,9 +82,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Party")
 	bool KickFromParty(int32 PartyID, int32 KickerID, int32 TargetID);
 
-	/** Set EXP sharing mode. True = Even Share, False = Each Take. */
+	/** Set EXP sharing mode. Only the party leader can change this. True = Even Share, False = Each Take. */
 	UFUNCTION(BlueprintCallable, Category = "Party")
-	void SetExpShareMode(int32 PartyID, bool bEvenShare);
+	void SetExpShareMode(int32 PartyID, int32 RequestorID, bool bEvenShare);
 
 	// ---- Queries ----
 
