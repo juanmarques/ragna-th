@@ -113,7 +113,6 @@ void UROInventoryComponent::ServerMoveItem_Implementation(int32 FromSlot, int32 
 				{
 					InventorySlots[ToSlot].Amount = TotalAmount;
 					InventorySlots[FromSlot] = FROItemInstance();
-					InventorySlots[FromSlot].ItemID = 0;
 					OnInventoryChanged.Broadcast();
 					return;
 				}
@@ -515,7 +514,6 @@ bool UROInventoryComponent::Internal_RemoveItem(int32 SlotIndex, int32 Amount)
 	if (InventorySlots[SlotIndex].Amount <= 0)
 	{
 		InventorySlots[SlotIndex] = FROItemInstance();
-		InventorySlots[SlotIndex].ItemID = 0;
 	}
 
 	return true;

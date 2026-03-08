@@ -76,6 +76,14 @@ void UROWoEManager::OnEmperiumDestroyed(int32 CastleID, int32 AttackingGuildID)
 		return;
 	}
 
+	// Validate attacker belongs to a real guild
+	if (AttackingGuildID <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("WoE: Emperium destroyed but attacker has no guild (ID: %d). Ignoring."),
+			AttackingGuildID);
+		return;
+	}
+
 	const int32 PreviousOwner = Castle->OwnerGuildID;
 	Castle->OwnerGuildID = AttackingGuildID;
 
