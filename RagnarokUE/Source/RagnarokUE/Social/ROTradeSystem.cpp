@@ -367,7 +367,7 @@ bool UROTradeSystem::ExecuteTrade(int32 TradeID)
 	}
 	for (const FROItemInstance& Item : Trade->Player1Items)
 	{
-		Inv2->Internal_AddItem(Item.ItemID, Item.Amount);
+		Inv2->Internal_PlaceItem(Item);
 	}
 
 	// Execute: Remove items from Player2 by UniqueID, give to Player1
@@ -384,7 +384,7 @@ bool UROTradeSystem::ExecuteTrade(int32 TradeID)
 	}
 	for (const FROItemInstance& Item : Trade->Player2Items)
 	{
-		Inv1->Internal_AddItem(Item.ItemID, Item.Amount);
+		Inv1->Internal_PlaceItem(Item);
 	}
 
 	// Transfer Zeny
