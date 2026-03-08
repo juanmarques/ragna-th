@@ -126,8 +126,14 @@ int32 AROEmperiumActor::ApplyEmperiumDamage(int32 DamageAmount, int32 AttackerGu
 		return 0;
 	}
 
-	// Only non-guild members can attack
-	if (AttackerGuildID == OwnerGuildID && OwnerGuildID > 0)
+	// Must belong to a guild to attack the Emperium
+	if (AttackerGuildID <= 0)
+	{
+		return 0;
+	}
+
+	// Only non-guild members can attack (owning guild cannot damage their own Emperium)
+	if (AttackerGuildID == OwnerGuildID)
 	{
 		return 0;
 	}
