@@ -12,6 +12,13 @@ void UROAuthSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	NextAccountID = 1;
 
+	// Start periodic cleanup of expired sessions (every 5 minutes)
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(SessionCleanupTimerHandle, this,
+			&UROAuthSubsystem::CleanupExpiredSessions, 300.0f, true);
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("ROAuthSubsystem: Initialized"));
 }
 
