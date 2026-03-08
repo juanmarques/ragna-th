@@ -24,11 +24,11 @@ enum class EROShopTab : uint8
 };
 
 /**
- * FROShopItem
+ * FROShopItemDisplayData
  * An item available for purchase at a shop.
  */
 USTRUCT(BlueprintType)
-struct FROShopItem
+struct FROShopItemDisplayData
 {
 	GENERATED_BODY()
 
@@ -86,7 +86,7 @@ public:
 
 	/** Set the shop's buy item list. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Shop")
-	void SetShopItems(const TArray<FROShopItem>& Items);
+	void SetShopItems(const TArray<FROShopItemDisplayData>& Items);
 
 	/** Set the player's sellable items. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Shop")
@@ -161,7 +161,7 @@ protected:
 
 private:
 	/** Shop items for buying. */
-	TArray<FROShopItem> ShopItems;
+	TArray<FROShopItemDisplayData> ShopItems;
 
 	/** Items the player can sell. */
 	TArray<FROSellableItem> SellableItems;

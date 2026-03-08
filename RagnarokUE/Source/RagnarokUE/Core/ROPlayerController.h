@@ -169,15 +169,15 @@ public:
 	// ---------------------------------------------------------------
 
 	/** Tell the server where we want to move. */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Movement")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSetDestination(const FVector& Destination);
 
 	/** Tell the server which actor we selected as target. */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Target")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSelectTarget(AActor* NewTarget);
 
 	/** Request the server to execute a skill on the current target. */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Skills")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerUseSkill(int32 SkillID, int32 SkillLevel, AActor* Target);
 
 	// ---------------------------------------------------------------

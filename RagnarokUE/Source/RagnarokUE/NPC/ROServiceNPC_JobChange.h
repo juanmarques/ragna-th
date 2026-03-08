@@ -64,7 +64,7 @@ public:
 	// ---- Server RPCs ----
 
 	/** Attempt to change the player's job class. Server-authoritative. */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "JobChange")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerAttemptJobChange();
 
 	// ---- Queries ----

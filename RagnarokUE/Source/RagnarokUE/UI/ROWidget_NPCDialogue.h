@@ -13,11 +13,11 @@ class UVerticalBox;
 class URichTextBlock;
 
 /**
- * FRODialogueChoice
+ * FRODialogueChoiceDisplay
  * A single dialogue choice button.
  */
 USTRUCT(BlueprintType)
-struct FRODialogueChoice
+struct FRODialogueChoiceDisplay
 {
 	GENERATED_BODY()
 
@@ -61,7 +61,7 @@ public:
 
 	/** Set the choice buttons (up to 4). Clears existing choices. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Dialogue")
-	void SetChoices(const TArray<FRODialogueChoice>& Choices);
+	void SetChoices(const TArray<FRODialogueChoiceDisplay>& Choices);
 
 	/** Show only a Next button (no choices). */
 	UFUNCTION(BlueprintCallable, Category = "RO|Dialogue")
@@ -172,5 +172,5 @@ private:
 	bool bIsCloseMode = false;
 
 	/** Current choice data. */
-	TArray<FRODialogueChoice> CurrentChoices;
+	TArray<FRODialogueChoiceDisplay> CurrentChoices;
 };

@@ -270,5 +270,7 @@ enum class EROWeatherType : uint8
 	Sakura		UMETA(DisplayName = "Sakura Petals"),
 	Fog			UMETA(DisplayName = "Fog"),
 	Sandstorm	UMETA(DisplayName = "Sandstorm"),
-	Leaves		UMETA(DisplayName = "Autumn Leaves")
+	Leaves		UMETA(DisplayName = "Autumn Leaves"),
+	Storm		UMETA(DisplayName = "Storm"),
+	Night		UMETA(DisplayName = "Night")
 };
