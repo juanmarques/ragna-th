@@ -11,6 +11,8 @@ class UHorizontalBox;
 class UTextBlock;
 class UImage;
 class UProgressBar;
+class UROItemDatabase;
+class UROAbilitySystemComponent;
 
 /**
  * FROHotbarSlot
