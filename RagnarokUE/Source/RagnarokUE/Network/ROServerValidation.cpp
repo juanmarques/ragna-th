@@ -11,6 +11,16 @@ FROValidationResult UROServerValidation::ValidateMovement(
 {
 	if (DeltaTime <= 0.0f)
 	{
+		// Zero or negative DeltaTime is suspicious; still check teleport distance
+		const float Distance = FVector::Dist(PreviousLocation, NewLocation);
+		if (Distance > MaxTeleportDistance)
+		{
+			const FString Details = FString::Printf(
+				TEXT("Teleport with invalid DeltaTime: Distance=%.1f (max=%.1f), DeltaTime=%.3f"),
+				Distance, MaxTeleportDistance, DeltaTime);
+			LogSuspiciousActivity(PlayerNetID, TEXT("TeleportHack"), Details, 3);
+			return FROValidationResult::Failure(Details, 3);
+		}
 		return FROValidationResult::Success();
 	}
 

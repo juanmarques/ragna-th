@@ -104,9 +104,21 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
 	bool IsOverweight() const;
 
+	/** Check if at 50% weight (stops natural HP/SP regen). */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
+	bool IsOverweight50() const;
+
+	/** Check if at 90% weight (cannot attack or use skills). */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
+	bool IsOverweight90() const;
+
 	/** Get the first available (empty) inventory slot. Returns -1 if full. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
 	int32 GetFreeSlot() const;
+
+	/** Update max weight capacity based on STR stat. Formula: 2000 + STR * 30 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void UpdateMaxWeight(int32 STR);
 
 	/** Recalculate CurrentWeight from all inventory items. */
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -126,6 +138,13 @@ public:
 	/** Internal: Remove item directly (server-side only). Returns true on success. */
 	bool Internal_RemoveItem(int32 SlotIndex, int32 Amount);
 
+	/** Internal: Place a fully-formed item instance into a free slot, preserving all data (refine, cards, etc). Returns slot index or -1. */
+	int32 Internal_PlaceItem(const FROItemInstance& Item);
+
+	/** Check if an item cooldown group is ready. */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Inventory")
+	bool IsItemCooldownReady(int32 CooldownGroup) const;
+
 protected:
 	UFUNCTION()
 	void OnRep_InventorySlots();
@@ -136,6 +155,10 @@ protected:
 private:
 	/** Maximum Zeny cap. */
 	static constexpr int32 MAX_ZENY = 1000000000;
+
+	/** Cooldown tracker: maps cooldown group ID to world time when cooldown expires. */
+	UPROPERTY()
+	TMap<int32, float> ItemCooldowns;
 
 	/** Get the item database subsystem. */
 	UROItemDatabase* GetItemDatabase() const;

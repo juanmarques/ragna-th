@@ -7,6 +7,8 @@
 #include "RagnarokUE/Combat/ROElementalSystem.h"
 #include "RagnarokUE/Combat/RODamageGameplayEffect.h"
 #include "RagnarokUE/Core/ROPlayerController.h"
+#include "RagnarokUE/Character/ROStatsComponent.h"
+#include "RagnarokUE/Character/ROLevelingComponent.h"
 
 UROAbility_Bash::UROAbility_Bash()
 {
@@ -16,7 +18,7 @@ UROAbility_Bash::UROAbility_Bash()
 	SkillLevel = 1;
 	SkillElement = EROElement::Neutral;
 
-	// SP cost: 8 + 2 * Level (using base=6, perLevel=2 so GetSPCost = 6 + 2*Level = 8 at Lv1)
+	// SP cost: 6 + 2 * Level (Lv1=8, Lv5=16, Lv10=26)
 	SPCostBase = 6.0f;
 	SPCostPerLevel = 2.0f;
 
@@ -107,14 +109,33 @@ void UROAbility_Bash::OnCastComplete()
 		SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpecHandle.Data.Get(), TargetASC);
 	}
 
-	// Apply stun at high levels
+	// Apply stun at high levels (with VIT resistance)
 	const float StunChance = GetStunChance();
 	if (StunChance > 0.0f && TargetActor)
 	{
 		UROStatusEffectComponent* StatusComp = TargetActor->FindComponentByClass<UROStatusEffectComponent>();
 		if (StatusComp)
 		{
-			StatusComp->ApplyStatusEffect(EROStatusEffect::Stun, StunDuration, 1, StunChance);
+			// Read target stats for resistance calculation
+			int32 TargetVIT = 0;
+			int32 TargetINT = 0;
+			int32 TargetLUK = 0;
+			int32 TargetBaseLevel = 1;
+			UROStatsComponent* TargetStats = TargetActor->FindComponentByClass<UROStatsComponent>();
+			if (TargetStats)
+			{
+				TargetVIT = TargetStats->GetTotalStat(EROStat::VIT);
+				TargetINT = TargetStats->GetTotalStat(EROStat::INT_STAT);
+				TargetLUK = TargetStats->GetTotalStat(EROStat::LUK);
+			}
+			UROLevelingComponent* TargetLevel = TargetActor->FindComponentByClass<UROLevelingComponent>();
+			if (TargetLevel)
+			{
+				TargetBaseLevel = TargetLevel->BaseLevel;
+			}
+			StatusComp->ApplyStatusEffectWithResist(
+				EROStatusEffect::Stun, StunDuration, 1, StunChance,
+				TargetVIT, TargetINT, TargetLUK, TargetBaseLevel);
 		}
 	}
 

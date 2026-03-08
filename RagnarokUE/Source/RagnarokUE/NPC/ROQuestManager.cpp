@@ -514,6 +514,12 @@ void UROQuestManager::AwardQuestRewards(AROCharacterBase* Player, const FROQuest
 		// Award items
 		if (Reward.ItemID > 0 && Reward.Amount > 0 && Inventory)
 		{
+			if (!Inventory->CanAddItem(Reward.ItemID, Reward.Amount))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("QuestManager: Player inventory full, cannot grant %d x Item %d from quest %d"),
+					Reward.Amount, Reward.ItemID, QuestID);
+				continue;
+			}
 			Inventory->Internal_AddItem(Reward.ItemID, Reward.Amount);
 		}
 

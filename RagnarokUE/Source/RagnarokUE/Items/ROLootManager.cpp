@@ -111,9 +111,9 @@ AROLootActor* UROLootManager::SpawnLootActor(int32 ItemID, int32 Amount, FVector
 		return nullptr;
 	}
 
-	// Validate item exists
+	// Validate item exists in the database
 	UROItemDatabase* DB = GetItemDatabase();
-	if (DB && !DB->GetItemData(ItemID))
+	if (!DB || !DB->GetItemData(ItemID))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("ROLootManager: Cannot spawn loot for unknown ItemID %d"), ItemID);
 		return nullptr;

@@ -39,6 +39,12 @@ void UROWidget_NPCDialogue::NativeTick(const FGeometry& MyGeometry, float InDelt
 		return;
 	}
 
+	if (TypewriterSpeed <= 0.0f)
+	{
+		SkipTypewriter();
+		return;
+	}
+
 	TypewriterAccumulator += InDeltaTime;
 	const float CharInterval = 1.0f / TypewriterSpeed;
 
