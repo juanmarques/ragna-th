@@ -218,10 +218,20 @@ void AROPlayerController::RotateCamera(float YawDelta)
 void AROPlayerController::SelectTarget(AActor* NewTarget)
 {
 	AActor* OldTarget = SelectedTarget;
-	SelectedTarget = NewTarget;
 
 	if (OldTarget != NewTarget)
 	{
+		// Only the server should modify the replicated property directly
+		if (HasAuthority())
+		{
+			SelectedTarget = NewTarget;
+		}
+		else
+		{
+			// On the client, send to server and let replication update SelectedTarget
+			ServerSelectTarget(NewTarget);
+		}
+
 		OnTargetChanged.Broadcast(NewTarget);
 
 		if (NewTarget)
@@ -231,12 +241,6 @@ void AROPlayerController::SelectTarget(AActor* NewTarget)
 		else
 		{
 			UE_LOG(LogRagnarokUE, Log, TEXT("SelectTarget – Target cleared."));
-		}
-
-		// Notify server
-		if (!HasAuthority())
-		{
-			ServerSelectTarget(NewTarget);
 		}
 	}
 }
@@ -392,10 +396,17 @@ bool AROPlayerController::ServerUseSkill_Validate(int32 SkillID, int32 SkillLeve
 	{
 		return false;
 	}
-	if (SkillLevel < 1 || SkillLevel > 20)
+	if (SkillLevel < 1 || SkillLevel > 10)
 	{
 		return false;
 	}
+
+	// Validate target is not pending kill (null is valid for self/ground skills)
+	if (Target && Target->IsPendingKillPending())
+	{
+		return false;
+	}
+
 	return true;
 }
 

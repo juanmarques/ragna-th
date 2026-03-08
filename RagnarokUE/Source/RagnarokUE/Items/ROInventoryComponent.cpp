@@ -245,7 +245,7 @@ bool UROInventoryComponent::CanAddItem(int32 ItemID, int32 Amount) const
 	}
 
 	// Slot check: if stackable, see if we can fit into existing stacks or need new slots
-	if (ItemData->bStackable)
+	if (ItemData->bStackable && ItemData->MaxStack > 0)
 	{
 		int32 Remaining = Amount;
 		for (int32 i = 0; i < InventorySlots.Num() && Remaining > 0; ++i)

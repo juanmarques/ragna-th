@@ -39,9 +39,6 @@ private:
 	/** Calculate damage modifier at current level. */
 	float GetDamageModifier() const;
 
-	/** Apply pushback to all enemies in range. */
-	void ApplyPushback(const FVector& Origin) const;
-
 	/** Apply fire element endow to self. */
 	void ApplyFireEndow() const;
 };
