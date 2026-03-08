@@ -198,6 +198,11 @@ bool FROSPRReader::DecodeRLEPaletteFrame(const uint8*& Cursor, const uint8* End)
 			uint8 RunLength = *Cursor++;
 			// Index 0 = transparent, already zeroed
 			WritePos += RunLength;
+			if (WritePos > PixelCount)
+			{
+				WritePos = PixelCount;
+				break;
+			}
 		}
 		else
 		{

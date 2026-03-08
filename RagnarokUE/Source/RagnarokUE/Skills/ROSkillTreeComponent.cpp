@@ -125,7 +125,7 @@ void UROSkillTreeComponent::ServerLearnSkill_Implementation(int32 SkillID)
 	}
 
 	// All checks passed - learn/level up the skill
-	LearnedSkills.Add(SkillID, DesiredLevel);
+	LearnedSkills.FindOrAdd(SkillID) = DesiredLevel;
 	SkillPoints--;
 	TotalSkillPointsSpent++;
 

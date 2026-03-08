@@ -80,20 +80,22 @@ void UROLevelingComponent::AddBaseExp(int64 Amount)
 	CurrentBaseExp += Amount;
 
 	// Loop for multi-level ups
-	int64 RequiredExp = GetRequiredBaseExp();
-	while (RequiredExp > 0 && CurrentBaseExp >= RequiredExp && BaseLevel < MaxLevel)
+	while (BaseLevel < MaxLevel)
 	{
-		CurrentBaseExp -= RequiredExp;
-		BaseLevel++;
-		ProcessBaseLevelUp();
-
-		if (BaseLevel >= MaxLevel)
+		int64 RequiredExp = GetRequiredBaseExp();
+		if (RequiredExp <= 0 || CurrentBaseExp < RequiredExp)
 		{
-			CurrentBaseExp = 0;
 			break;
 		}
 
-		RequiredExp = GetRequiredBaseExp();
+		CurrentBaseExp -= RequiredExp;
+		BaseLevel++;
+		ProcessBaseLevelUp();
+	}
+
+	if (BaseLevel >= MaxLevel)
+	{
+		CurrentBaseExp = 0;
 	}
 }
 
@@ -122,20 +124,22 @@ void UROLevelingComponent::AddJobExp(int64 Amount)
 	CurrentJobExp += Amount;
 
 	// Loop for multi-level ups
-	int64 RequiredExp = GetRequiredJobExp();
-	while (RequiredExp > 0 && CurrentJobExp >= RequiredExp && JobLevel < MaxLevel)
+	while (JobLevel < MaxLevel)
 	{
-		CurrentJobExp -= RequiredExp;
-		JobLevel++;
-		ProcessJobLevelUp();
-
-		if (JobLevel >= MaxLevel)
+		int64 RequiredExp = GetRequiredJobExp();
+		if (RequiredExp <= 0 || CurrentJobExp < RequiredExp)
 		{
-			CurrentJobExp = 0;
 			break;
 		}
 
-		RequiredExp = GetRequiredJobExp();
+		CurrentJobExp -= RequiredExp;
+		JobLevel++;
+		ProcessJobLevelUp();
+	}
+
+	if (JobLevel >= MaxLevel)
+	{
+		CurrentJobExp = 0;
 	}
 }
 

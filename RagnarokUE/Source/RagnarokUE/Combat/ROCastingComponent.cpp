@@ -112,7 +112,6 @@ bool UROCastingComponent::IsInVariableCastPhase() const
 
 void UROCastingComponent::CompleteCast()
 {
-	const int32 CompletedSkillID = CastingSkillID;
 	ResetCastState();
 	OnCastComplete.Broadcast();
 }

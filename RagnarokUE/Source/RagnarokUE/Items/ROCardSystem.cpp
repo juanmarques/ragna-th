@@ -7,7 +7,7 @@
 #include "ROCardData.h"
 #include "ROItemDatabase.h"
 
-bool UROCardSystem::InsertCard(FROItemInstance& Equipment, int32 CardID, int32 SlotIndex)
+bool UROCardSystem::InsertCard(FROItemInstance& Equipment, int32 CardID, int32 SlotIndex, UROItemDatabase* ItemDatabase)
 {
 	if (CardID <= 0 || SlotIndex < 0)
 	{
@@ -24,6 +24,17 @@ bool UROCardSystem::InsertCard(FROItemInstance& Equipment, int32 CardID, int32 S
 	if (Equipment.CardSlots[SlotIndex] != 0)
 	{
 		return false;
+	}
+
+	// Validate card type matches equipment type (weapon card in weapon, armor card in matching slot)
+	if (ItemDatabase)
+	{
+		const UROItemBase* EquipData = ItemDatabase->GetItemData(Equipment.ItemID);
+		const UROCardData* CardData = ItemDatabase->GetCardData(CardID);
+		if (EquipData && CardData && !ValidateCardSlot(EquipData, CardData))
+		{
+			return false;
+		}
 	}
 
 	Equipment.CardSlots[SlotIndex] = CardID;
