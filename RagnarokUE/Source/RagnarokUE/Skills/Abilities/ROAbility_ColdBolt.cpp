@@ -24,6 +24,7 @@ UROAbility_ColdBolt::UROAbility_ColdBolt()
 	CooldownDuration = 0.3f;
 
 	BoltInterval = 0.15f;
+	bRequiresTarget = true;
 }
 
 void UROAbility_ColdBolt::OnCastComplete()

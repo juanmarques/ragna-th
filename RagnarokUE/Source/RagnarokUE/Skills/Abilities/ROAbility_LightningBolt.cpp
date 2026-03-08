@@ -24,6 +24,7 @@ UROAbility_LightningBolt::UROAbility_LightningBolt()
 	CooldownDuration = 0.3f;
 
 	BoltInterval = 0.15f;
+	bRequiresTarget = true;
 }
 
 void UROAbility_LightningBolt::OnCastComplete()
