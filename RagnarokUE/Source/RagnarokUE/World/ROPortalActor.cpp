@@ -1,7 +1,9 @@
 // Copyright Ragna-TH Project. All Rights Reserved.
 
 #include "ROPortalActor.h"
+#include "ROMapManager.h"
 #include "Components/BoxComponent.h"
+#include "RagnarokUE/Character/ROLevelingComponent.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -75,11 +77,17 @@ bool AROPortalActor::MeetsLevelRequirement(AActor* PlayerCharacter) const
 		return true;
 	}
 
-	// TODO: Get the player's base level from their AROCharacterBase stats component.
-	// For now, we check if the cast to ACharacter succeeds (assume level requirement met).
-	// In production:
-	//   AROCharacterBase* ROChar = Cast<AROCharacterBase>(PlayerCharacter);
-	//   if (ROChar) { return ROChar->GetBaseLevel() >= RequiredBaseLevel; }
+	if (!PlayerCharacter)
+	{
+		return false;
+	}
+
+	UROLevelingComponent* LevelComp = PlayerCharacter->FindComponentByClass<UROLevelingComponent>();
+	if (LevelComp)
+	{
+		return LevelComp->BaseLevel >= RequiredBaseLevel;
+	}
+
 	return true;
 }
 
@@ -94,16 +102,46 @@ void AROPortalActor::TeleportPlayer(AActor* PlayerCharacter)
 	UE_LOG(LogTemp, Log, TEXT("Portal %s: Teleporting player to map '%s' at location %s"),
 		*GetName(), *DestinationMapID.ToString(), *DestinationLocation.ToString());
 
-	// For same-level teleportation (within the same UE map):
-	// Simply teleport the actor to the destination location.
-	const FRotator DestRotation(0.0f, DestinationRotation, 0.0f);
-	PlayerCharacter->SetActorLocationAndRotation(DestinationLocation, DestRotation);
+	// Determine if this is a same-map or cross-map teleport
+	const bool bIsCrossMap = !SourceMapID.IsNone() && SourceMapID != DestinationMapID;
 
-	// For cross-level travel (different UE maps), use server travel:
-	// APlayerController* PC = Cast<ACharacter>(PlayerCharacter)->GetController<APlayerController>();
-	// if (PC)
-	// {
-	//     // Seamless travel to the destination level
-	//     GetWorld()->ServerTravel(FString::Printf(TEXT("/Game/Maps/%s?listen"), *DestinationMapID.ToString()));
-	// }
+	if (!bIsCrossMap)
+	{
+		// Same-level teleportation: move the actor within the current UE map
+		const FRotator DestRotation(0.0f, DestinationRotation, 0.0f);
+		PlayerCharacter->SetActorLocationAndRotation(DestinationLocation, DestRotation);
+		return;
+	}
+
+	// Cross-level travel: look up the destination level path from the map manager
+	FString TravelURL;
+
+	UGameInstance* GI = GetGameInstance();
+	UROMapManager* MapManager = GI ? GI->GetSubsystem<UROMapManager>() : nullptr;
+	if (MapManager)
+	{
+		FROMapConnectionInfo DestInfo = MapManager->GetMapConnectionInfo(DestinationMapID);
+		if (!DestInfo.LevelAssetPath.IsEmpty())
+		{
+			TravelURL = DestInfo.LevelAssetPath;
+		}
+	}
+
+	// Fallback to convention-based path if map manager doesn't have it
+	if (TravelURL.IsEmpty())
+	{
+		TravelURL = FString::Printf(TEXT("/Game/Maps/%s"), *DestinationMapID.ToString());
+	}
+
+	// Append destination coordinates as travel options so the player spawns at the right location
+	TravelURL += FString::Printf(TEXT("?DestX=%.1f?DestY=%.1f?DestZ=%.1f?DestYaw=%.1f"),
+		DestinationLocation.X, DestinationLocation.Y, DestinationLocation.Z, DestinationRotation);
+
+	UE_LOG(LogTemp, Log, TEXT("Portal %s: Server travel to '%s'"), *GetName(), *TravelURL);
+
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->ServerTravel(TravelURL + TEXT("?listen"));
+	}
 }

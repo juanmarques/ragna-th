@@ -116,7 +116,7 @@ void AROServiceNPC_Refine::ServerRefineItem_Implementation(int32 InventorySlot)
 
 bool AROServiceNPC_Refine::ServerRefineItem_Validate(int32 InventorySlot)
 {
-	return InventorySlot >= 0;
+	return InventorySlot >= 0 && InventorySlot < 100;
 }
 
 bool AROServiceNPC_Refine::CanRefineItem(const FROItemInstance& Item, int32 WeaponLevel) const

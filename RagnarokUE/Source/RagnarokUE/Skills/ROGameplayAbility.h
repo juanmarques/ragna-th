@@ -70,6 +70,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RO Skill")
 	TSoftObjectPtr<UTexture2D> SkillIcon;
 
+	/** If true, skill requires a valid SelectedTarget to activate. Prevents wasting SP/cooldown on no-target casts. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RO Skill|Targeting")
+	bool bRequiresTarget;
+
 	// --- Computed Getters ---
 
 	/** Calculate total SP cost at current skill level. */

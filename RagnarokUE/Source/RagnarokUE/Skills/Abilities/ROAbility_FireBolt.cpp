@@ -25,6 +25,7 @@ UROAbility_FireBolt::UROAbility_FireBolt()
 	CooldownDuration = 0.3f;
 
 	BoltInterval = 0.15f;
+	bRequiresTarget = true;
 }
 
 void UROAbility_FireBolt::OnCastComplete()
@@ -93,11 +94,10 @@ void UROAbility_FireBolt::OnCastComplete()
 			DamageSpec.Data->SetSetByCallerMagnitude(DamageTypeTag, 1.0f); // Magical
 		}
 
-		FGameplayTag ElementModTag = FGameplayTag::RequestGameplayTag(FName("Data.ElementMod"), false);
-		if (ElementModTag.IsValid())
+		FGameplayTag AttackElementTag = FGameplayTag::RequestGameplayTag(FName("Data.AttackElement"), false);
+		if (AttackElementTag.IsValid())
 		{
-			// Fire element modifier will be looked up against target's element in the execution
-			DamageSpec.Data->SetSetByCallerMagnitude(ElementModTag, 1.0f);
+			DamageSpec.Data->SetSetByCallerMagnitude(AttackElementTag, static_cast<float>(SkillElement));
 		}
 
 		// Apply the damage effect to the target

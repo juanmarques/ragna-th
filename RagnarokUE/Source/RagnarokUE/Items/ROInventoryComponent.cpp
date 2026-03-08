@@ -68,7 +68,7 @@ void UROInventoryComponent::ServerAddItem_Implementation(int32 ItemID, int32 Amo
 
 bool UROInventoryComponent::ServerRemoveItem_Validate(int32 SlotIndex, int32 Amount)
 {
-	return SlotIndex >= 0 && Amount > 0;
+	return SlotIndex >= 0 && SlotIndex < 100 && Amount > 0;
 }
 
 void UROInventoryComponent::ServerRemoveItem_Implementation(int32 SlotIndex, int32 Amount)
@@ -83,7 +83,7 @@ void UROInventoryComponent::ServerRemoveItem_Implementation(int32 SlotIndex, int
 
 bool UROInventoryComponent::ServerMoveItem_Validate(int32 FromSlot, int32 ToSlot)
 {
-	return FromSlot >= 0 && ToSlot >= 0 && FromSlot != ToSlot;
+	return FromSlot >= 0 && FromSlot < 100 && ToSlot >= 0 && ToSlot < 100 && FromSlot != ToSlot;
 }
 
 void UROInventoryComponent::ServerMoveItem_Implementation(int32 FromSlot, int32 ToSlot)
@@ -138,7 +138,7 @@ void UROInventoryComponent::ServerMoveItem_Implementation(int32 FromSlot, int32 
 
 bool UROInventoryComponent::ServerUseItem_Validate(int32 SlotIndex)
 {
-	return SlotIndex >= 0;
+	return SlotIndex >= 0 && SlotIndex < 100;
 }
 
 void UROInventoryComponent::ServerUseItem_Implementation(int32 SlotIndex)
