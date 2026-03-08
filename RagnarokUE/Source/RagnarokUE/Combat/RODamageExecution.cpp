@@ -251,7 +251,7 @@ bool URODamageExecution::PerformHitCheck(float HIT, float FLEE)
 	// Minimum 5% hit rate, maximum 95% hit rate
 	const float HitChance = FMath::Clamp(HIT - FLEE + 80.0f, 5.0f, 95.0f);
 	const float Roll = FMath::FRandRange(0.0f, 100.0f);
-	return Roll <= HitChance;
+	return Roll < HitChance;
 }
 
 bool URODamageExecution::PerformCriticalCheck(float CritRate, float PerfectDodge)

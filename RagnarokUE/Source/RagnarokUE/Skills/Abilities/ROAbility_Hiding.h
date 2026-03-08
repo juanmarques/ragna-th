@@ -27,6 +27,7 @@ public:
 
 protected:
 	virtual void OnCastComplete() override;
+	virtual void OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 
 	/** Called to end hiding (toggle off or SP depleted). */
 	UFUNCTION()
