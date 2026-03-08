@@ -7,6 +7,11 @@
 #include "Engine/Texture2D.h"
 #include "TextureResource.h"
 #include "Misc/Paths.h"
+#include "Misc/FileHelper.h"
+#include "IImageWrapperModule.h"
+#include "IImageWrapper.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -320,17 +325,178 @@ FROImportResult UROAssetImporter::ImportElementIcons()
 	return Result;
 }
 
+// --- PNG File Loading ---
+
+FROImportResult UROAssetImporter::LoadFromPNGFiles()
+{
+	FROImportResult Result;
+
+	// Find the Content directory
+	FString ContentDir = FPaths::ProjectContentDir();
+	FString ManifestPath = ContentDir / TEXT("Data") / TEXT("asset_manifest.json");
+
+	FString JsonString;
+	if (!FFileHelper::LoadFileToString(JsonString, *ManifestPath))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ROAssetImporter: No asset manifest found at: %s"), *ManifestPath);
+		UE_LOG(LogTemp, Warning, TEXT("ROAssetImporter: Run 'python3 Tools/download_ro_assets.py' to download assets first."));
+		Result.Message = TEXT("No asset_manifest.json found. Run Tools/download_ro_assets.py first.");
+		return Result;
+	}
+
+	TSharedPtr<FJsonObject> JsonRoot;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+	if (!FJsonSerializer::Deserialize(Reader, JsonRoot) || !JsonRoot.IsValid())
+	{
+		Result.Message = TEXT("Failed to parse asset_manifest.json");
+		return Result;
+	}
+
+	auto LoadCategory = [&](const FString& Category, TMap<int32, UTexture2D*>& Cache)
+	{
+		const TSharedPtr<FJsonObject>* CategoryObj = nullptr;
+		if (!JsonRoot->TryGetObjectField(Category, CategoryObj))
+		{
+			return;
+		}
+
+		for (const auto& Pair : (*CategoryObj)->Values)
+		{
+			int32 ID = FCString::Atoi(*Pair.Key);
+			FString RelPath = Pair.Value->AsString();
+			FString FullPath = ContentDir / RelPath;
+
+			if (!FPaths::FileExists(FullPath))
+			{
+				Result.FailedCount++;
+				continue;
+			}
+
+			UTexture2D* Texture = LoadPNGAsTexture(FullPath);
+			if (Texture)
+			{
+				Cache.Add(ID, Texture);
+				Result.ImportedCount++;
+				Result.ImportedAssets.Add(RelPath);
+			}
+			else
+			{
+				Result.FailedCount++;
+			}
+		}
+	};
+
+	UE_LOG(LogTemp, Log, TEXT("ROAssetImporter: Loading PNG assets from manifest..."));
+
+	LoadCategory(TEXT("items"), ItemIconCache);
+	LoadCategory(TEXT("skills"), SkillIconCache);
+	LoadCategory(TEXT("monsters"), MonsterIconCache);
+	LoadCategory(TEXT("elements"), ElementIconCache);
+
+	Result.bSuccess = Result.ImportedCount > 0;
+	Result.Message = FString::Printf(TEXT("Loaded %d PNG assets (%d failed)"),
+		Result.ImportedCount, Result.FailedCount);
+	UE_LOG(LogTemp, Log, TEXT("ROAssetImporter: %s"), *Result.Message);
+
+	return Result;
+}
+
+UTexture2D* UROAssetImporter::LoadPNGAsTexture(const FString& FilePath)
+{
+	// Check cache
+	if (UTexture2D* Cached = GetCachedTexture(FilePath))
+	{
+		return Cached;
+	}
+
+	TArray<uint8> FileData;
+	if (!FFileHelper::LoadFileToArray(FileData, *FilePath))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ROAssetImporter: Failed to read file: %s"), *FilePath);
+		return nullptr;
+	}
+
+	IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+
+	// Detect format from extension
+	FString Extension = FPaths::GetExtension(FilePath).ToLower();
+	EImageFormat Format = EImageFormat::PNG;
+	if (Extension == TEXT("bmp"))
+	{
+		Format = EImageFormat::BMP;
+	}
+	else if (Extension == TEXT("tga"))
+	{
+		Format = EImageFormat::TGA;
+	}
+	else if (Extension == TEXT("jpg") || Extension == TEXT("jpeg"))
+	{
+		Format = EImageFormat::JPEG;
+	}
+
+	TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(Format);
+	if (!ImageWrapper.IsValid() || !ImageWrapper->SetCompressed(FileData.GetData(), FileData.Num()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ROAssetImporter: Failed to decode: %s"), *FilePath);
+		return nullptr;
+	}
+
+	TArray<uint8> RawData;
+	if (!ImageWrapper->GetRaw(ERGBFormat::RGBA, 8, RawData))
+	{
+		return nullptr;
+	}
+
+	FString TextureName = FPaths::GetBaseFilename(FilePath);
+	UTexture2D* Texture = CreateTextureFromRGBA(TextureName, ImageWrapper->GetWidth(), ImageWrapper->GetHeight(), RawData.GetData());
+
+	if (Texture)
+	{
+		TextureCache.Add(FilePath, Texture);
+	}
+
+	return Texture;
+}
+
+UTexture2D* UROAssetImporter::GetItemIcon(int32 ItemID) const
+{
+	const TObjectPtr<UTexture2D>* Found = ItemIconCache.Find(ItemID);
+	return Found ? *Found : nullptr;
+}
+
+UTexture2D* UROAssetImporter::GetSkillIcon(int32 SkillID) const
+{
+	const TObjectPtr<UTexture2D>* Found = SkillIconCache.Find(SkillID);
+	return Found ? *Found : nullptr;
+}
+
+UTexture2D* UROAssetImporter::GetMonsterIcon(int32 MonsterID) const
+{
+	const TObjectPtr<UTexture2D>* Found = MonsterIconCache.Find(MonsterID);
+	return Found ? *Found : nullptr;
+}
+
+UTexture2D* UROAssetImporter::GetElementIcon(int32 ElementIndex) const
+{
+	const TObjectPtr<UTexture2D>* Found = ElementIconCache.Find(ElementIndex);
+	return Found ? *Found : nullptr;
+}
+
 // --- Texture Cache ---
 
-UTexture2D* UROAssetImporter::GetCachedTexture(const FString& SPRPath) const
+UTexture2D* UROAssetImporter::GetCachedTexture(const FString& Key) const
 {
-	const TObjectPtr<UTexture2D>* Found = TextureCache.Find(SPRPath);
+	const TObjectPtr<UTexture2D>* Found = TextureCache.Find(Key);
 	return Found ? *Found : nullptr;
 }
 
 void UROAssetImporter::ClearTextureCache()
 {
 	TextureCache.Empty();
+	ItemIconCache.Empty();
+	SkillIconCache.Empty();
+	MonsterIconCache.Empty();
+	ElementIconCache.Empty();
 }
 
 // --- Private Helpers ---
