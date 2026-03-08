@@ -156,12 +156,31 @@ bool UROVendingSystem::BuyFromShop(int32 BuyerID, int32 VendorID, int32 ItemInde
 		return false;
 	}
 
-	// Add items to buyer's inventory first (preserve refine, cards, etc)
+	// Find and remove items from vendor's inventory by UniqueID (prevent duplication)
+	int32 VendorSlot = INDEX_NONE;
+	for (int32 i = 0; i < VendorInv->InventorySlots.Num(); ++i)
+	{
+		if (VendorInv->InventorySlots[i].UniqueID == VendItem.Item.UniqueID)
+		{
+			VendorSlot = i;
+			break;
+		}
+	}
+	if (VendorSlot == INDEX_NONE)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Vending purchase failed: vendor no longer has the item in inventory."));
+		return false;
+	}
+	VendorInv->Internal_RemoveItem(VendorSlot, Amount);
+
+	// Add items to buyer's inventory (preserve refine, cards, etc)
 	FROItemInstance PurchasedItem = VendItem.Item;
 	PurchasedItem.Amount = Amount;
 	int32 PlacedSlot = BuyerInv->Internal_PlaceItem(PurchasedItem);
 	if (PlacedSlot < 0)
 	{
+		// Placement failed — return item to vendor to avoid item loss
+		VendorInv->Internal_PlaceItem(PurchasedItem);
 		UE_LOG(LogTemp, Warning, TEXT("Vending purchase failed: could not place item in buyer inventory."));
 		return false;
 	}
