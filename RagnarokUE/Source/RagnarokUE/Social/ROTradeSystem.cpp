@@ -316,13 +316,53 @@ bool UROTradeSystem::ExecuteTrade(int32 TradeID)
 		}
 	}
 
-	// Execute: Remove items from Player1, give to Player2
+	// Re-validate: verify all traded items still exist in each player's inventory
+	// by UniqueID (prevents item duplication if items were moved/dropped after locking)
 	for (const FROItemInstance& Item : Trade->Player1Items)
 	{
-		int32 SlotIndex = Inv1->FindItemByID(Item.ItemID);
-		if (SlotIndex >= 0)
+		bool bFound = false;
+		for (int32 i = 0; i < Inv1->InventorySlots.Num(); ++i)
 		{
-			Inv1->Internal_RemoveItem(SlotIndex, Item.Amount);
+			if (Inv1->InventorySlots[i].UniqueID == Item.UniqueID)
+			{
+				bFound = true;
+				break;
+			}
+		}
+		if (!bFound)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Trade %d failed: Player1 no longer has item %s."), TradeID, *Item.UniqueID.ToString());
+			return false;
+		}
+	}
+	for (const FROItemInstance& Item : Trade->Player2Items)
+	{
+		bool bFound = false;
+		for (int32 i = 0; i < Inv2->InventorySlots.Num(); ++i)
+		{
+			if (Inv2->InventorySlots[i].UniqueID == Item.UniqueID)
+			{
+				bFound = true;
+				break;
+			}
+		}
+		if (!bFound)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Trade %d failed: Player2 no longer has item %s."), TradeID, *Item.UniqueID.ToString());
+			return false;
+		}
+	}
+
+	// Execute: Remove items from Player1 by UniqueID, give to Player2
+	for (const FROItemInstance& Item : Trade->Player1Items)
+	{
+		for (int32 i = 0; i < Inv1->InventorySlots.Num(); ++i)
+		{
+			if (Inv1->InventorySlots[i].UniqueID == Item.UniqueID)
+			{
+				Inv1->Internal_RemoveItem(i, Item.Amount);
+				break;
+			}
 		}
 	}
 	for (const FROItemInstance& Item : Trade->Player1Items)
@@ -330,13 +370,16 @@ bool UROTradeSystem::ExecuteTrade(int32 TradeID)
 		Inv2->Internal_AddItem(Item.ItemID, Item.Amount);
 	}
 
-	// Execute: Remove items from Player2, give to Player1
+	// Execute: Remove items from Player2 by UniqueID, give to Player1
 	for (const FROItemInstance& Item : Trade->Player2Items)
 	{
-		int32 SlotIndex = Inv2->FindItemByID(Item.ItemID);
-		if (SlotIndex >= 0)
+		for (int32 i = 0; i < Inv2->InventorySlots.Num(); ++i)
 		{
-			Inv2->Internal_RemoveItem(SlotIndex, Item.Amount);
+			if (Inv2->InventorySlots[i].UniqueID == Item.UniqueID)
+			{
+				Inv2->Internal_RemoveItem(i, Item.Amount);
+				break;
+			}
 		}
 	}
 	for (const FROItemInstance& Item : Trade->Player2Items)

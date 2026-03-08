@@ -577,12 +577,24 @@ bool UROGuildSubsystem::DeclareHostility(int32 GuildID, int32 TargetGuildID)
 		}
 	}
 
+	FROGuildInfo* TargetGuild = ActiveGuilds.Find(TargetGuildID);
+	if (!TargetGuild)
+	{
+		return false;
+	}
+
 	FROGuildAllianceEntry Entry;
 	Entry.GuildID = TargetGuildID;
-	const FROGuildInfo* TargetGuild = ActiveGuilds.Find(TargetGuildID);
-	Entry.GuildName = TargetGuild ? TargetGuild->GuildName : TEXT("");
+	Entry.GuildName = TargetGuild->GuildName;
 	Entry.bIsAlliance = false;
 	Guild->Relations.Add(Entry);
+
+	// Add reverse hostility entry so the target guild knows about it
+	FROGuildAllianceEntry ReverseEntry;
+	ReverseEntry.GuildID = GuildID;
+	ReverseEntry.GuildName = Guild->GuildName;
+	ReverseEntry.bIsAlliance = false;
+	TargetGuild->Relations.Add(ReverseEntry);
 
 	return true;
 }
@@ -599,22 +611,18 @@ void UROGuildSubsystem::RemoveRelation(int32 GuildID, int32 TargetGuildID)
 	{
 		if (Guild->Relations[i].GuildID == TargetGuildID)
 		{
-			bool bWasAlliance = Guild->Relations[i].bIsAlliance;
 			Guild->Relations.RemoveAt(i);
 
-			// If it was an alliance, also remove from target guild
-			if (bWasAlliance)
+			// Also remove the reverse entry from the target guild
+			FROGuildInfo* TargetGuild = ActiveGuilds.Find(TargetGuildID);
+			if (TargetGuild)
 			{
-				FROGuildInfo* TargetGuild = ActiveGuilds.Find(TargetGuildID);
-				if (TargetGuild)
+				for (int32 j = TargetGuild->Relations.Num() - 1; j >= 0; --j)
 				{
-					for (int32 j = TargetGuild->Relations.Num() - 1; j >= 0; --j)
+					if (TargetGuild->Relations[j].GuildID == GuildID)
 					{
-						if (TargetGuild->Relations[j].GuildID == GuildID)
-						{
-							TargetGuild->Relations.RemoveAt(j);
-							break;
-						}
+						TargetGuild->Relations.RemoveAt(j);
+						break;
 					}
 				}
 			}
