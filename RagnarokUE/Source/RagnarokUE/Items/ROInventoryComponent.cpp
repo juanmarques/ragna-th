@@ -111,8 +111,17 @@ void UROInventoryComponent::ServerMoveItem_Implementation(int32 FromSlot, int32 
 				int32 TotalAmount = InventorySlots[FromSlot].Amount + InventorySlots[ToSlot].Amount;
 				if (TotalAmount <= ItemData->MaxStack)
 				{
+					// Full merge: all items fit in destination
 					InventorySlots[ToSlot].Amount = TotalAmount;
 					InventorySlots[FromSlot] = FROItemInstance();
+					OnInventoryChanged.Broadcast();
+					return;
+				}
+				else
+				{
+					// Partial merge: fill destination to max, leave remainder in source
+					InventorySlots[ToSlot].Amount = ItemData->MaxStack;
+					InventorySlots[FromSlot].Amount = TotalAmount - ItemData->MaxStack;
 					OnInventoryChanged.Broadcast();
 					return;
 				}
