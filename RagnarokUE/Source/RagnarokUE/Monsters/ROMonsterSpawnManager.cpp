@@ -3,7 +3,9 @@
 #include "ROMonsterSpawnManager.h"
 #include "ROMonsterBase.h"
 #include "ROMonsterDatabase.h"
+#include "RagnarokUE/Social/ROChatSubsystem.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h"
 #include "NavigationSystem.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -153,10 +155,22 @@ void AROMonsterSpawnManager::OnMonsterDied(AROMonsterBase* Monster, AActor* Kill
 		// Boss/MVP death announcement
 		if (Monster->bIsMVP || Monster->bIsBoss)
 		{
+			const FString KillerName = Killer ? Killer->GetName() : TEXT("Unknown");
 			UE_LOG(LogTemp, Warning, TEXT("BOSS KILLED: %s has been defeated by %s!"),
-				*Monster->MonsterName.ToString(),
-				Killer ? *Killer->GetName() : TEXT("Unknown"));
-			// TODO: Broadcast to all connected clients via game state
+				*Monster->MonsterName.ToString(), *KillerName);
+
+			// Broadcast boss kill to all connected players
+			if (UGameInstance* GI = GetGameInstance())
+			{
+				UROChatSubsystem* Chat = GI->GetSubsystem<UROChatSubsystem>();
+				if (Chat)
+				{
+					const FString Announcement = FString::Printf(
+						TEXT("[MVP] %s has been defeated by %s!"),
+						*Monster->MonsterName.ToString(), *KillerName);
+					Chat->SendMessage(0, EChatChannel::System, Announcement);
+				}
+			}
 		}
 
 		UE_LOG(LogTemp, Log, TEXT("SpawnManager: Monster %s died. Respawn in %.1f sec."),

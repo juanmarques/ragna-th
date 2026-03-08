@@ -56,7 +56,18 @@ void AROMonsterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AROMonsterBase, MonsterName);
 	DOREPLIFETIME(AROMonsterBase, HP);
 	DOREPLIFETIME(AROMonsterBase, MaxHP);
+	DOREPLIFETIME(AROMonsterBase, ATK);
+	DOREPLIFETIME(AROMonsterBase, ATKMin);
+	DOREPLIFETIME(AROMonsterBase, ATKMax);
+	DOREPLIFETIME(AROMonsterBase, MATK);
+	DOREPLIFETIME(AROMonsterBase, DEF);
+	DOREPLIFETIME(AROMonsterBase, MDEF);
+	DOREPLIFETIME(AROMonsterBase, HIT);
+	DOREPLIFETIME(AROMonsterBase, FLEE);
 	DOREPLIFETIME(AROMonsterBase, Element);
+	DOREPLIFETIME(AROMonsterBase, ElementLevel);
+	DOREPLIFETIME(AROMonsterBase, Size);
+	DOREPLIFETIME(AROMonsterBase, Race);
 	DOREPLIFETIME(AROMonsterBase, bIsMVP);
 	DOREPLIFETIME(AROMonsterBase, bIsBoss);
 	DOREPLIFETIME(AROMonsterBase, bIsDead);
