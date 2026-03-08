@@ -154,8 +154,8 @@ void AROGameModeBase::RespawnPlayer(APlayerController* PlayerController)
 	APawn* OldPawn = PlayerController->GetPawn();
 	if (OldPawn)
 	{
-		OldPawn->Destroy();
 		PlayerController->UnPossess();
+		OldPawn->Destroy();
 	}
 
 	// Use the engine's RestartPlayer which calls ChoosePlayerStart and
