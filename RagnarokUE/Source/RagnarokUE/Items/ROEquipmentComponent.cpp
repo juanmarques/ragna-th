@@ -34,7 +34,7 @@ void UROEquipmentComponent::BeginPlay()
 bool UROEquipmentComponent::ServerEquipItem_Validate(int32 InventorySlot, EROEquipSlot TargetSlot)
 {
 	// Validate slot index is within a sane range (actual bounds checked in Implementation)
-	if (InventorySlot < 0 || InventorySlot >= 200)
+	if (InventorySlot < 0 || InventorySlot >= 100)
 	{
 		return false;
 	}
@@ -342,7 +342,7 @@ void UROEquipmentComponent::ApplyEquipmentEffects()
 				EffectContext.AddSourceObject(GetOwner());
 				FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(
 					CardData->CardEffect, 1.0f, EffectContext);
-				if (SpecHandle.IsValid())
+				if (SpecHandle.IsValid() && SpecHandle.Data.IsValid())
 				{
 					FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(
 						*SpecHandle.Data.Get());
