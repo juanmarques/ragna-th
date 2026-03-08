@@ -57,11 +57,11 @@ public:
 	// ---- Server RPCs ----
 
 	/** Server: Equip an item from inventory into the specified slot. */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Equipment")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipItem(int32 InventorySlot, EROEquipSlot TargetSlot);
 
 	/** Server: Unequip an item from the specified slot back to inventory. */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Equipment")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerUnequipItem(EROEquipSlot Slot);
 
 	// ---- Queries ----

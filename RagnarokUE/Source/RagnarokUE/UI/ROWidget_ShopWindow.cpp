@@ -22,7 +22,7 @@ void UROWidget_ShopWindow::NativeConstruct()
 	RefreshDisplay();
 }
 
-void UROWidget_ShopWindow::SetShopItems(const TArray<FROShopItem>& Items)
+void UROWidget_ShopWindow::SetShopItems(const TArray<FROShopItemDisplayData>& Items)
 {
 	ShopItems = Items;
 	RefreshDisplay();

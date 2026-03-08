@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
-#include "Data/ROEnums.h"
+#include "RagnarokUE/Data/ROEnums.h"
 #include "ROGameStateBase.generated.h"
 
 /**
