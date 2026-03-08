@@ -53,6 +53,13 @@ void AROServiceNPC_Shop::ServerBuyItem_Implementation(int32 ShopIndex, int32 Amo
 	const int32 PricePerUnit = GetBuyPrice(ShopIndex, CurrentShopUser);
 	const int64 TotalCost = static_cast<int64>(PricePerUnit) * Amount;
 
+	// Reject purchases that exceed int32 Zeny range
+	if (TotalCost > static_cast<int64>(MAX_int32))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Shop NPC: Purchase cost exceeds max Zeny."));
+		return;
+	}
+
 	// Validate Zeny
 	if (Inventory->Zeny < TotalCost)
 	{
@@ -92,7 +99,7 @@ void AROServiceNPC_Shop::ServerBuyItem_Implementation(int32 ShopIndex, int32 Amo
 
 bool AROServiceNPC_Shop::ServerBuyItem_Validate(int32 ShopIndex, int32 Amount)
 {
-	return Amount > 0 && ShopIndex >= 0;
+	return Amount > 0 && Amount <= 30000 && ShopIndex >= 0 && ShopIndex < ShopInventory.Num();
 }
 
 void AROServiceNPC_Shop::ServerSellItem_Implementation(int32 InventorySlot, int32 Amount)
@@ -123,9 +130,10 @@ void AROServiceNPC_Shop::ServerSellItem_Implementation(int32 InventorySlot, int3
 		return;
 	}
 
-	// Calculate sell price with Overcharge modifier
+	// Calculate sell price with Overcharge modifier (use int64 to avoid overflow)
 	const int32 PricePerUnit = GetSellPrice(ItemToSell.ItemID, CurrentShopUser);
-	const int32 TotalSellPrice = PricePerUnit * SellAmount;
+	const int32 TotalSellPrice = static_cast<int32>(FMath::Min(
+		static_cast<int64>(PricePerUnit) * SellAmount, static_cast<int64>(MAX_int32)));
 
 	// Remove items from inventory
 	if (!Inventory->Internal_RemoveItem(InventorySlot, SellAmount))
@@ -143,7 +151,7 @@ void AROServiceNPC_Shop::ServerSellItem_Implementation(int32 InventorySlot, int3
 
 bool AROServiceNPC_Shop::ServerSellItem_Validate(int32 InventorySlot, int32 Amount)
 {
-	return Amount > 0 && InventorySlot >= 0;
+	return Amount > 0 && Amount <= 30000 && InventorySlot >= 0 && InventorySlot < 200;
 }
 
 int32 AROServiceNPC_Shop::GetBuyPrice(int32 ShopIndex, AROCharacterBase* Buyer) const
