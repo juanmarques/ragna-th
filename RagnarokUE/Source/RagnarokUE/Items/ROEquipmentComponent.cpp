@@ -302,9 +302,8 @@ void UROEquipmentComponent::RecalculateEquipmentBonuses()
 		}
 	}
 
-	// The actual stat application would go through the StatsComponent
-	// This is a signal for the stats system to refresh
-	OnEquipmentChanged.Broadcast();
+	// The actual stat application goes through the StatsComponent.
+	// Callers (ServerEquipItem/ServerUnequipItem) broadcast OnEquipmentChanged.
 }
 
 void UROEquipmentComponent::ApplyEquipmentEffects()
