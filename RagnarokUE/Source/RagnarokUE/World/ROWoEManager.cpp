@@ -150,7 +150,9 @@ void UROWoEManager::CheckSchedule()
 	}
 
 	const FDateTime Now = FDateTime::Now();
-	const int32 CurrentDay = static_cast<int32>(Now.GetDayOfWeek());
+	// UE EDayOfWeek: Monday=0..Sunday=6 (ISO); schedule uses Sunday=0..Saturday=6 (POSIX)
+	const int32 UEDay = static_cast<int32>(Now.GetDayOfWeek());
+	const int32 CurrentDay = (UEDay + 1) % 7;
 	const int32 CurrentHour = Now.GetHour();
 	const int32 CurrentMinute = Now.GetMinute();
 	const int32 CurrentTimeMinutes = CurrentHour * 60 + CurrentMinute;
