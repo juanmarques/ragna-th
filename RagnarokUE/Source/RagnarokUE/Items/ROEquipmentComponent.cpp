@@ -94,8 +94,8 @@ void UROEquipmentComponent::ServerEquipItem_Implementation(int32 InventorySlot, 
 		// Remove equipment effects before swapping
 		RemoveEquipmentEffects();
 
-		// Put the old item back in inventory
-		Inventory->Internal_AddItem(CurrentlyEquipped.ItemID, 1);
+		// Put the old item back in inventory (preserving refine, cards, etc)
+		Inventory->Internal_PlaceItem(CurrentlyEquipped);
 		EquippedItems.Remove(TargetSlot);
 	}
 	else
@@ -151,8 +151,8 @@ void UROEquipmentComponent::ServerUnequipItem_Implementation(EROEquipSlot Slot)
 	// Remove from equipment
 	EquippedItems.Remove(Slot);
 
-	// Put back in inventory
-	Inventory->Internal_AddItem(EquippedItem.ItemID, 1);
+	// Put back in inventory (preserving refine, cards, etc)
+	Inventory->Internal_PlaceItem(EquippedItem);
 
 	// Reapply remaining equipment effects
 	ApplyEquipmentEffects();

@@ -41,4 +41,7 @@ private:
 
 	/** Apply fire element endow to self. */
 	void ApplyFireEndow() const;
+
+	/** Timer handle for fire endow expiry, stored to clear on re-use. */
+	FTimerHandle FireEndowTimerHandle;
 };
