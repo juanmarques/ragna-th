@@ -33,8 +33,8 @@ const float UROElementalSystem::ElementalTable[10][10][4] =
 		{ 1.00f, 1.00f, 1.00f, 1.00f },
 		// vs Shadow Lv1-4
 		{ 1.00f, 1.00f, 1.00f, 1.00f },
-		// vs Ghost Lv1-4
-		{ 0.25f, 0.00f, 0.00f, 0.00f },
+		// vs Ghost Lv1-4 (Neutral always deals 25% to Ghost, all levels)
+		{ 0.25f, 0.25f, 0.25f, 0.25f },
 		// vs Undead Lv1-4
 		{ 1.00f, 1.00f, 1.00f, 1.00f },
 	},
@@ -111,8 +111,8 @@ const float UROElementalSystem::ElementalTable[10][10][4] =
 	{
 		// vs Neutral
 		{ 1.00f, 1.00f, 1.00f, 1.00f },
-		// vs Water
-		{ 1.75f, 2.00f, 2.00f, 2.00f },
+		// vs Water (counter element: standard 150/175/200/200 pattern)
+		{ 1.50f, 1.75f, 2.00f, 2.00f },
 		// vs Earth
 		{ 0.50f, 0.25f, 0.00f, -0.25f },
 		// vs Fire
@@ -192,17 +192,17 @@ const float UROElementalSystem::ElementalTable[10][10][4] =
 		{ 0.50f, 0.25f, 0.00f, -0.25f },
 		// vs Holy
 		{ 1.25f, 1.50f, 1.75f, 2.00f },
-		// vs Shadow
-		{ 0.00f, -0.25f, -0.50f, -0.75f },
+		// vs Shadow (same element: 0/0/-25/-50)
+		{ 0.00f, 0.00f, -0.25f, -0.50f },
 		// vs Ghost
 		{ 1.00f, 0.75f, 0.50f, 0.25f },
-		// vs Undead
-		{ 0.00f, 0.00f, 0.00f, -0.25f },
+		// vs Undead (Shadow deals bonus to Undead)
+		{ 1.00f, 1.25f, 1.50f, 1.75f },
 	},
 	// Attack: Ghost (8)
 	{
-		// vs Neutral
-		{ 0.25f, 0.00f, 0.00f, 0.00f },
+		// vs Neutral (Ghost always deals 25% to Neutral, all levels)
+		{ 0.25f, 0.25f, 0.25f, 0.25f },
 		// vs Water
 		{ 1.00f, 0.75f, 0.50f, 0.25f },
 		// vs Earth
@@ -231,19 +231,19 @@ const float UROElementalSystem::ElementalTable[10][10][4] =
 		// vs Earth
 		{ 1.00f, 0.75f, 0.50f, 0.25f },
 		// vs Fire
-		{ 1.00f, 1.00f, 1.00f, 1.00f },
+		{ 1.00f, 0.75f, 0.50f, 0.25f },
 		// vs Wind
 		{ 1.00f, 0.75f, 0.50f, 0.25f },
-		// vs Poison
-		{ 0.50f, 0.00f, -0.25f, -0.50f },
+		// vs Poison (Undead absorbs Poison)
+		{ -0.25f, -0.50f, -0.75f, -1.00f },
 		// vs Holy
 		{ 1.00f, 1.25f, 1.50f, 1.75f },
-		// vs Shadow
-		{ 0.00f, 0.00f, -0.25f, -0.50f },
+		// vs Shadow (Undead deals bonus to Shadow)
+		{ 1.00f, 1.25f, 1.50f, 1.75f },
 		// vs Ghost
 		{ 1.00f, 0.75f, 0.50f, 0.25f },
-		// vs Undead
-		{ 0.00f, 0.00f, -0.25f, -0.50f },
+		// vs Undead (same element)
+		{ 0.00f, 0.00f, 0.00f, -0.25f },
 	},
 };
 

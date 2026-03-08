@@ -68,14 +68,14 @@ public:
 	 * Buy an item from this shop.
 	 * Deducts Zeny (with Discount modifier) and adds item to inventory.
 	 */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Shop")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerBuyItem(int32 ShopIndex, int32 Amount);
 
 	/**
 	 * Sell an item from the player's inventory.
 	 * Removes item and adds Zeny (sell price, with Overcharge modifier).
 	 */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Shop")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSellItem(int32 InventorySlot, int32 Amount);
 
 	// ---- Price Calculation ----

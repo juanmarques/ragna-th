@@ -148,16 +148,10 @@ void URODamageExecution::Execute_Implementation(
 			}
 		}
 
-		// In RO, DEF has two components:
-		// HardDEF = equipment DEF (flat reduction)
-		// SoftDEF = VIT-based DEF (percentage reduction)
-		// For simplicity, we split the DEF attribute:
-		// HardDEF = DEF (the main value)
-		// SoftDEF = DEF / 2 (approximation; in full implementation this comes from VIT)
-		const float HardDEF = TargetDEF;
-		const float SoftDEF = FMath::Clamp(TargetDEF * 0.5f, 0.0f, 99.0f);
-
-		FinalDamage = CalculatePhysicalDamage(SourceATK, SkillMod, ElementMod, SizeMod, HardDEF, SoftDEF, bIsCritical);
+		// Pre-renewal RO: DEF is flat subtraction.
+		// The GAS DEF attribute stores total DEF (soft DEF from VIT + equipment hard DEF).
+		// Both are subtracted from damage as flat reduction. Critical hits ignore DEF.
+		FinalDamage = CalculatePhysicalDamage(SourceATK, SkillMod, ElementMod, SizeMod, TargetDEF, bIsCritical);
 	}
 	else if (DamageType == ERODamageType::Magical)
 	{
@@ -185,25 +179,23 @@ void URODamageExecution::Execute_Implementation(
 
 float URODamageExecution::CalculatePhysicalDamage(
 	float ATK, float SkillMod, float ElementMod, float SizeMod,
-	float HardDEF, float SoftDEF, bool bIsCritical)
+	float TotalDEF, bool bIsCritical)
 {
-	// RO Physical Damage Formula:
-	// FinalDamage = max(1, (ATK * SkillMod * ElementMod * SizeMod) - (HardDEF * (1 - SoftDEF/100)))
-	// Critical: +40% damage, ignores FLEE (handled before calling this)
+	// Pre-renewal RO Physical Damage Formula:
+	// FinalDamage = max(1, (ATK * SkillMod * ElementMod * SizeMod) - DEF)
+	// Critical: always uses max weapon ATK roll, ignores FLEE and DEF
 
 	float RawDamage = ATK * SkillMod * ElementMod * SizeMod;
 
-	// Apply critical bonus
-	if (bIsCritical)
+	if (!bIsCritical)
 	{
-		RawDamage *= 1.4f;
+		// Flat DEF subtraction (pre-renewal behavior)
+		RawDamage -= TotalDEF;
 	}
+	// Critical hits: DEF is ignored. No multiplicative bonus in pre-renewal;
+	// the damage increase comes from always using max weapon ATK variance.
 
-	// Defense reduction
-	const float DefReduction = HardDEF * (1.0f - SoftDEF / 100.0f);
-	const float FinalDamage = RawDamage - DefReduction;
-
-	return FMath::Max(1.0f, FinalDamage);
+	return FMath::Max(1.0f, RawDamage);
 }
 
 float URODamageExecution::CalculateMagicalDamage(

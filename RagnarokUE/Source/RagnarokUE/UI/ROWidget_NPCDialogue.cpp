@@ -111,7 +111,7 @@ void UROWidget_NPCDialogue::SetDialogueText(const FString& Text)
 	if (Btn_NextClose) Btn_NextClose->SetVisibility(ESlateVisibility::Collapsed);
 }
 
-void UROWidget_NPCDialogue::SetChoices(const TArray<FRODialogueChoice>& Choices)
+void UROWidget_NPCDialogue::SetChoices(const TArray<FRODialogueChoiceDisplay>& Choices)
 {
 	CurrentChoices = Choices;
 

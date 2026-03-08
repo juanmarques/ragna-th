@@ -71,19 +71,19 @@ public:
 	// ---- Server RPCs ----
 
 	/** Server: Add an item to inventory by ID and amount. Returns success via client RPC. */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Inventory")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerAddItem(int32 ItemID, int32 Amount);
 
 	/** Server: Remove items from a specific slot. */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Inventory")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRemoveItem(int32 SlotIndex, int32 Amount);
 
 	/** Server: Move an item from one slot to another (swap if destination occupied). */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Inventory")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerMoveItem(int32 FromSlot, int32 ToSlot);
 
 	/** Server: Use a consumable item from the given slot. */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Inventory")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerUseItem(int32 SlotIndex);
 
 	// ---- Blueprint Callable Queries ----

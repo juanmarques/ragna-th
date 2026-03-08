@@ -20,7 +20,7 @@ UROAbility_LightningBolt::UROAbility_LightningBolt()
 	SPCostPerLevel = 3.0f;
 
 	VariableCastTimeBase = 0.7f;
-	FixedCastTime = 0.3f;
+	FixedCastTime = 0.0f; // Pre-renewal has no fixed cast time
 	CooldownDuration = 0.3f;
 
 	BoltInterval = 0.15f;
