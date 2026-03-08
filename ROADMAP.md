@@ -19,7 +19,7 @@ Tracking all missing systems, features, and formula corrections identified in th
 > Missing mechanics that RO players would immediately notice
 
 - [x] **Stone Curse two-phase** — Phase 1 "soft stone" (3s, can move, can't attack), Phase 2 full petrification (1% HP drain/5s)
-- [ ] **Freeze element change** — Frozen targets become Water Lv1 element (tag-based, needs combat integration)
+- [x] **Freeze element change** — Frozen targets become Water Lv1 element via `GetElementOverride()`, Stone Phase 2 becomes Earth Lv1
 - [x] **VIT/LUK/INT-based resistance** — `ApplyStatusEffectWithResist()` with per-effect stat scaling
 - [x] **OPT1 mutual exclusion** — Stone/Freeze/Stun/Sleep are mutually exclusive via `IsOPT1Effect()`
 - [x] **Curse behavior** — Movement speed reduction via tag (handled by movement component)
