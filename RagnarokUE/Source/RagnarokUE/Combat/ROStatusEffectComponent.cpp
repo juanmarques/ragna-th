@@ -225,14 +225,14 @@ void UROStatusEffectComponent::ProcessPeriodicEffects(float DeltaTime)
 		FROActiveStatusEffect& ActiveEffect = ActiveEffectsArray[i];
 		ActiveEffect.TickAccumulator += DeltaTime;
 
-		if (ActiveEffect.TickAccumulator >= StatusTickInterval)
+		while (ActiveEffect.TickAccumulator >= StatusTickInterval)
 		{
 			ActiveEffect.TickAccumulator -= StatusTickInterval;
 
 			AActor* Owner = GetOwner();
 			if (!Owner)
 			{
-				continue;
+				break;
 			}
 
 			UAbilitySystemComponent* ASC = Owner->FindComponentByClass<UAbilitySystemComponent>();
