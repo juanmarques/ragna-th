@@ -37,9 +37,9 @@ float UROGameplayAbility::GetVariableCastTime(int32 DEX, int32 INT_Stat) const
 		return 0.0f;
 	}
 
-	// Pre-renewal RO formula: CastTime * (1 - DEX/150)
-	// At 150 DEX, cast time is fully reduced to 0 (instant cast)
-	const float Reduction = FMath::Clamp(static_cast<float>(DEX) / 150.0f, 0.0f, 1.0f);
+	// Renewal RO formula: CastTime * (1 - sqrt((DEX*2 + INT) / 530))
+	const float StatSum = static_cast<float>(DEX * 2 + INT_Stat);
+	const float Reduction = FMath::Clamp(FMath::Sqrt(StatSum / 530.0f), 0.0f, 1.0f);
 	const float Result = VariableCastTimeBase * (1.0f - Reduction);
 	return FMath::Max(0.0f, Result);
 }
@@ -81,6 +81,24 @@ bool UROGameplayAbility::CanActivateAbility(
 
 	// Check not stunned
 	if (HasStatusEffectTag(ActorInfo, FName("Status.Stun")))
+	{
+		return false;
+	}
+
+	// Check not frozen
+	if (HasStatusEffectTag(ActorInfo, FName("Status.Freeze")))
+	{
+		return false;
+	}
+
+	// Check not sleeping
+	if (HasStatusEffectTag(ActorInfo, FName("Status.Sleep")))
+	{
+		return false;
+	}
+
+	// Check not petrified (hard stone)
+	if (HasStatusEffectTag(ActorInfo, FName("Status.Stone")))
 	{
 		return false;
 	}
@@ -146,13 +164,14 @@ bool UROGameplayAbility::CommitAbility(
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	FGameplayTagContainer* OptionalRelevantTags)
 {
-	if (!Super::CommitAbility(Handle, ActorInfo, ActivationInfo, OptionalRelevantTags))
+	// Only commit cooldown here, NOT cost.
+	// SP deduction happens in OnCastComplete so that interrupted casts don't waste SP.
+	// Calling Super::CommitAbility would apply cost GE, causing double SP deduction.
+	if (!CommitAbilityCooldown(Handle, ActorInfo, ActivationInfo, OptionalRelevantTags))
 	{
 		return false;
 	}
 
-	// SP deduction happens after cast completes, not on commit
-	// This allows cast interruption to not waste SP
 	return true;
 }
 
