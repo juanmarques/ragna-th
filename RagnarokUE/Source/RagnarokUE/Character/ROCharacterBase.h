@@ -87,6 +87,37 @@ public:
 	UPROPERTY(ReplicatedUsing=OnRep_bIsSitting, BlueprintReadOnly, Category="Character|State")
 	bool bIsSitting;
 
+	// ---- Zone Flags ----
+
+	/** Whether PvP is enabled for this character (set by zone rules). */
+	UPROPERTY(BlueprintReadWrite, Category="Character|Zone")
+	bool bPvPEnabled;
+
+	/** Whether teleport is blocked (set by zone rules). */
+	UPROPERTY(BlueprintReadWrite, Category="Character|Zone")
+	bool bTeleportBlocked;
+
+	/** Whether the character is currently in a town zone. */
+	UPROPERTY(BlueprintReadWrite, Category="Character|Zone")
+	bool bInTown;
+
+	/** Whether the character is in a guild-controlled zone, and which guild owns it. */
+	UPROPERTY(BlueprintReadWrite, Category="Character|Zone")
+	bool bInGuildZone;
+
+	UPROPERTY(BlueprintReadWrite, Category="Character|Zone")
+	int32 GuildZoneOwnerID;
+
+	// ---- Save Point ----
+
+	/** Map ID of the character's saved respawn point. */
+	UPROPERTY(BlueprintReadWrite, Category="Character|SavePoint")
+	FName SavedSpawnMapID;
+
+	/** World location of the character's saved respawn point. */
+	UPROPERTY(BlueprintReadWrite, Category="Character|SavePoint")
+	FVector SavedSpawnLocation;
+
 	// ---- Character Actions ----
 
 	/** Handle character death. Stops movement, disables input, plays death animation. */

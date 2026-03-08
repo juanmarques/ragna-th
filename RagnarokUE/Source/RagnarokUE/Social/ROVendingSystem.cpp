@@ -53,8 +53,28 @@ bool UROVendingSystem::OpenShop(int32 PlayerID, const FString& Title, const TArr
 	NewShop.VendorPlayerID = PlayerID;
 	NewShop.ShopTitle = Title;
 	NewShop.Items = Items;
-	// TODO: Set ShopLocation from the player's current world position.
+
+	// Set shop location from the player's current world position
 	NewShop.ShopLocation = FVector::ZeroVector;
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		UWorld* World = GI->GetWorld();
+		if (World && World->GetGameState())
+		{
+			for (APlayerState* PS : World->GetGameState()->PlayerArray)
+			{
+				if (PS && PS->GetPlayerId() == PlayerID)
+				{
+					APawn* Pawn = PS->GetPawn();
+					if (Pawn)
+					{
+						NewShop.ShopLocation = Pawn->GetActorLocation();
+					}
+					break;
+				}
+			}
+		}
+	}
 
 	ActiveShops.Add(PlayerID, NewShop);
 

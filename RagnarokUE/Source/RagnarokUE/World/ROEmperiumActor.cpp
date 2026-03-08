@@ -3,6 +3,7 @@
 #include "ROEmperiumActor.h"
 #include "Components/SphereComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "RagnarokUE/World/ROWoEManager.h"
 
 AROEmperiumActor::AROEmperiumActor()
 {
@@ -186,13 +187,13 @@ void AROEmperiumActor::HandleDestruction(int32 AttackingGuildID)
 	// Broadcast the destruction event
 	OnEmperiumDestroyed.Broadcast(CastleID, AttackingGuildID);
 
-	// TODO: Notify the WoE manager to handle castle ownership transfer
-	// UROWoEManager* WoEManager = GetGameInstance()->GetSubsystem<UROWoEManager>();
-	// if (WoEManager)
-	// {
-	//     WoEManager->OnEmperiumDestroyed(CastleID, AttackingGuildID);
-	// }
-
-	// TODO: Visual destruction effects (explosion particles, sound)
-	// TODO: Server-wide broadcast message
+	// Notify the WoE manager to handle castle ownership transfer
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		UROWoEManager* WoEManager = GI->GetSubsystem<UROWoEManager>();
+		if (WoEManager)
+		{
+			WoEManager->OnEmperiumDestroyed(CastleID, AttackingGuildID);
+		}
+	}
 }

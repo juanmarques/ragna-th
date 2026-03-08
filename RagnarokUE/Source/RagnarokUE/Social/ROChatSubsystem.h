@@ -111,4 +111,7 @@ protected:
 
 	/** Get the display name for a player ID. */
 	FString GetPlayerName(int32 PlayerID) const;
+
+	/** Resolve a character name to a player ID. Returns 0 if not found. */
+	int32 ResolvePlayerName(const FString& Name) const;
 };

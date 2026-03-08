@@ -3,6 +3,7 @@
 #include "ROPortalActor.h"
 #include "ROMapManager.h"
 #include "Components/BoxComponent.h"
+#include "RagnarokUE/Character/ROLevelingComponent.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -76,11 +77,17 @@ bool AROPortalActor::MeetsLevelRequirement(AActor* PlayerCharacter) const
 		return true;
 	}
 
-	// TODO: Get the player's base level from their AROCharacterBase stats component.
-	// For now, we check if the cast to ACharacter succeeds (assume level requirement met).
-	// In production:
-	//   AROCharacterBase* ROChar = Cast<AROCharacterBase>(PlayerCharacter);
-	//   if (ROChar) { return ROChar->GetBaseLevel() >= RequiredBaseLevel; }
+	if (!PlayerCharacter)
+	{
+		return false;
+	}
+
+	UROLevelingComponent* LevelComp = PlayerCharacter->FindComponentByClass<UROLevelingComponent>();
+	if (LevelComp)
+	{
+		return LevelComp->BaseLevel >= RequiredBaseLevel;
+	}
+
 	return true;
 }
 

@@ -67,6 +67,13 @@ AROCharacterBase::AROCharacterBase(const FObjectInitializer& ObjectInitializer)
 	MaxSP = 0;
 	bIsDead = false;
 	bIsSitting = false;
+	bPvPEnabled = false;
+	bTeleportBlocked = false;
+	bInTown = false;
+	bInGuildZone = false;
+	GuildZoneOwnerID = 0;
+	SavedSpawnMapID = FName(TEXT("prontera"));
+	SavedSpawnLocation = FVector::ZeroVector;
 }
 
 void AROCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

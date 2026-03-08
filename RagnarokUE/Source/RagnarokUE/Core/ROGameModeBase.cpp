@@ -5,6 +5,7 @@
 #include "Core/ROPlayerState.h"
 #include "Core/ROGameStateBase.h"
 #include "RagnarokUE.h"
+#include "RagnarokUE/Character/ROLevelingComponent.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
@@ -275,7 +276,15 @@ void AROGameModeBase::ApplyDeathPenalty(AROPlayerState* PS) const
 		PS->GetBaseLevel(),
 		DeathExpPenaltyPercent * 100.0f);
 
-	// TODO: When ROStatsComponent / EXP system is integrated:
-	// UROStatsComponent* Stats = PS->GetPawn()->FindComponentByClass<UROStatsComponent>();
-	// if (Stats) { Stats->ApplyExpPenalty(DeathExpPenaltyPercent); }
+	APawn* Pawn = PS->GetPawn();
+	if (Pawn)
+	{
+		UROLevelingComponent* LevelComp = Pawn->FindComponentByClass<UROLevelingComponent>();
+		if (LevelComp)
+		{
+			const int64 RequiredExp = LevelComp->GetRequiredBaseExp();
+			const int64 Penalty = static_cast<int64>(static_cast<float>(RequiredExp) * DeathExpPenaltyPercent);
+			LevelComp->CurrentBaseExp = FMath::Max(static_cast<int64>(0), LevelComp->CurrentBaseExp - Penalty);
+		}
+	}
 }

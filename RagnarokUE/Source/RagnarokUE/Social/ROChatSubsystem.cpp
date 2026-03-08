@@ -3,8 +3,11 @@
 #include "ROChatSubsystem.h"
 #include "ROPartySubsystem.h"
 #include "ROGuildSubsystem.h"
+#include "RagnarokUE/Core/ROPlayerState.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h"
 #include "GameFramework/PlayerState.h"
+#include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
 
 void UROChatSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -103,9 +106,7 @@ void UROChatSubsystem::ParseAndSendMessage(int32 SenderID, const FString& RawInp
 					const FString TargetName = AfterFirstQuote.Left(SecondQuote);
 					MessageText = AfterFirstQuote.Mid(SecondQuote + 1).TrimStart();
 
-					// TODO: Resolve TargetName to TargetID via player lookup
-					// For now, try parsing as int for testing
-					TargetID = FCString::Atoi(*TargetName);
+					TargetID = ResolvePlayerName(TargetName);
 				}
 			}
 		}
@@ -114,8 +115,7 @@ void UROChatSubsystem::ParseAndSendMessage(int32 SenderID, const FString& RawInp
 			// Unquoted: first word is the name
 			FString TargetName;
 			Rest.Split(TEXT(" "), &TargetName, &MessageText);
-			// TODO: Resolve TargetName to TargetID
-			TargetID = FCString::Atoi(*TargetName);
+			TargetID = ResolvePlayerName(TargetName);
 		}
 
 		if (TargetID > 0 && !MessageText.IsEmpty())
@@ -139,15 +139,61 @@ void UROChatSubsystem::ParseAndSendMessage(int32 SenderID, const FString& RawInp
 
 void UROChatSubsystem::RouteLocalMessage(const FROChatMessage& ChatMessage)
 {
-	// In a full implementation, iterate all player controllers/pawns in the world
-	// and deliver to those within LocalChatRadius of the sender's position.
-	// For now, broadcast via delegate for any local listeners.
-
 	UE_LOG(LogTemp, Log, TEXT("[Local] %s: %s"), *ChatMessage.SenderName, *ChatMessage.Message);
 
-	// TODO: Get sender's world position, iterate nearby players within LocalChatRadius
-	// and call DeliverMessageToPlayer for each.
-	OnChatMessageReceived.Broadcast(ChatMessage);
+	// Deliver to all players within LocalChatRadius of the sender
+	UGameInstance* GI = GetGameInstance();
+	if (!GI)
+	{
+		OnChatMessageReceived.Broadcast(ChatMessage);
+		return;
+	}
+
+	UWorld* World = GI->GetWorld();
+	if (!World || !World->GetGameState())
+	{
+		OnChatMessageReceived.Broadcast(ChatMessage);
+		return;
+	}
+
+	// Find sender's pawn location
+	FVector SenderLocation = FVector::ZeroVector;
+	bool bFoundSender = false;
+	for (APlayerState* PS : World->GetGameState()->PlayerArray)
+	{
+		if (PS && PS->GetPlayerId() == ChatMessage.SenderID)
+		{
+			APawn* SenderPawn = PS->GetPawn();
+			if (SenderPawn)
+			{
+				SenderLocation = SenderPawn->GetActorLocation();
+				bFoundSender = true;
+			}
+			break;
+		}
+	}
+
+	if (!bFoundSender)
+	{
+		// Fallback: broadcast to everyone
+		OnChatMessageReceived.Broadcast(ChatMessage);
+		return;
+	}
+
+	// Deliver to nearby players
+	const float RadiusSq = LocalChatRadius * LocalChatRadius;
+	for (APlayerState* PS : World->GetGameState()->PlayerArray)
+	{
+		if (!PS)
+		{
+			continue;
+		}
+		APawn* Pawn = PS->GetPawn();
+		if (Pawn && FVector::DistSquared(Pawn->GetActorLocation(), SenderLocation) <= RadiusSq)
+		{
+			DeliverMessageToPlayer(PS->GetPlayerId(), ChatMessage);
+		}
+	}
 }
 
 void UROChatSubsystem::RoutePartyMessage(const FROChatMessage& ChatMessage)
@@ -211,13 +257,27 @@ void UROChatSubsystem::RouteWhisperMessage(const FROChatMessage& ChatMessage, in
 
 void UROChatSubsystem::RouteGlobalMessage(const FROChatMessage& ChatMessage)
 {
-	// In a full implementation, iterate all connected players and deliver.
-	// For now, broadcast via delegate.
 	UE_LOG(LogTemp, Log, TEXT("[%s] %s: %s"),
 		ChatMessage.Channel == EChatChannel::Trade ? TEXT("Trade") : TEXT("Global"),
 		*ChatMessage.SenderName, *ChatMessage.Message);
 
-	OnChatMessageReceived.Broadcast(ChatMessage);
+	// Deliver to all connected players
+	UGameInstance* GI = GetGameInstance();
+	UWorld* World = GI ? GI->GetWorld() : nullptr;
+	if (World && World->GetGameState())
+	{
+		for (APlayerState* PS : World->GetGameState()->PlayerArray)
+		{
+			if (PS)
+			{
+				DeliverMessageToPlayer(PS->GetPlayerId(), ChatMessage);
+			}
+		}
+	}
+	else
+	{
+		OnChatMessageReceived.Broadcast(ChatMessage);
+	}
 }
 
 void UROChatSubsystem::DeliverMessageToPlayer(int32 PlayerID, const FROChatMessage& ChatMessage)
@@ -235,7 +295,54 @@ void UROChatSubsystem::DeliverMessageToPlayer(int32 PlayerID, const FROChatMessa
 
 FString UROChatSubsystem::GetPlayerName(int32 PlayerID) const
 {
-	// TODO: Look up player name from a player registry or game state.
-	// Placeholder: return the ID as a string.
+	// Look up player name from game state's player array
+	UGameInstance* GI = GetGameInstance();
+	if (!GI)
+	{
+		return FString::Printf(TEXT("Player_%d"), PlayerID);
+	}
+
+	UWorld* World = GI->GetWorld();
+	if (!World || !World->GetGameState())
+	{
+		return FString::Printf(TEXT("Player_%d"), PlayerID);
+	}
+
+	for (APlayerState* PS : World->GetGameState()->PlayerArray)
+	{
+		AROPlayerState* ROPS = Cast<AROPlayerState>(PS);
+		if (ROPS && ROPS->GetPlayerId() == PlayerID)
+		{
+			const FString Name = ROPS->GetCharacterName();
+			return Name.IsEmpty() ? PS->GetPlayerName() : Name;
+		}
+	}
+
 	return FString::Printf(TEXT("Player_%d"), PlayerID);
+}
+
+int32 UROChatSubsystem::ResolvePlayerName(const FString& Name) const
+{
+	UGameInstance* GI = GetGameInstance();
+	if (!GI)
+	{
+		return 0;
+	}
+
+	UWorld* World = GI->GetWorld();
+	if (!World || !World->GetGameState())
+	{
+		return 0;
+	}
+
+	for (APlayerState* PS : World->GetGameState()->PlayerArray)
+	{
+		AROPlayerState* ROPS = Cast<AROPlayerState>(PS);
+		if (ROPS && ROPS->GetCharacterName().Equals(Name, ESearchCase::IgnoreCase))
+		{
+			return ROPS->GetPlayerId();
+		}
+	}
+
+	return 0;
 }
