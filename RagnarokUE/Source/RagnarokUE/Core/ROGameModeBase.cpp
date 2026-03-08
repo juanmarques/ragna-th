@@ -66,6 +66,17 @@ void AROGameModeBase::Logout(AController* Exiting)
 		UE_LOG(LogRagnarokUE, Log, TEXT("ROGameModeBase::Logout – Player %s leaving."),
 			*Exiting->GetName());
 
+		// Cancel any pending respawn timer for this controller
+		if (APlayerController* PC = Cast<APlayerController>(Exiting))
+		{
+			TWeakObjectPtr<APlayerController> WeakPC(PC);
+			if (FTimerHandle* Timer = PendingRespawnTimers.Find(WeakPC))
+			{
+				GetWorldTimerManager().ClearTimer(*Timer);
+				PendingRespawnTimers.Remove(WeakPC);
+			}
+		}
+
 		// Update online player count on the game state
 		AROGameStateBase* GS = GetGameState<AROGameStateBase>();
 		if (GS)
@@ -186,16 +197,17 @@ void AROGameModeBase::HandlePlayerDeath(APlayerController* DeadController, ACont
 		ApplyDeathPenalty(PS);
 	}
 
-	// Queue respawn after the configured delay
-	FTimerHandle RespawnTimerHandle;
+	// Queue respawn after the configured delay, storing the handle for cancellation on logout
 	TWeakObjectPtr<APlayerController> WeakDeadController(DeadController);
+	FTimerHandle& RespawnTimer = PendingRespawnTimers.FindOrAdd(WeakDeadController);
 
 	GetWorldTimerManager().SetTimer(
-		RespawnTimerHandle,
+		RespawnTimer,
 		[this, WeakDeadController]()
 		{
 			if (APlayerController* PC = WeakDeadController.Get())
 			{
+				PendingRespawnTimers.Remove(WeakDeadController);
 				RespawnPlayer(PC);
 			}
 		},

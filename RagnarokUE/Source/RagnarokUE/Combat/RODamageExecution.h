@@ -12,9 +12,11 @@
  * Gameplay Effect Execution Calculation implementing the full Ragnarok Online damage formula.
  *
  * Physical damage (pre-renewal):
- *   FinalDamage = max(1, (ATK * SkillMod * ElementMod * SizeMod) - DEF)
- *   Hit check: HitRate - FleeRate >= random(0,100)
+ *   FinalDamage = max(1, ATK * SkillMod - DEF) * ElementMod * SizeMod
+ *   DEF subtracted before elemental/size modifiers (pre-renewal order).
+ *   Hit check: 80 + HIT - FLEE >= random(0,100), clamped to [5, 95]
  *   Critical: CritRate > random(0,100) -> ignore flee and DEF (no bonus damage in pre-renewal)
+ *   Negative final damage (elemental absorb) heals the target instead.
  *
  * Magical damage:
  *   FinalDamage = max(1, MATK * SkillMod * ElementMod - MDEF)

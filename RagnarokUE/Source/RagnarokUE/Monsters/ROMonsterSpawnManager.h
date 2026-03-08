@@ -64,9 +64,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Spawn Manager")
 	AROMonsterBase* SpawnMonster(const FROMonsterSpawnInfo& Info);
 
-	/** Helper: spawn a single monster by ID at a specific location. */
+	/** Helper: spawn a single monster by ID at a specific location. Pass InSpawnDefIndex for managed definitions. */
 	UFUNCTION(BlueprintCallable, Category = "Spawn Manager")
-	AROMonsterBase* SpawnSingleMonster(int32 MonsterID, FVector Location);
+	AROMonsterBase* SpawnSingleMonster(int32 MonsterID, FVector Location, int32 InSpawnDefIndex = -1);
 
 	/** Called when a managed monster dies. Starts respawn timer. */
 	UFUNCTION()

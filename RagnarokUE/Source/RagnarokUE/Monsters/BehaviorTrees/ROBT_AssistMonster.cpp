@@ -190,7 +190,7 @@ void UROBTTask_AssistAttack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* 
 			Monster->SetActorRotation(Direction.Rotation());
 
 			FDamageEvent DamageEvent;
-			Target->TakeDamage(static_cast<float>(Monster->ATK), DamageEvent, AIController, Monster);
+			Target->TakeDamage(static_cast<float>(Monster->GetAttackDamage()), DamageEvent, AIController, Monster);
 			Monster->MarkAttackPerformed();
 		}
 	}

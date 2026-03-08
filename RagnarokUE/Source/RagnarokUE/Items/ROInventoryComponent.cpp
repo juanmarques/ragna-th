@@ -1,6 +1,7 @@
 // Copyright Ragna-TH Project. All Rights Reserved.
 
 #include "ROInventoryComponent.h"
+#include "ROEquipmentComponent.h"
 #include "ROItemBase.h"
 #include "ROConsumableData.h"
 #include "ROWeaponData.h"
@@ -68,7 +69,7 @@ void UROInventoryComponent::ServerAddItem_Implementation(int32 ItemID, int32 Amo
 
 bool UROInventoryComponent::ServerRemoveItem_Validate(int32 SlotIndex, int32 Amount)
 {
-	return SlotIndex >= 0 && SlotIndex < 100 && Amount > 0;
+	return SlotIndex >= 0 && SlotIndex < MaxSlots && Amount > 0;
 }
 
 void UROInventoryComponent::ServerRemoveItem_Implementation(int32 SlotIndex, int32 Amount)
@@ -83,7 +84,7 @@ void UROInventoryComponent::ServerRemoveItem_Implementation(int32 SlotIndex, int
 
 bool UROInventoryComponent::ServerMoveItem_Validate(int32 FromSlot, int32 ToSlot)
 {
-	return FromSlot >= 0 && FromSlot < 100 && ToSlot >= 0 && ToSlot < 100 && FromSlot != ToSlot;
+	return FromSlot >= 0 && FromSlot < MaxSlots && ToSlot >= 0 && ToSlot < MaxSlots && FromSlot != ToSlot;
 }
 
 void UROInventoryComponent::ServerMoveItem_Implementation(int32 FromSlot, int32 ToSlot)
@@ -138,7 +139,7 @@ void UROInventoryComponent::ServerMoveItem_Implementation(int32 FromSlot, int32 
 
 bool UROInventoryComponent::ServerUseItem_Validate(int32 SlotIndex)
 {
-	return SlotIndex >= 0 && SlotIndex < 100;
+	return SlotIndex >= 0 && SlotIndex < MaxSlots;
 }
 
 void UROInventoryComponent::ServerUseItem_Implementation(int32 SlotIndex)
@@ -219,11 +220,20 @@ FROItemInstance UROInventoryComponent::GetItemAtSlot(int32 Index) const
 	return FROItemInstance();
 }
 
+FROItemInstance* UROInventoryComponent::GetItemAtSlotRef(int32 Index)
+{
+	if (InventorySlots.IsValidIndex(Index))
+	{
+		return &InventorySlots[Index];
+	}
+	return nullptr;
+}
+
 int32 UROInventoryComponent::FindItemByID(int32 ItemID) const
 {
 	for (int32 i = 0; i < InventorySlots.Num(); ++i)
 	{
-		if (InventorySlots[i].ItemID == ItemID)
+		if (InventorySlots[i].ItemID == ItemID && InventorySlots[i].IsValid())
 		{
 			return i;
 		}
@@ -244,6 +254,9 @@ bool UROInventoryComponent::CanAddItem(int32 ItemID, int32 Amount) const
 	{
 		return false;
 	}
+
+	// Ensure weight is current before checking
+	const_cast<UROInventoryComponent*>(this)->UpdateWeight();
 
 	// Weight check
 	float AdditionalWeight = ItemData->Weight * Amount;
@@ -354,6 +367,23 @@ void UROInventoryComponent::UpdateWeight()
 			}
 		}
 	}
+
+	// Add equipped item weights
+	if (UROEquipmentComponent* EquipComp = GetOwner()->FindComponentByClass<UROEquipmentComponent>())
+	{
+		for (const auto& Pair : EquipComp->EquippedItems)
+		{
+			if (Pair.Value.IsValid())
+			{
+				const UROItemBase* ItemData = DB->GetItemData(Pair.Value.ItemID);
+				if (ItemData)
+				{
+					TotalWeight += ItemData->Weight;
+				}
+			}
+		}
+	}
+
 	CurrentWeight = TotalWeight;
 }
 

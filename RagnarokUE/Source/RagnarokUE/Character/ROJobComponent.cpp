@@ -295,8 +295,8 @@ int32 UROJobComponent::GetRequiredJobLevelForChange(EROJobTier TargetTier)
 
 bool UROJobComponent::ServerRequestJobChange_Validate(EROJobClass NewJob)
 {
-	// Basic validation that NewJob is a valid enum value
-	return static_cast<uint8>(NewJob) <= static_cast<uint8>(EROJobClass::HighAcolyte);
+	// Can't change TO novice — everything else is validated by CanChangeToJob
+	return NewJob != EROJobClass::Novice;
 }
 
 void UROJobComponent::ServerRequestJobChange_Implementation(EROJobClass NewJob)
@@ -333,6 +333,12 @@ bool UROJobComponent::CanChangeToJob(EROJobClass TargetJob) const
 			{
 				return false;
 			}
+
+			// Rebirth to HighNovice requires base level 99
+			if (TargetJob == EROJobClass::HighNovice && LevelComp->BaseLevel < 99)
+			{
+				return false;
+			}
 		}
 	}
 
@@ -353,8 +359,11 @@ void UROJobComponent::ExecuteJobChange(EROJobClass NewJob)
 		}
 	}
 
-	// Reset skill points for new job (keep accumulated from previous tiers in a real implementation)
+	// Reset skill points for new job
 	AvailableSkillPoints = 0;
+
+	// Grant initial skill point for job level 1
+	AddSkillPoints(1);
 
 	// Broadcast the change
 	OnJobChanged.Broadcast(OldJob, NewJob);

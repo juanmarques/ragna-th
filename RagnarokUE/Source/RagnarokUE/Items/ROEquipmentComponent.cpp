@@ -34,8 +34,8 @@ void UROEquipmentComponent::BeginPlay()
 
 bool UROEquipmentComponent::ServerEquipItem_Validate(int32 InventorySlot, EROEquipSlot TargetSlot)
 {
-	// Validate slot index is within a sane range (actual bounds checked in Implementation)
-	if (InventorySlot < 0 || InventorySlot >= 100)
+	// Validate slot index is within a sane range (actual bounds checked in Implementation via IsValidIndex)
+	if (InventorySlot < 0)
 	{
 		return false;
 	}
@@ -51,33 +51,45 @@ bool UROEquipmentComponent::ServerEquipItem_Validate(int32 InventorySlot, EROEqu
 
 void UROEquipmentComponent::ServerEquipItem_Implementation(int32 InventorySlot, EROEquipSlot TargetSlot)
 {
+	// Guard against race condition: reject if this slot is already being processed
+	if (PendingEquipSlots.Contains(InventorySlot))
+	{
+		return;
+	}
+	PendingEquipSlots.Add(InventorySlot);
+
 	UROInventoryComponent* Inventory = GetInventoryComponent();
 	if (!Inventory)
 	{
+		PendingEquipSlots.Remove(InventorySlot);
 		return;
 	}
 
 	FROItemInstance ItemToEquip = Inventory->GetItemAtSlot(InventorySlot);
 	if (!ItemToEquip.IsValid())
 	{
+		PendingEquipSlots.Remove(InventorySlot);
 		return;
 	}
 
 	UROItemDatabase* DB = GetItemDatabase();
 	if (!DB)
 	{
+		PendingEquipSlots.Remove(InventorySlot);
 		return;
 	}
 
 	const UROItemBase* ItemData = DB->GetItemData(ItemToEquip.ItemID);
 	if (!ItemData)
 	{
+		PendingEquipSlots.Remove(InventorySlot);
 		return;
 	}
 
-	// Validate that the item can go in the target slot
+	// Validate that the item can go in the target slot (may auto-unequip shield for 2H weapons)
 	if (!ValidateEquipSlot(ItemData, TargetSlot))
 	{
+		PendingEquipSlots.Remove(InventorySlot);
 		return;
 	}
 
@@ -89,6 +101,7 @@ void UROEquipmentComponent::ServerEquipItem_Implementation(int32 InventorySlot, 
 		// Check if inventory has space for the unequipped item
 		if (!Inventory->CanAddItem(CurrentlyEquipped.ItemID, 1))
 		{
+			PendingEquipSlots.Remove(InventorySlot);
 			return;
 		}
 
@@ -104,10 +117,18 @@ void UROEquipmentComponent::ServerEquipItem_Implementation(int32 InventorySlot, 
 		RemoveEquipmentEffects();
 	}
 
-	// Remove item from inventory
-	Inventory->Internal_RemoveItem(InventorySlot, 1);
+	// Remove from inventory FIRST, before placing in equipment
+	if (!Inventory->Internal_RemoveItem(InventorySlot, 1))
+	{
+		// Item no longer there (consumed by race condition or other logic)
+		PendingEquipSlots.Remove(InventorySlot);
+		// Re-apply effects since we removed them above
+		ApplyEquipmentEffects();
+		RecalculateEquipmentBonuses();
+		return;
+	}
 
-	// Equip the new item
+	// THEN place in equipment
 	EquippedItems.Add(TargetSlot, ItemToEquip);
 
 	// Reapply all equipment effects
@@ -115,6 +136,8 @@ void UROEquipmentComponent::ServerEquipItem_Implementation(int32 InventorySlot, 
 	RecalculateEquipmentBonuses();
 
 	Inventory->UpdateWeight();
+
+	PendingEquipSlots.Remove(InventorySlot);
 
 	OnEquipmentChanged.Broadcast();
 	OnItemEquipped.Broadcast(TargetSlot, ItemToEquip);
@@ -127,14 +150,23 @@ bool UROEquipmentComponent::ServerUnequipItem_Validate(EROEquipSlot Slot)
 
 void UROEquipmentComponent::ServerUnequipItem_Implementation(EROEquipSlot Slot)
 {
+	// Guard against race condition: reject if this slot is already being processed
+	if (PendingUnequipSlots.Contains(Slot))
+	{
+		return;
+	}
+	PendingUnequipSlots.Add(Slot);
+
 	if (!IsSlotOccupied(Slot))
 	{
+		PendingUnequipSlots.Remove(Slot);
 		return;
 	}
 
 	UROInventoryComponent* Inventory = GetInventoryComponent();
 	if (!Inventory)
 	{
+		PendingUnequipSlots.Remove(Slot);
 		return;
 	}
 
@@ -143,6 +175,7 @@ void UROEquipmentComponent::ServerUnequipItem_Implementation(EROEquipSlot Slot)
 	// Check if inventory has space
 	if (!Inventory->CanAddItem(EquippedItem.ItemID, 1))
 	{
+		PendingUnequipSlots.Remove(Slot);
 		return;
 	}
 
@@ -160,6 +193,8 @@ void UROEquipmentComponent::ServerUnequipItem_Implementation(EROEquipSlot Slot)
 	RecalculateEquipmentBonuses();
 
 	Inventory->UpdateWeight();
+
+	PendingUnequipSlots.Remove(Slot);
 
 	OnEquipmentChanged.Broadcast();
 	OnItemUnequipped.Broadcast(Slot);
@@ -267,13 +302,13 @@ void UROEquipmentComponent::RecalculateEquipmentBonuses()
 		return;
 	}
 
-	FROStatBlock EquipBonuses;
-	EquipBonuses.BaseSTR = 0;
-	EquipBonuses.BaseAGI = 0;
-	EquipBonuses.BaseVIT = 0;
-	EquipBonuses.BaseINT = 0;
-	EquipBonuses.BaseDEX = 0;
-	EquipBonuses.BaseLUK = 0;
+	FROStatBlock NewEquipBonuses;
+	NewEquipBonuses.BonusSTR = 0;
+	NewEquipBonuses.BonusAGI = 0;
+	NewEquipBonuses.BonusVIT = 0;
+	NewEquipBonuses.BonusINT = 0;
+	NewEquipBonuses.BonusDEX = 0;
+	NewEquipBonuses.BonusLUK = 0;
 
 	for (const auto& Pair : EquippedItems)
 	{
@@ -293,40 +328,42 @@ void UROEquipmentComponent::RecalculateEquipmentBonuses()
 			const UROCardData* CardData = DB->GetCardData(CardID);
 			if (CardData)
 			{
-				EquipBonuses.BonusSTR += CardData->StatBonuses.BonusSTR;
-				EquipBonuses.BonusAGI += CardData->StatBonuses.BonusAGI;
-				EquipBonuses.BonusVIT += CardData->StatBonuses.BonusVIT;
-				EquipBonuses.BonusINT += CardData->StatBonuses.BonusINT;
-				EquipBonuses.BonusDEX += CardData->StatBonuses.BonusDEX;
-				EquipBonuses.BonusLUK += CardData->StatBonuses.BonusLUK;
+				NewEquipBonuses.BonusSTR += CardData->StatBonuses.BonusSTR;
+				NewEquipBonuses.BonusAGI += CardData->StatBonuses.BonusAGI;
+				NewEquipBonuses.BonusVIT += CardData->StatBonuses.BonusVIT;
+				NewEquipBonuses.BonusINT += CardData->StatBonuses.BonusINT;
+				NewEquipBonuses.BonusDEX += CardData->StatBonuses.BonusDEX;
+				NewEquipBonuses.BonusLUK += CardData->StatBonuses.BonusLUK;
 			}
 		}
 	}
 
-	// Apply the accumulated equipment bonuses to the StatsComponent.
-	// We reset all bonus stats first, then re-add from equipment, so that
-	// equip/unequip both produce the correct result.
+	// Apply the delta between old and new equipment bonuses to the StatsComponent.
+	// This preserves non-equipment bonus stats (e.g., from buffs).
 	if (AActor* Owner = GetOwner())
 	{
 		if (UROStatsComponent* StatsComp = Owner->FindComponentByClass<UROStatsComponent>())
 		{
-			// Reset all bonus stats to 0 before reapplying
-			StatsComp->BonusSTR = 0;
-			StatsComp->BonusAGI = 0;
-			StatsComp->BonusVIT = 0;
-			StatsComp->BonusINT = 0;
-			StatsComp->BonusDEX = 0;
-			StatsComp->BonusLUK = 0;
+			// Remove old equipment bonuses
+			StatsComp->BonusSTR -= CachedEquipBonuses.BonusSTR;
+			StatsComp->BonusAGI -= CachedEquipBonuses.BonusAGI;
+			StatsComp->BonusVIT -= CachedEquipBonuses.BonusVIT;
+			StatsComp->BonusINT -= CachedEquipBonuses.BonusINT;
+			StatsComp->BonusDEX -= CachedEquipBonuses.BonusDEX;
+			StatsComp->BonusLUK -= CachedEquipBonuses.BonusLUK;
 
-			// Apply equipment card bonuses
-			StatsComp->AddBonusStat(EROStat::STR, EquipBonuses.BonusSTR);
-			StatsComp->AddBonusStat(EROStat::AGI, EquipBonuses.BonusAGI);
-			StatsComp->AddBonusStat(EROStat::VIT, EquipBonuses.BonusVIT);
-			StatsComp->AddBonusStat(EROStat::INT_STAT, EquipBonuses.BonusINT);
-			StatsComp->AddBonusStat(EROStat::DEX, EquipBonuses.BonusDEX);
-			StatsComp->AddBonusStat(EROStat::LUK, EquipBonuses.BonusLUK);
+			// Apply new equipment bonuses
+			StatsComp->AddBonusStat(EROStat::STR, NewEquipBonuses.BonusSTR);
+			StatsComp->AddBonusStat(EROStat::AGI, NewEquipBonuses.BonusAGI);
+			StatsComp->AddBonusStat(EROStat::VIT, NewEquipBonuses.BonusVIT);
+			StatsComp->AddBonusStat(EROStat::INT_STAT, NewEquipBonuses.BonusINT);
+			StatsComp->AddBonusStat(EROStat::DEX, NewEquipBonuses.BonusDEX);
+			StatsComp->AddBonusStat(EROStat::LUK, NewEquipBonuses.BonusLUK);
 		}
 	}
+
+	// Cache the new equipment bonuses for next delta calculation
+	CachedEquipBonuses = NewEquipBonuses;
 }
 
 void UROEquipmentComponent::ApplyEquipmentEffects()
@@ -435,7 +472,7 @@ UAbilitySystemComponent* UROEquipmentComponent::GetASC() const
 	return nullptr;
 }
 
-bool UROEquipmentComponent::ValidateEquipSlot(const UROItemBase* ItemData, EROEquipSlot TargetSlot) const
+bool UROEquipmentComponent::ValidateEquipSlot(const UROItemBase* ItemData, EROEquipSlot TargetSlot)
 {
 	if (!ItemData)
 	{
@@ -445,7 +482,7 @@ bool UROEquipmentComponent::ValidateEquipSlot(const UROItemBase* ItemData, EROEq
 	// Weapons go in the weapon slot
 	if (ItemData->ItemType == EROItemType::Weapon)
 	{
-		// Two-handed weapons: cannot equip if shield is occupied (and vice versa)
+		// Two-handed weapons: auto-unequip shield if occupied
 		const UROWeaponData* WeapData = Cast<UROWeaponData>(ItemData);
 		if (WeapData)
 		{
@@ -459,7 +496,19 @@ bool UROEquipmentComponent::ValidateEquipSlot(const UROItemBase* ItemData, EROEq
 								WeapData->WeaponType == EROWeaponType::Katar);
 			if (bIsTwoHanded && IsSlotOccupied(EROEquipSlot::Shield))
 			{
-				return false; // Can't equip 2H weapon with shield
+				// Auto-unequip shield to inventory
+				UROInventoryComponent* Inventory = GetInventoryComponent();
+				if (Inventory && Inventory->CanAddItem(EquippedItems[EROEquipSlot::Shield].ItemID, 1))
+				{
+					FROItemInstance ShieldItem = EquippedItems[EROEquipSlot::Shield];
+					EquippedItems.Remove(EROEquipSlot::Shield);
+					Inventory->Internal_PlaceItem(ShieldItem);
+				}
+				else
+				{
+					// Can't unequip shield - inventory full
+					return false;
+				}
 			}
 		}
 		return TargetSlot == EROEquipSlot::Weapon;

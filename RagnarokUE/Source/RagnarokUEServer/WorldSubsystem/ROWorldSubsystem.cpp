@@ -30,6 +30,13 @@ void UROWorldSubsystem::PlayerEnteredMap(FName MapID, const FString& PlayerNetID
 		return;
 	}
 
+	// FIX 14: If the player is already tracked on a different map, remove them from the old map first
+	const FName* CurrentMap = PlayerToMap.Find(PlayerNetID);
+	if (CurrentMap && *CurrentMap != MapID)
+	{
+		PlayerLeftMap(*CurrentMap, PlayerNetID);
+	}
+
 	TArray<FString>& Players = MapPlayers.FindOrAdd(MapID);
 	if (!Players.Contains(PlayerNetID))
 	{

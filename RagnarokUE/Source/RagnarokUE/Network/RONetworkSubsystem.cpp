@@ -3,6 +3,8 @@
 #include "RONetworkSubsystem.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerState.h"
 
 void URONetworkSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -24,6 +26,17 @@ void URONetworkSubsystem::RegisterConnection(const FString& PlayerNetID, int32 A
 	if (PlayerNetID.IsEmpty())
 	{
 		return;
+	}
+
+	// FIX 7: Check for duplicate NetID and clean up old connection state before overwriting
+	if (ActiveConnections.Contains(PlayerNetID))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RONetworkSubsystem: Duplicate NetID=%s detected. Cleaning up old connection state before re-registering."),
+			*PlayerNetID);
+
+		// Clean up old connection data
+		PingHistory.Remove(PlayerNetID);
+		ActiveConnections.Remove(PlayerNetID);
 	}
 
 	FROConnectionInfo Info;
@@ -158,6 +171,35 @@ void URONetworkSubsystem::ExecuteServerTravel(const FString& MapAssetPath)
 		return;
 	}
 
+	// FIX 4: Validate map path against allowlist to prevent unauthorized ServerTravel
+	static const TSet<FString> AllowedMaps = {
+		TEXT("/Game/Maps/prontera"),
+		TEXT("/Game/Maps/prt_fild01"),
+		TEXT("/Game/Maps/prt_fild02"),
+		TEXT("/Game/Maps/prt_fild03"),
+		TEXT("/Game/Maps/prt_fild04"),
+		TEXT("/Game/Maps/prt_fild05"),
+		TEXT("/Game/Maps/prt_fild06"),
+		TEXT("/Game/Maps/prt_fild07"),
+		TEXT("/Game/Maps/prt_fild08"),
+		TEXT("/Game/Maps/prt_sewb1"),
+		TEXT("/Game/Maps/prt_sewb2"),
+		TEXT("/Game/Maps/prt_sewb3"),
+		TEXT("/Game/Maps/prt_sewb4"),
+		TEXT("/Game/Maps/izlude"),
+		TEXT("/Game/Maps/iz_dun01"),
+		TEXT("/Game/Maps/iz_dun02"),
+		TEXT("/Game/Maps/iz_dun03"),
+		TEXT("/Game/Maps/iz_dun04"),
+		TEXT("/Game/Maps/iz_dun05"),
+	};
+
+	if (!AllowedMaps.Contains(MapAssetPath))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("RONetworkSubsystem: Blocked unauthorized ServerTravel to: %s"), *MapAssetPath);
+		return;
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("RONetworkSubsystem: Executing server travel to %s"), *MapAssetPath);
 
 	const FString TravelURL = FString::Printf(TEXT("%s?listen"), *MapAssetPath);
@@ -172,6 +214,25 @@ void URONetworkSubsystem::FlagConnection(const FString& PlayerNetID, const FStri
 		Info->bIsFlagged = true;
 		UE_LOG(LogTemp, Warning, TEXT("RONetworkSubsystem: Player %s flagged - Reason: %s"),
 			*PlayerNetID, *Reason);
+
+		// FIX 13: Take action on flagged connections - kick the player
+		UWorld* World = GetWorld();
+		if (World)
+		{
+			for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+			{
+				APlayerController* PC = It->Get();
+				if (!PC) continue;
+
+				APlayerState* PS = PC->GetPlayerState<APlayerState>();
+				if (PS && PS->GetUniqueId().ToString() == PlayerNetID)
+				{
+					PC->ClientReturnToMainMenuWithTextReason(
+						FText::FromString(TEXT("Disconnected: suspicious activity detected")));
+					break;
+				}
+			}
+		}
 	}
 }
 

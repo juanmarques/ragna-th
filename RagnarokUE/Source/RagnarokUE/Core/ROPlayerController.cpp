@@ -223,18 +223,16 @@ void AROPlayerController::SelectTarget(AActor* NewTarget)
 
 	if (OldTarget != NewTarget)
 	{
-		// Only the server should modify the replicated property directly
 		if (HasAuthority())
 		{
 			SelectedTarget = NewTarget;
+			OnTargetChanged.Broadcast(NewTarget);
 		}
 		else
 		{
-			// On the client, send to server and let replication update SelectedTarget
+			// On the client, send to server and wait for OnRep_SelectedTarget
 			ServerSelectTarget(NewTarget);
 		}
-
-		OnTargetChanged.Broadcast(NewTarget);
 
 		if (NewTarget)
 		{
@@ -245,6 +243,11 @@ void AROPlayerController::SelectTarget(AActor* NewTarget)
 			UE_LOG(LogRagnarokUE, Log, TEXT("SelectTarget – Target cleared."));
 		}
 	}
+}
+
+void AROPlayerController::OnRep_SelectedTarget()
+{
+	OnTargetChanged.Broadcast(SelectedTarget);
 }
 
 void AROPlayerController::ClearTarget()

@@ -6,10 +6,12 @@
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "AIController.h"
+#include "Net/UnrealNetwork.h"
 
 UROCharacterMovement::UROCharacterMovement()
 {
 	PrimaryComponentTick.bCanEverTick = true;
+	SetIsReplicatedByDefault(true);
 
 	bIsMovingToDestination = false;
 	MoveDestination = FVector::ZeroVector;
@@ -27,6 +29,21 @@ UROCharacterMovement::UROCharacterMovement()
 	// Use NavMesh walking
 	bUseRVOAvoidance = true;
 	AvoidanceConsiderationRadius = 150.0f;
+}
+
+void UROCharacterMovement::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UROCharacterMovement, MovementSpeedBonusPercent);
+}
+
+void UROCharacterMovement::SetMovementSpeedBonus(float NewBonus)
+{
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		MovementSpeedBonusPercent = FMath::Clamp(NewBonus, 0.0f, 1.5f); // Cap at 150% bonus
+	}
 }
 
 void UROCharacterMovement::BeginPlay()

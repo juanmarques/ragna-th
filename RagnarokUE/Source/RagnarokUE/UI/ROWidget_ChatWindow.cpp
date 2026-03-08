@@ -231,8 +231,8 @@ void UROWidget_ChatWindow::AppendMessageToLog(const FROChatMessage& Message)
 		return;
 	}
 
-	// Create a text block for this message
-	UTextBlock* MsgText = NewObject<UTextBlock>(this);
+	// Create a text block for this message with the scroll box as outer
+	UTextBlock* MsgText = NewObject<UTextBlock>(ChatLogScrollBox);
 	if (!MsgText)
 	{
 		return;

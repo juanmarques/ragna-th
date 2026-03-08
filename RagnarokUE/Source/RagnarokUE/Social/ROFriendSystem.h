@@ -56,6 +56,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Friends")
 	bool AreFriends(int32 PlayerID, int32 OtherID) const;
 
+	// ---- Player Cleanup ----
+
+	/** Remove a player from the friend system entirely. Cleans up all references. */
+	UFUNCTION(BlueprintCallable, Category = "Friends")
+	void RemovePlayer(int32 PlayerID);
+
 	// ---- Online Status ----
 
 	/** Mark a player as online. Called when a player connects. */

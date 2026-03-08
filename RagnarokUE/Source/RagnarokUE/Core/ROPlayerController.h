@@ -108,7 +108,7 @@ public:
 	// ---------------------------------------------------------------
 
 	/** The actor the player currently has selected (monster, NPC, player). */
-	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Target")
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_SelectedTarget, Category = "Target")
 	TObjectPtr<AActor> SelectedTarget;
 
 	/** Select a new target actor. nullptr to deselect. */
@@ -185,6 +185,10 @@ public:
 	// ---------------------------------------------------------------
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	/** Called on client when SelectedTarget is replicated from server. */
+	UFUNCTION()
+	void OnRep_SelectedTarget();
 
 private:
 	// ---------------------------------------------------------------

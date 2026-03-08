@@ -1,6 +1,13 @@
 // Copyright Ragna-TH Project. All Rights Reserved.
 
 #include "ROServerValidation.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
+#include "RagnarokUE/Skills/ROAttributeSet.h"
+#include "Engine/World.h"
+#include "Engine/Engine.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerState.h"
 
 FROValidationResult UROServerValidation::ValidateMovement(
 	const FVector& PreviousLocation,
@@ -56,8 +63,8 @@ FROValidationResult UROServerValidation::ValidateMovement(
 
 FROValidationResult UROServerValidation::ValidateDamage(
 	int32 DamageAmount,
-	int32 AttackerATK,
-	int32 DefenderDEF,
+	AActor* Attacker,
+	AActor* Defender,
 	float SkillMultiplier,
 	const FString& PlayerNetID)
 {
@@ -74,9 +81,44 @@ FROValidationResult UROServerValidation::ValidateDamage(
 		return FROValidationResult::Success();
 	}
 
+	// FIX 5: Read ATK and DEF from server-authoritative UROAttributeSet instead of
+	// accepting caller-supplied values that could be spoofed.
+	if (!Attacker || !Defender)
+	{
+		const FString Details = TEXT("Null attacker or defender actor");
+		LogSuspiciousActivity(PlayerNetID, TEXT("InvalidDamage"), Details, 3);
+		return FROValidationResult::Failure(Details, 3);
+	}
+
+	int32 AttackerATK = 1;
+	int32 DefenderDEF = 0;
+
+	// Get ATK from attacker's AbilitySystemComponent
+	if (const IAbilitySystemInterface* AttackerASI = Cast<IAbilitySystemInterface>(Attacker))
+	{
+		if (UAbilitySystemComponent* ASC = AttackerASI->GetAbilitySystemComponent())
+		{
+			if (const UROAttributeSet* AttackerAttrs = ASC->GetSet<UROAttributeSet>())
+			{
+				AttackerATK = FMath::RoundToInt32(AttackerAttrs->GetATK());
+			}
+		}
+	}
+
+	// Get DEF from defender's AbilitySystemComponent
+	if (const IAbilitySystemInterface* DefenderASI = Cast<IAbilitySystemInterface>(Defender))
+	{
+		if (UAbilitySystemComponent* ASC = DefenderASI->GetAbilitySystemComponent())
+		{
+			if (const UROAttributeSet* DefenderAttrs = ASC->GetSet<UROAttributeSet>())
+			{
+				DefenderDEF = FMath::RoundToInt32(DefenderAttrs->GetDEF());
+			}
+		}
+	}
+
 	// Calculate expected maximum damage
 	// RO damage formula: ATK - DEF, modified by skill multiplier, elements, cards, etc.
-	// We use a generous tolerance to account for all possible bonuses.
 	const int32 RawDamage = FMath::Max(1, AttackerATK - DefenderDEF);
 	const float MaxExpectedDamage = static_cast<float>(RawDamage) * SkillMultiplier * DamageToleranceMultiplier;
 
@@ -143,8 +185,8 @@ FROValidationResult UROServerValidation::ValidateItemOperation(
 }
 
 FROValidationResult UROServerValidation::ValidateCooldown(
+	const UWorld* World,
 	float LastUseTime,
-	float CurrentTime,
 	float RequiredCooldown,
 	const FString& ActionName,
 	const FString& PlayerNetID)
@@ -155,11 +197,25 @@ FROValidationResult UROServerValidation::ValidateCooldown(
 		return FROValidationResult::Success();
 	}
 
-	float ElapsedTime = CurrentTime - LastUseTime;
+	// FIX 6: Get current time from the world internally instead of accepting it as a parameter.
+	// This prevents clients from supplying a manipulated time value.
+	if (!World)
+	{
+		const FString Details = TEXT("No valid world context for cooldown validation");
+		return FROValidationResult::Failure(Details, 1);
+	}
+	const float CurrentTime = World->GetTimeSeconds();
+
+	const float ElapsedTime = CurrentTime - LastUseTime;
 	if (ElapsedTime < 0.0f)
 	{
-		// Server time wrapped (day cycle reset), treat as cooldown elapsed
-		return FROValidationResult::Success();
+		// FIX 6: Negative elapsed time is suspicious - UE world time is monotonically increasing
+		// and should never go backwards. This could indicate time manipulation.
+		const FString Details = FString::Printf(
+			TEXT("Negative elapsed time detected: Action=%s, CurrentTime=%.2f, LastUseTime=%.2f"),
+			*ActionName, CurrentTime, LastUseTime);
+		LogSuspiciousActivity(PlayerNetID, TEXT("TimeManipulation"), Details, 3);
+		return FROValidationResult::Failure(Details, 3);
 	}
 	const float AdjustedCooldown = FMath::Max(0.0f, RequiredCooldown - CooldownToleranceSeconds);
 
@@ -200,6 +256,29 @@ void UROServerValidation::LogSuspiciousActivity(
 	// INSERT INTO anticheat_logs (player_net_id, activity_type, details, severity, timestamp)
 	// VALUES (...);
 
-	// TODO: For severity >= 3, auto-kick or auto-ban the player.
-	// TODO: Send notification to online GMs.
+	// FIX 13: Auto-kick for cheat-level severity (>= 3)
+	if (Severity >= 3 && GEngine)
+	{
+		for (const FWorldContext& Context : GEngine->GetWorldContexts())
+		{
+			UWorld* World = Context.World();
+			if (!World) continue;
+
+			for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+			{
+				APlayerController* PC = It->Get();
+				if (!PC) continue;
+
+				APlayerState* PS = PC->GetPlayerState<APlayerState>();
+				if (PS && PS->GetUniqueId().ToString() == PlayerNetID)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("[ANTICHEAT] Auto-kicking player %s for severity %d violation: %s"),
+						*PlayerNetID, Severity, *ActivityType);
+					PC->ClientReturnToMainMenuWithTextReason(
+						FText::FromString(TEXT("Disconnected: suspicious activity detected")));
+					return;
+				}
+			}
+		}
+	}
 }

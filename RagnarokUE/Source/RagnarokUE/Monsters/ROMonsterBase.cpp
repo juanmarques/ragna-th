@@ -256,6 +256,10 @@ void AROMonsterBase::ResetToIdle()
 	ThreatTable.Empty();
 	SkillCooldowns.Empty();
 	LastAttackTime = 0.0f;
+
+	// Reset spawn location to current actor location to prevent
+	// return-to-home pathfinding to a stale/overwritten location
+	SpawnLocation = GetActorLocation();
 }
 
 bool AROMonsterBase::CanAttack() const
@@ -292,8 +296,8 @@ bool AROMonsterBase::CheckSkillConditions(const FROMonsterSkillEntry& SkillEntry
 		return false;
 	}
 
-	// Check HP threshold
-	if (MaxHP > 0)
+	// Check HP threshold (only if a meaningful threshold is set)
+	if (SkillEntry.HPThresholdPercent > 0.0f && SkillEntry.HPThresholdPercent < 100.0f && MaxHP > 0)
 	{
 		const float HPPercent = (static_cast<float>(HP) / static_cast<float>(MaxHP)) * 100.0f;
 		if (HPPercent > SkillEntry.HPThresholdPercent)
@@ -345,8 +349,7 @@ void AROMonsterBase::Multicast_OnDeath_Implementation(AActor* Killer)
 	SetActorEnableCollision(false);
 
 	// Set a timer to destroy the actor after death animation
-	FTimerHandle DestroyTimer;
-	GetWorldTimerManager().SetTimer(DestroyTimer, [this]()
+	GetWorldTimerManager().SetTimer(DeathDestroyTimerHandle, [this]()
 	{
 		if (HasAuthority())
 		{
@@ -384,19 +387,24 @@ void AROMonsterBase::DistributeExp()
 		return;
 	}
 
-	// Calculate total damage dealt to determine shares
-	float TotalDamage = 0.0f;
+	// Calculate total damage dealt only by actors that have a leveling component
+	// This prevents EXP from being diluted by non-leveling sources (pets, traps, etc.)
+	float TotalLevelingDamage = 0.0f;
 	for (const auto& Pair : ThreatTable)
 	{
-		TotalDamage += Pair.Value;
+		AActor* Attacker = Pair.Key.Get();
+		if (Attacker && Attacker->FindComponentByClass<UROLevelingComponent>())
+		{
+			TotalLevelingDamage += Pair.Value;
+		}
 	}
 
-	if (TotalDamage <= 0.0f)
+	if (TotalLevelingDamage <= 0.0f)
 	{
 		return;
 	}
 
-	// Distribute EXP proportionally based on damage dealt
+	// Distribute EXP proportionally based on damage dealt by leveling-capable actors
 	for (const auto& Pair : ThreatTable)
 	{
 		AActor* Attacker = Pair.Key.Get();
@@ -405,17 +413,19 @@ void AROMonsterBase::DistributeExp()
 			continue;
 		}
 
-		const float DamageShare = Pair.Value / TotalDamage;
+		// Only distribute EXP to actors with a leveling component
+		UROLevelingComponent* LevelingComp = Attacker->FindComponentByClass<UROLevelingComponent>();
+		if (!LevelingComp)
+		{
+			continue;
+		}
+
+		const float DamageShare = Pair.Value / TotalLevelingDamage;
 		const int64 BaseExpShare = FMath::RoundToInt64(BaseExpReward * DamageShare);
 		const int64 JobExpShare = FMath::RoundToInt64(JobExpReward * DamageShare);
 
-		// Distribute EXP via the character's leveling component
-		UROLevelingComponent* LevelingComp = Attacker->FindComponentByClass<UROLevelingComponent>();
-		if (LevelingComp)
-		{
-			LevelingComp->AddBaseExp(BaseExpShare);
-			LevelingComp->AddJobExp(JobExpShare);
-		}
+		LevelingComp->AddBaseExp(BaseExpShare);
+		LevelingComp->AddJobExp(JobExpShare);
 
 		UE_LOG(LogTemp, Log, TEXT("Distributing %lld Base EXP and %lld Job EXP to %s"),
 			BaseExpShare, JobExpShare, *Attacker->GetName());

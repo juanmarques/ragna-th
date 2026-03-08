@@ -142,13 +142,26 @@ protected:
 	const FRODialogueNode* FindNodeByID(int32 NodeID) const;
 
 private:
+	/** Per-player dialogue session state. */
+	struct FDialogueSession
+	{
+		int32 CurrentNodeIndex = 0;
+		bool bIsActive = false;
+	};
+
+	/** Active sessions keyed by player. */
+	TMap<TObjectPtr<AROCharacterBase>, FDialogueSession> ActiveSessions;
+
+	// Legacy single-player state kept for backward-compatible API.
+	// Internally we route through ActiveSessions.
+
 	/** Index into DialogueTree for the current node. */
 	int32 CurrentNodeIndex;
 
 	/** Whether a dialogue session is currently active. */
 	bool bIsDialogueActive;
 
-	/** The player currently engaged in dialogue. */
+	/** The player currently engaged in dialogue (last interacting player for legacy API). */
 	UPROPERTY()
 	TObjectPtr<AROCharacterBase> CurrentPlayer;
 };

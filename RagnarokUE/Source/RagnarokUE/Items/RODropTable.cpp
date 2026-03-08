@@ -36,9 +36,11 @@ TArray<int32> URODropTable::RollDrops(int32 MonsterID, float DropRateModifier) c
 		// Apply drop rate modifier, capped at 100%
 		float EffectiveRate = FMath::Min(DropEntry.DropRate * DropRateModifier, 100.0f);
 
-		// Roll against the drop rate (use <= so 100% rate items always drop)
-		float Roll = FMath::FRandRange(0.0f, 100.0f);
-		if (EffectiveRate > 0.0f && Roll <= EffectiveRate)
+		// Roll against the drop rate using integer dice for precision (RO-style)
+		// Range 1-10000, compare against EffectiveRate * 100
+		int32 Roll = FMath::RandRange(1, 10000);
+		int32 Threshold = FMath::RoundToInt(EffectiveRate * 100.0f);
+		if (Threshold > 0 && Roll <= Threshold)
 		{
 			DroppedItems.Add(DropEntry.ItemID);
 		}

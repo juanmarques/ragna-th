@@ -3,7 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystemComponent.h"
 #include "ROServerValidation.generated.h"
+
+class UROAttributeSet;
 
 /** Result of a server-side validation check. */
 USTRUCT(BlueprintType)
@@ -75,9 +78,11 @@ public:
 
 	/**
 	 * Validate a damage amount to ensure it falls within expected bounds.
+	 * Reads ATK and DEF from the attacker's and defender's UROAttributeSet directly
+	 * to ensure server-authoritative values are used (FIX 5).
 	 * @param DamageAmount      The reported damage.
-	 * @param AttackerATK       The attacker's ATK value.
-	 * @param DefenderDEF       The defender's DEF value.
+	 * @param Attacker          The attacking actor (must have an AbilitySystemComponent with UROAttributeSet).
+	 * @param Defender          The defending actor (must have an AbilitySystemComponent with UROAttributeSet).
 	 * @param SkillMultiplier   Skill damage multiplier (1.0 for normal attacks).
 	 * @param PlayerNetID       For logging purposes.
 	 * @return Validation result.
@@ -85,8 +90,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Validation")
 	static FROValidationResult ValidateDamage(
 		int32 DamageAmount,
-		int32 AttackerATK,
-		int32 DefenderDEF,
+		AActor* Attacker,
+		AActor* Defender,
 		float SkillMultiplier,
 		const FString& PlayerNetID);
 
@@ -118,8 +123,9 @@ public:
 
 	/**
 	 * Validate that a skill or action cooldown has elapsed.
-	 * @param LastUseTime           World time of last use.
-	 * @param CurrentTime           Current world time.
+	 * Current time is obtained from the world internally to prevent caller manipulation (FIX 6).
+	 * @param World                 The world context (used to get authoritative server time).
+	 * @param LastUseTime           World time of last use (from GetTimeSeconds).
 	 * @param RequiredCooldown      The cooldown duration in seconds.
 	 * @param ActionName            Name of the action for logging.
 	 * @param PlayerNetID           For logging purposes.
@@ -127,8 +133,8 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Validation")
 	static FROValidationResult ValidateCooldown(
+		const UWorld* World,
 		float LastUseTime,
-		float CurrentTime,
 		float RequiredCooldown,
 		const FString& ActionName,
 		const FString& PlayerNetID);
@@ -158,8 +164,9 @@ public:
 	/** Maximum allowed teleport distance before flagging (in UE units). */
 	static constexpr float MaxTeleportDistance = 5000.0f;
 
-	/** Damage tolerance multiplier (allows for critical hits, elemental bonuses). */
-	static constexpr float DamageToleranceMultiplier = 3.0f;
+	/** Damage tolerance multiplier. 1.5x accounts for critical hits, elemental advantages,
+	 * and card bonuses without being so permissive that cheating goes undetected. */
+	static constexpr float DamageToleranceMultiplier = 1.5f;
 
 	/** Minimum cooldown tolerance in seconds (network latency allowance). */
 	static constexpr float CooldownToleranceSeconds = 0.1f;

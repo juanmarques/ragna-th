@@ -52,7 +52,7 @@ public:
 
 	/**
 	 * Calculate soft DEF (VIT-based) flat damage reduction.
-	 * Formula: VIT + floor(VIT/5)^2
+	 * Formula: VIT/2 + max(VIT*0.3, VIT^2/150 - 1)
 	 * In pre-renewal, this is subtracted from damage after hard DEF reduction.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "RO|Damage")

@@ -89,4 +89,7 @@ private:
 	 * Apply the death EXP penalty to a player.
 	 */
 	void ApplyDeathPenalty(AROPlayerState* PS) const;
+
+	/** Pending respawn timers keyed by controller, so they can be cancelled on logout. */
+	TMap<TWeakObjectPtr<APlayerController>, FTimerHandle> PendingRespawnTimers;
 };

@@ -234,10 +234,14 @@ bool UROStatusEffectComponent::GetElementOverride(EROElement& OutElement, EROEle
 
 void UROStatusEffectComponent::ProcessPeriodicEffects(float DeltaTime)
 {
-	for (int32 i = 0; i < ActiveEffectsArray.Num(); ++i)
+	// Cap DeltaTime to prevent multiple ticks firing in a single frame
+	// during large frame hitches or lag spikes.
+	const float ClampedDelta = FMath::Min(DeltaTime, StatusTickInterval);
+
+	for (int32 i = ActiveEffectsArray.Num() - 1; i >= 0; --i)
 	{
 		FROActiveStatusEffect& ActiveEffect = ActiveEffectsArray[i];
-		ActiveEffect.TickAccumulator += DeltaTime;
+		ActiveEffect.TickAccumulator += ClampedDelta;
 
 		while (ActiveEffect.TickAccumulator >= StatusTickInterval)
 		{
@@ -265,6 +269,16 @@ void UROStatusEffectComponent::ProcessPeriodicEffects(float DeltaTime)
 						ActiveEffect.bStoneCurseHardened = true;
 						ActiveEffect.StonePhaseTimer = 0.0f;
 						// Element overridden to Earth Lv1 via GetElementOverride()
+
+						// Apply Phase 2 tag so ability checks can distinguish phases
+						if (ASC)
+						{
+							FGameplayTag Phase2Tag = FGameplayTag::RequestGameplayTag(FName("Status.Stone.Phase2"), false);
+							if (Phase2Tag.IsValid())
+							{
+								ASC->AddLooseGameplayTag(Phase2Tag);
+							}
+						}
 					}
 				}
 				else
@@ -388,6 +402,16 @@ void UROStatusEffectComponent::RemoveStatusTag(EROStatusEffect Effect)
 		if (Tag.IsValid())
 		{
 			ASC->RemoveLooseGameplayTag(Tag);
+		}
+
+		// Also remove the Phase 2 sub-tag when Stone is removed
+		if (Effect == EROStatusEffect::Stone)
+		{
+			FGameplayTag Phase2Tag = FGameplayTag::RequestGameplayTag(FName("Status.Stone.Phase2"), false);
+			if (Phase2Tag.IsValid())
+			{
+				ASC->RemoveLooseGameplayTag(Phase2Tag);
+			}
 		}
 	}
 }

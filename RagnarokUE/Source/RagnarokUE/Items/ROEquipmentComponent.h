@@ -107,6 +107,15 @@ private:
 	UPROPERTY()
 	TArray<FActiveGameplayEffectHandle> ActiveEquipmentEffects;
 
+	/** Slots currently being processed by equip operations (race condition guard). */
+	TSet<int32> PendingEquipSlots;
+
+	/** Equipment slots currently being processed by unequip operations (race condition guard). */
+	TSet<EROEquipSlot> PendingUnequipSlots;
+
+	/** Cached equipment stat bonuses for delta-based application. */
+	FROStatBlock CachedEquipBonuses;
+
 	/** Get the item database subsystem. */
 	UROItemDatabase* GetItemDatabase() const;
 
@@ -116,6 +125,6 @@ private:
 	/** Get the ability system component on the same actor. */
 	UAbilitySystemComponent* GetASC() const;
 
-	/** Validate that the item can go in the target slot. */
-	bool ValidateEquipSlot(const UROItemBase* ItemData, EROEquipSlot TargetSlot) const;
+	/** Validate that the item can go in the target slot. May auto-unequip shield for 2H weapons. */
+	bool ValidateEquipSlot(const UROItemBase* ItemData, EROEquipSlot TargetSlot);
 };

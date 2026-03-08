@@ -6,10 +6,23 @@
 #include "ROArmorData.h"
 #include "ROCardData.h"
 #include "ROItemDatabase.h"
+#include "Engine/World.h"
 
-bool UROCardSystem::InsertCard(FROItemInstance& Equipment, int32 CardID, int32 SlotIndex, UROItemDatabase* ItemDatabase)
+bool UROCardSystem::InsertCard(FROItemInstance& Equipment, int32 CardID, int32 SlotIndex, UROItemDatabase* ItemDatabase, UWorld* World)
 {
+	// Server authority check: reject card insertion on clients
+	if (World && World->GetNetMode() == NM_Client)
+	{
+		return false;
+	}
+
 	if (CardID <= 0 || SlotIndex < 0)
+	{
+		return false;
+	}
+
+	// Item database is required for card validation
+	if (!ItemDatabase)
 	{
 		return false;
 	}
@@ -27,14 +40,11 @@ bool UROCardSystem::InsertCard(FROItemInstance& Equipment, int32 CardID, int32 S
 	}
 
 	// Validate card type matches equipment type (weapon card in weapon, armor card in matching slot)
-	if (ItemDatabase)
+	const UROItemBase* EquipData = ItemDatabase->GetItemData(Equipment.ItemID);
+	const UROCardData* CardData = ItemDatabase->GetCardData(CardID);
+	if (EquipData && CardData && !ValidateCardSlot(EquipData, CardData))
 	{
-		const UROItemBase* EquipData = ItemDatabase->GetItemData(Equipment.ItemID);
-		const UROCardData* CardData = ItemDatabase->GetCardData(CardID);
-		if (EquipData && CardData && !ValidateCardSlot(EquipData, CardData))
-		{
-			return false;
-		}
+		return false;
 	}
 
 	Equipment.CardSlots[SlotIndex] = CardID;

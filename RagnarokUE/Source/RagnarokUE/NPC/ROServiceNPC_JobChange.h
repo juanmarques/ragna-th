@@ -91,4 +91,8 @@ protected:
 
 	/** Execute the job change on the server. */
 	void ExecuteJobChange(AROCharacterBase* Player);
+
+	/** Called when the current interactor is destroyed (disconnect cleanup). */
+	UFUNCTION()
+	void OnJobChangePlayerDestroyed(AActor* DestroyedActor);
 };

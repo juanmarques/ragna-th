@@ -61,6 +61,13 @@ void UROLootManager::GenerateLoot(int32 MonsterID, AActor* Killer, FVector Death
 
 bool UROLootManager::PickupLoot(AActor* Character, AROLootActor* LootActor)
 {
+	// Only allow pickup processing on the server
+	if (GetWorld() && GetWorld()->GetNetMode() == NM_Client)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ROLootManager: PickupLoot called on client - rejected"));
+		return false;
+	}
+
 	if (!Character || !LootActor)
 	{
 		return false;

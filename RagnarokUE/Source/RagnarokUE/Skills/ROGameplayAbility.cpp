@@ -100,8 +100,8 @@ bool UROGameplayAbility::CanActivateAbility(
 		return false;
 	}
 
-	// Check not petrified (hard stone)
-	if (HasStatusEffectTag(ActorInfo, FName("Status.Stone")))
+	// Check not petrified (hard stone Phase 2 only — Phase 1 allows abilities except attacks)
+	if (HasStatusEffectTag(ActorInfo, FName("Status.Stone.Phase2")))
 	{
 		return false;
 	}
@@ -191,10 +191,34 @@ bool UROGameplayAbility::CommitAbility(
 
 void UROGameplayAbility::OnCastComplete()
 {
-	// Deduct SP cost now that cast completed
-	if (CachedActorInfo)
+	// Deduct SP cost now that cast completed.
+	// Validate CachedActorInfo and its weak pointers before use to guard against
+	// dangling pointer access if the actor was destroyed during cast.
+	if (CachedActorInfo && CachedActorInfo->AbilitySystemComponent.IsValid())
 	{
-		DeductSP(CachedActorInfo, GetSPCost());
+		// Re-check SP before deducting: another skill may have consumed SP during cast,
+		// preventing a double-spend that leaves SP negative.
+		UAbilitySystemComponent* ASC = CachedActorInfo->AbilitySystemComponent.Get();
+		const float SPCost = GetSPCost();
+		const float CurrentSP = ASC->GetNumericAttribute(UROAttributeSet::GetSPAttribute());
+		if (CurrentSP < SPCost)
+		{
+			// Not enough SP anymore - cancel the ability effect
+			// Unbind from casting component first
+			if (CachedActorInfo->AvatarActor.IsValid())
+			{
+				UROCastingComponent* CastComp = CachedActorInfo->AvatarActor->FindComponentByClass<UROCastingComponent>();
+				if (CastComp)
+				{
+					CastComp->OnCastComplete.RemoveDynamic(this, &UROGameplayAbility::OnCastComplete);
+					CastComp->OnCastInterrupted.RemoveDynamic(this, &UROGameplayAbility::OnCastInterrupted);
+				}
+			}
+			EndAbility(CachedHandle, CachedActorInfo, CachedActivationInfo, true, true);
+			return;
+		}
+
+		DeductSP(CachedActorInfo, SPCost);
 
 		// Unbind from casting component
 		if (CachedActorInfo->AvatarActor.IsValid())
@@ -213,7 +237,7 @@ void UROGameplayAbility::OnCastComplete()
 
 void UROGameplayAbility::OnCastInterrupted()
 {
-	if (CachedActorInfo)
+	if (CachedActorInfo && CachedActorInfo->AbilitySystemComponent.IsValid())
 	{
 		// Unbind from casting component
 		if (CachedActorInfo->AvatarActor.IsValid())

@@ -7,6 +7,9 @@
 #include "RagnarokUE/Data/ROEnums.h"
 #include "ROPlayerState.generated.h"
 
+class UROLevelingComponent;
+class UROJobComponent;
+
 /**
  * AROPlayerState
  *
@@ -24,6 +27,21 @@ public:
 	//~ AActor interface
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	//~ End AActor interface
+
+	/** Sync level/job data from the character's authoritative components when pawn is set. */
+	void SyncFromCharacter(APawn* NewPawn);
+
+	/** Called when the character's base level changes. */
+	UFUNCTION()
+	void OnCharacterBaseLevelUp(int32 NewBaseLevel);
+
+	/** Called when the character's job level changes. */
+	UFUNCTION()
+	void OnCharacterJobLevelUp(int32 NewJobLevel);
+
+	/** Called when the character's job class changes. */
+	UFUNCTION()
+	void OnCharacterJobChanged(EROJobClass OldJob, EROJobClass NewJob);
 
 	// ---------------------------------------------------------------
 	// Replicated character identity
