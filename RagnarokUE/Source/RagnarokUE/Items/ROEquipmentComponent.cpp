@@ -7,6 +7,7 @@
 #include "ROArmorData.h"
 #include "ROCardData.h"
 #include "ROItemDatabase.h"
+#include "RagnarokUE/Character/ROStatsComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/GameInstance.h"
 #include "AbilitySystemComponent.h"
@@ -302,8 +303,30 @@ void UROEquipmentComponent::RecalculateEquipmentBonuses()
 		}
 	}
 
-	// The actual stat application goes through the StatsComponent.
-	// Callers (ServerEquipItem/ServerUnequipItem) broadcast OnEquipmentChanged.
+	// Apply the accumulated equipment bonuses to the StatsComponent.
+	// We reset all bonus stats first, then re-add from equipment, so that
+	// equip/unequip both produce the correct result.
+	if (AActor* Owner = GetOwner())
+	{
+		if (UROStatsComponent* StatsComp = Owner->FindComponentByClass<UROStatsComponent>())
+		{
+			// Reset all bonus stats to 0 before reapplying
+			StatsComp->BonusSTR = 0;
+			StatsComp->BonusAGI = 0;
+			StatsComp->BonusVIT = 0;
+			StatsComp->BonusINT = 0;
+			StatsComp->BonusDEX = 0;
+			StatsComp->BonusLUK = 0;
+
+			// Apply equipment card bonuses
+			StatsComp->AddBonusStat(EROStat::STR, EquipBonuses.BonusSTR);
+			StatsComp->AddBonusStat(EROStat::AGI, EquipBonuses.BonusAGI);
+			StatsComp->AddBonusStat(EROStat::VIT, EquipBonuses.BonusVIT);
+			StatsComp->AddBonusStat(EROStat::INT_STAT, EquipBonuses.BonusINT);
+			StatsComp->AddBonusStat(EROStat::DEX, EquipBonuses.BonusDEX);
+			StatsComp->AddBonusStat(EROStat::LUK, EquipBonuses.BonusLUK);
+		}
+	}
 }
 
 void UROEquipmentComponent::ApplyEquipmentEffects()

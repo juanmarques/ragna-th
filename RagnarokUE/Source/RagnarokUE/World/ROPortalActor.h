@@ -11,6 +11,7 @@
 class UBoxComponent;
 class UParticleSystemComponent;
 class UNiagaraComponent;
+class UROMapManager;
 
 /**
  * AROPortalActor
@@ -27,6 +28,10 @@ public:
 	AROPortalActor();
 
 	// ---- Portal Configuration ----
+
+	/** The map ID this portal is on (set to enable cross-map detection). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal")
+	FName SourceMapID;
 
 	/** The map ID to travel to. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal")
