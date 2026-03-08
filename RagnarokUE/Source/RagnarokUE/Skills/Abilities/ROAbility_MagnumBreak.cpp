@@ -144,13 +144,21 @@ void UROAbility_MagnumBreak::ApplyFireEndow() const
 	FGameplayTag FireEndowTag = FGameplayTag::RequestGameplayTag(FName("Buff.Element.Fire"), false);
 	if (FireEndowTag.IsValid())
 	{
+		// Clear any existing fire endow timer and tag to prevent stacking
+		if (CachedActorInfo->AvatarActor.IsValid())
+		{
+			CachedActorInfo->AvatarActor->GetWorldTimerManager().ClearTimer(FireEndowTimerHandle);
+		}
+		if (ASC->HasMatchingGameplayTag(FireEndowTag))
+		{
+			ASC->RemoveLooseGameplayTag(FireEndowTag);
+		}
+
 		ASC->AddLooseGameplayTag(FireEndowTag);
 
 		// Set a timer to remove the tag after duration
-		// Use weak pointer to avoid dangling reference if ASC is destroyed
 		if (CachedActorInfo->AvatarActor.IsValid())
 		{
-			FTimerHandle TimerHandle;
 			FTimerDelegate TimerDelegate;
 			TWeakObjectPtr<UAbilitySystemComponent> WeakASC(ASC);
 			TimerDelegate.BindLambda([WeakASC, FireEndowTag]()
@@ -162,7 +170,7 @@ void UROAbility_MagnumBreak::ApplyFireEndow() const
 			});
 
 			CachedActorInfo->AvatarActor->GetWorldTimerManager().SetTimer(
-				TimerHandle, TimerDelegate, FireEndowDuration, false);
+				FireEndowTimerHandle, TimerDelegate, FireEndowDuration, false);
 		}
 	}
 }
