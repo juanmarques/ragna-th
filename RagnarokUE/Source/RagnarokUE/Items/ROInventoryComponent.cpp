@@ -3,7 +3,10 @@
 #include "ROInventoryComponent.h"
 #include "ROItemBase.h"
 #include "ROConsumableData.h"
+#include "ROWeaponData.h"
+#include "ROArmorData.h"
 #include "ROItemDatabase.h"
+#include "RagnarokUE/Data/ROConstants.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/GameInstance.h"
 #include "AbilitySystemComponent.h"
@@ -155,6 +158,13 @@ void UROInventoryComponent::ServerUseItem_Implementation(int32 SlotIndex)
 		return;
 	}
 
+	// Check item use cooldown (all consumables share group 0 by default)
+	const int32 CooldownGroup = 0;
+	if (!IsItemCooldownReady(CooldownGroup))
+	{
+		return;
+	}
+
 	AActor* Owner = GetOwner();
 	if (!Owner)
 	{
@@ -179,6 +189,13 @@ void UROInventoryComponent::ServerUseItem_Implementation(int32 SlotIndex)
 
 	// Consume one unit
 	Internal_RemoveItem(SlotIndex, 1);
+
+	// Set item use cooldown (0.5 second shared cooldown)
+	if (const UWorld* World = GetWorld())
+	{
+		ItemCooldowns.Add(CooldownGroup, World->GetTimeSeconds() + 0.5f);
+	}
+
 	UpdateWeight();
 	OnInventoryChanged.Broadcast();
 }
@@ -282,6 +299,16 @@ bool UROInventoryComponent::IsOverweight() const
 	return CurrentWeight >= MaxWeight;
 }
 
+bool UROInventoryComponent::IsOverweight50() const
+{
+	return CurrentWeight >= (MaxWeight * 0.5f);
+}
+
+bool UROInventoryComponent::IsOverweight90() const
+{
+	return CurrentWeight >= (MaxWeight * 0.9f);
+}
+
 int32 UROInventoryComponent::GetFreeSlot() const
 {
 	for (int32 i = 0; i < InventorySlots.Num(); ++i)
@@ -292,6 +319,11 @@ int32 UROInventoryComponent::GetFreeSlot() const
 		}
 	}
 	return -1;
+}
+
+void UROInventoryComponent::UpdateMaxWeight(int32 STR)
+{
+	MaxWeight = static_cast<float>(ROConstants::CalculateMaxWeight(STR));
 }
 
 void UROInventoryComponent::UpdateWeight()
@@ -420,10 +452,24 @@ int32 UROInventoryComponent::Internal_AddItem(int32 ItemID, int32 Amount)
 			InventorySlots[FreeSlot].UniqueID = FGuid::NewGuid();
 
 			// Initialize card slot array based on equipment data
-			if (const UROItemBase* EquipData = DB->GetItemData(ItemID))
+			const UROWeaponData* WeapData = Cast<UROWeaponData>(ItemData);
+			const UROArmorData* ArmorData2 = Cast<UROArmorData>(ItemData);
+			int32 NumCardSlots = 0;
+			if (WeapData)
 			{
-				// Card slots are initialized empty (0 = no card)
-				// Actual slot count comes from weapon/armor data
+				NumCardSlots = WeapData->CardSlots;
+			}
+			else if (ArmorData2)
+			{
+				NumCardSlots = ArmorData2->CardSlots;
+			}
+			if (NumCardSlots > 0)
+			{
+				InventorySlots[FreeSlot].CardSlots.SetNum(NumCardSlots);
+				for (int32 s = 0; s < NumCardSlots; ++s)
+				{
+					InventorySlots[FreeSlot].CardSlots[s] = 0; // Empty slot
+				}
 			}
 
 			if (FirstSlot < 0)
@@ -456,6 +502,17 @@ bool UROInventoryComponent::Internal_RemoveItem(int32 SlotIndex, int32 Amount)
 	}
 
 	return true;
+}
+
+bool UROInventoryComponent::IsItemCooldownReady(int32 CooldownGroup) const
+{
+	const float* Expiry = ItemCooldowns.Find(CooldownGroup);
+	if (!Expiry)
+	{
+		return true;
+	}
+	const UWorld* World = GetWorld();
+	return World && World->GetTimeSeconds() >= *Expiry;
 }
 
 void UROInventoryComponent::OnRep_InventorySlots()

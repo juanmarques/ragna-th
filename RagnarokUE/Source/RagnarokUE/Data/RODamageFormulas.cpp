@@ -78,81 +78,127 @@ float URODamageFormulas::CalculateCritRate(int32 LUK)
 // Attack Speed
 // ============================================================================
 
-int32 URODamageFormulas::GetBaseASPDForJob(EROJobClass Job)
+int32 URODamageFormulas::GetWeaponASPDOffset(EROWeaponType WeaponType)
 {
+	switch (WeaponType)
+	{
+	case EROWeaponType::Dagger:       return 0;
+	case EROWeaponType::Sword:        return 5;
+	case EROWeaponType::TwoHandSword: return 10;
+	case EROWeaponType::Spear:        return 5;
+	case EROWeaponType::TwoHandSpear: return 10;
+	case EROWeaponType::Axe:          return 5;
+	case EROWeaponType::TwoHandAxe:   return 10;
+	case EROWeaponType::Mace:         return 5;
+	case EROWeaponType::TwoHandMace:  return 10;
+	case EROWeaponType::Rod:          return 5;
+	case EROWeaponType::TwoHandRod:   return 10;
+	case EROWeaponType::Bow:          return 5;
+	case EROWeaponType::Knuckle:      return 0;
+	case EROWeaponType::Katar:        return -5;
+	case EROWeaponType::Book:         return 5;
+	case EROWeaponType::Instrument:   return 5;
+	case EROWeaponType::Whip:         return 5;
+	case EROWeaponType::Gun:          return 0;
+	case EROWeaponType::Shuriken:     return 0;
+	default:                          return 0;
+	}
+}
+
+int32 URODamageFormulas::GetBaseASPDForJob(EROJobClass Job, EROWeaponType WeaponType)
+{
+	int32 JobBase = 150;
+
 	switch (Job)
 	{
 	// Novice
 	case EROJobClass::Novice:
 	case EROJobClass::HighNovice:
-		return 150;
+		JobBase = 150;
+		break;
 
 	// Swordsman line
 	case EROJobClass::Swordsman:
 	case EROJobClass::HighSwordsman:
-		return 145;
+		JobBase = 145;
+		break;
 	case EROJobClass::Knight:
 	case EROJobClass::Crusader:
 	case EROJobClass::LordKnight:
 	case EROJobClass::Paladin:
-		return 145;
+		JobBase = 145;
+		break;
 
 	// Magician line
 	case EROJobClass::Magician:
 	case EROJobClass::HighMagician:
-		return 150;
+		JobBase = 150;
+		break;
 	case EROJobClass::Wizard:
 	case EROJobClass::Sage:
 	case EROJobClass::HighWizard:
 	case EROJobClass::Professor:
-		return 150;
+		JobBase = 150;
+		break;
 
 	// Archer line
 	case EROJobClass::Archer:
 	case EROJobClass::HighArcher:
-		return 145;
+		JobBase = 145;
+		break;
 	case EROJobClass::Hunter:
 	case EROJobClass::Bard:
 	case EROJobClass::Dancer:
 	case EROJobClass::Sniper:
 	case EROJobClass::Minstrel:
 	case EROJobClass::Gypsy:
-		return 145;
+		JobBase = 145;
+		break;
 
 	// Thief line
 	case EROJobClass::Thief:
 	case EROJobClass::HighThief:
-		return 140;
+		JobBase = 140;
+		break;
 	case EROJobClass::Assassin:
 	case EROJobClass::Rogue:
 	case EROJobClass::AssassinCross:
 	case EROJobClass::Stalker:
-		return 140;
+		JobBase = 140;
+		break;
 
 	// Merchant line
 	case EROJobClass::Merchant:
 	case EROJobClass::HighMerchant:
-		return 150;
+		JobBase = 150;
+		break;
 	case EROJobClass::Blacksmith:
 	case EROJobClass::Alchemist:
 	case EROJobClass::Whitesmith:
 	case EROJobClass::Creator:
-		return 150;
+		JobBase = 150;
+		break;
 
 	// Acolyte line
 	case EROJobClass::Acolyte:
 	case EROJobClass::HighAcolyte:
-		return 150;
+		JobBase = 150;
+		break;
 	case EROJobClass::Priest:
 	case EROJobClass::HighPriest:
-		return 150;
+		JobBase = 150;
+		break;
 	case EROJobClass::Monk:
 	case EROJobClass::Champion:
-		return 145;
+		JobBase = 145;
+		break;
 
 	default:
-		return 150;
+		JobBase = 150;
+		break;
 	}
+
+	return JobBase + GetWeaponASPDOffset(WeaponType);
 }
 
 float URODamageFormulas::CalculateASPD(int32 BaseASPD, int32 AGI, int32 DEX)
@@ -356,6 +402,60 @@ float URODamageFormulas::GetJobSPModifier(EROJobClass Job)
 
 	default:
 		return 1.0f;
+	}
+}
+
+// ============================================================================
+// Size Modifiers
+// ============================================================================
+
+float URODamageFormulas::GetWeaponSizeModifier(EROWeaponType WeaponType, EROMonsterSize TargetSize)
+{
+	// Pre-renewal weapon-type size penalty table.
+	// Values: S = Small, M = Medium, L = Large (as percentage / 100).
+	//                                    Small   Medium  Large
+	switch (WeaponType)
+	{
+	case EROWeaponType::Dagger:       // 100%    75%     50%
+		return (TargetSize == EROMonsterSize::Small) ? 1.00f : (TargetSize == EROMonsterSize::Medium) ? 0.75f : 0.50f;
+	case EROWeaponType::Sword:        // 75%     100%    75%
+		return (TargetSize == EROMonsterSize::Medium) ? 1.00f : 0.75f;
+	case EROWeaponType::TwoHandSword: // 75%     75%     100%
+		return (TargetSize == EROMonsterSize::Large) ? 1.00f : 0.75f;
+	case EROWeaponType::Spear:        // 75%     75%     100%
+		return (TargetSize == EROMonsterSize::Large) ? 1.00f : 0.75f;
+	case EROWeaponType::TwoHandSpear: // 75%     75%     100%
+		return (TargetSize == EROMonsterSize::Large) ? 1.00f : 0.75f;
+	case EROWeaponType::Axe:          // 50%     75%     100%
+		return (TargetSize == EROMonsterSize::Small) ? 0.50f : (TargetSize == EROMonsterSize::Medium) ? 0.75f : 1.00f;
+	case EROWeaponType::TwoHandAxe:   // 50%     75%     100%
+		return (TargetSize == EROMonsterSize::Small) ? 0.50f : (TargetSize == EROMonsterSize::Medium) ? 0.75f : 1.00f;
+	case EROWeaponType::Mace:         // 75%     100%    100%
+		return (TargetSize == EROMonsterSize::Small) ? 0.75f : 1.00f;
+	case EROWeaponType::TwoHandMace:  // 75%     100%    100%
+		return (TargetSize == EROMonsterSize::Small) ? 0.75f : 1.00f;
+	case EROWeaponType::Rod:          // 100%    100%    100%
+		return 1.00f;
+	case EROWeaponType::TwoHandRod:   // 100%    100%    100%
+		return 1.00f;
+	case EROWeaponType::Bow:          // 100%    100%    75%
+		return (TargetSize == EROMonsterSize::Large) ? 0.75f : 1.00f;
+	case EROWeaponType::Knuckle:      // 100%    75%     50%
+		return (TargetSize == EROMonsterSize::Small) ? 1.00f : (TargetSize == EROMonsterSize::Medium) ? 0.75f : 0.50f;
+	case EROWeaponType::Katar:        // 75%     100%    75%
+		return (TargetSize == EROMonsterSize::Medium) ? 1.00f : 0.75f;
+	case EROWeaponType::Book:         // 100%    100%    50%
+		return (TargetSize == EROMonsterSize::Large) ? 0.50f : 1.00f;
+	case EROWeaponType::Instrument:   // 75%     100%    75%
+		return (TargetSize == EROMonsterSize::Medium) ? 1.00f : 0.75f;
+	case EROWeaponType::Whip:         // 75%     100%    50%
+		return (TargetSize == EROMonsterSize::Small) ? 0.75f : (TargetSize == EROMonsterSize::Medium) ? 1.00f : 0.50f;
+	case EROWeaponType::Gun:          // 100%    100%    100%
+		return 1.00f;
+	case EROWeaponType::Shuriken:     // 100%    100%    100%
+		return 1.00f;
+	default:
+		return 1.00f;
 	}
 }
 
@@ -672,7 +772,8 @@ int32 URODamageFormulas::CalculatePhysicalDamage(
 	EROElementLevel DefElementLevel,
 	float SizeModifier,
 	float RaceModifier,
-	bool bIsCritical)
+	bool bIsCritical,
+	float CardFixModifier)
 {
 	// Step 1: Total ATK = BaseATK + WeaponATK
 	float TotalATK = static_cast<float>(BaseATK + WeaponATK);
@@ -690,6 +791,9 @@ int32 URODamageFormulas::CalculatePhysicalDamage(
 	const float ElemMod = GetElementalModifier(AtkElement, DefElement, DefElementLevel);
 	TotalATK *= ElemMod;
 
+	// Step 5b: Apply card fix modifier
+	TotalATK *= CardFixModifier;
+
 	// Step 6: Subtract Hard DEF (flat reduction)
 	// Critical hits ignore hard DEF in pre-renewal
 	if (!bIsCritical)
@@ -701,7 +805,9 @@ int32 URODamageFormulas::CalculatePhysicalDamage(
 	// Critical hits also ignore soft DEF
 	if (!bIsCritical)
 	{
-		TotalATK -= static_cast<float>(TargetSoftDEF);
+		// Pre-renewal: soft DEF has random variance (rnd() % softDEF)
+		const int32 EffectiveSoftDEF = (TargetSoftDEF > 0) ? FMath::RandRange(0, TargetSoftDEF) : 0;
+		TotalATK -= static_cast<float>(EffectiveSoftDEF);
 	}
 
 	// Minimum damage is 1
@@ -716,7 +822,8 @@ int32 URODamageFormulas::CalculateMagicalDamage(
 	EROElement AtkElement,
 	EROElement DefElement,
 	EROElementLevel DefElementLevel,
-	float RaceModifier)
+	float RaceModifier,
+	float CardFixModifier)
 {
 	// Step 1: Base magic damage
 	float TotalDmg = static_cast<float>(MATK);
@@ -730,6 +837,9 @@ int32 URODamageFormulas::CalculateMagicalDamage(
 	// Step 4: Apply elemental modifier
 	const float ElemMod = GetElementalModifier(AtkElement, DefElement, DefElementLevel);
 	TotalDmg *= ElemMod;
+
+	// Step 4b: Apply card fix modifier
+	TotalDmg *= CardFixModifier;
 
 	// Step 5: Subtract Hard MDEF (flat reduction)
 	TotalDmg -= static_cast<float>(FMath::Max(0, TargetMDEF_Hard));

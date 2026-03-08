@@ -71,7 +71,8 @@ void AROMonsterBase::InitializeFromData(const FROMonsterData& Data)
 	HP = MaxHP;
 	ATKMin = Data.ATKMin;
 	ATKMax = Data.ATKMax;
-	ATK = FMath::RandRange(Data.ATKMin, Data.ATKMax);
+	// ATK is rolled per-attack via GetAttackDamage(), store max for reference
+	ATK = Data.ATKMax;
 	MATK = Data.MATK;
 	DEF = Data.DEF;
 	MDEF = Data.MDEF;
@@ -255,6 +256,50 @@ void AROMonsterBase::MarkAttackPerformed()
 	{
 		LastAttackTime = World->GetTimeSeconds();
 	}
+}
+
+int32 AROMonsterBase::GetAttackDamage() const
+{
+	// Roll between ATKMin and ATKMax each attack for proper damage variance
+	return FMath::RandRange(ATKMin, ATKMax);
+}
+
+bool AROMonsterBase::CheckSkillConditions(const FROMonsterSkillEntry& SkillEntry, AActor* Target) const
+{
+	// Check cooldown
+	if (!IsSkillReady(SkillEntry.SkillID))
+	{
+		return false;
+	}
+
+	// Check HP threshold
+	if (MaxHP > 0)
+	{
+		const float HPPercent = (static_cast<float>(HP) / static_cast<float>(MaxHP)) * 100.0f;
+		if (HPPercent > SkillEntry.HPThresholdPercent)
+		{
+			return false;
+		}
+	}
+
+	// Check range to target
+	if (Target)
+	{
+		const float DistToTarget = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
+		if (DistToTarget > SkillEntry.Range)
+		{
+			return false;
+		}
+	}
+
+	// Roll use chance
+	const float Roll = FMath::FRandRange(0.0f, 100.0f);
+	if (Roll > SkillEntry.UseChance)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void AROMonsterBase::OnRep_HP()

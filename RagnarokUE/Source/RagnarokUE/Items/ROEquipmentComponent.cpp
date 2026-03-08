@@ -411,6 +411,23 @@ bool UROEquipmentComponent::ValidateEquipSlot(const UROItemBase* ItemData, EROEq
 	// Weapons go in the weapon slot
 	if (ItemData->ItemType == EROItemType::Weapon)
 	{
+		// Two-handed weapons: cannot equip if shield is occupied (and vice versa)
+		const UROWeaponData* WeapData = Cast<UROWeaponData>(ItemData);
+		if (WeapData)
+		{
+			// Check if this is a two-handed weapon type
+			bool bIsTwoHanded = (WeapData->WeaponType == EROWeaponType::TwoHandSword ||
+								WeapData->WeaponType == EROWeaponType::TwoHandSpear ||
+								WeapData->WeaponType == EROWeaponType::TwoHandAxe ||
+								WeapData->WeaponType == EROWeaponType::TwoHandMace ||
+								WeapData->WeaponType == EROWeaponType::TwoHandRod ||
+								WeapData->WeaponType == EROWeaponType::Bow ||
+								WeapData->WeaponType == EROWeaponType::Katar);
+			if (bIsTwoHanded && IsSlotOccupied(EROEquipSlot::Shield))
+			{
+				return false; // Can't equip 2H weapon with shield
+			}
+		}
 		return TargetSlot == EROEquipSlot::Weapon;
 	}
 
@@ -420,6 +437,34 @@ bool UROEquipmentComponent::ValidateEquipSlot(const UROItemBase* ItemData, EROEq
 		const UROArmorData* ArmorData = Cast<UROArmorData>(ItemData);
 		if (ArmorData)
 		{
+			// Shield: cannot equip if a two-handed weapon is equipped
+			if (TargetSlot == EROEquipSlot::Shield)
+			{
+				const FROItemInstance* CurrentWeapon = EquippedItems.Find(EROEquipSlot::Weapon);
+				if (CurrentWeapon && CurrentWeapon->IsValid())
+				{
+					UROItemDatabase* WeapDB = GetItemDatabase();
+					if (WeapDB)
+					{
+						const UROWeaponData* EquippedWeaponData = WeapDB->GetWeaponData(CurrentWeapon->ItemID);
+						if (EquippedWeaponData)
+						{
+							bool bIsTwoHanded = (EquippedWeaponData->WeaponType == EROWeaponType::TwoHandSword ||
+												EquippedWeaponData->WeaponType == EROWeaponType::TwoHandSpear ||
+												EquippedWeaponData->WeaponType == EROWeaponType::TwoHandAxe ||
+												EquippedWeaponData->WeaponType == EROWeaponType::TwoHandMace ||
+												EquippedWeaponData->WeaponType == EROWeaponType::TwoHandRod ||
+												EquippedWeaponData->WeaponType == EROWeaponType::Bow ||
+												EquippedWeaponData->WeaponType == EROWeaponType::Katar);
+							if (bIsTwoHanded)
+							{
+								return false; // Can't equip shield with 2H weapon
+							}
+						}
+					}
+				}
+			}
+
 			// Accessories can go in either left or right slot
 			if (ArmorData->EquipSlot == EROEquipSlot::AccessoryL ||
 				ArmorData->EquipSlot == EROEquipSlot::AccessoryR)

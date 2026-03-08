@@ -8,6 +8,52 @@
 #include "RagnarokUE/Data/ROStructs.h"
 #include "ROGuildSubsystem.generated.h"
 
+/**
+ * FROGuildPosition
+ * One of 20 configurable position/title slots in a guild.
+ * Each position has a name and permission flags.
+ */
+USTRUCT(BlueprintType)
+struct RAGNAROKUE_API FROGuildPosition
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	FString Title = TEXT("Member");
+
+	/** Can this position invite new members? */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	bool bCanInvite = false;
+
+	/** Can this position expel members? */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	bool bCanExpel = false;
+
+	/** Can this position access guild storage? */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	bool bCanAccessStorage = false;
+};
+
+/**
+ * FROGuildAllianceEntry
+ * Represents a guild alliance or hostility relationship.
+ */
+USTRUCT(BlueprintType)
+struct RAGNAROKUE_API FROGuildAllianceEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	int32 GuildID = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	FString GuildName;
+
+	/** True = allied, False = hostile. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	bool bIsAlliance = true;
+};
+
 /** A single guild member's data. */
 USTRUCT(BlueprintType)
 struct RAGNAROKUE_API FROGuildMember
@@ -24,6 +70,10 @@ struct RAGNAROKUE_API FROGuildMember
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
 	int32 Rank = 2;
 
+	/** Position index (0-19) into the guild's Positions array. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	int32 PositionIndex = 19;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
 	EROJobClass JobClass = EROJobClass::Novice;
 
@@ -32,6 +82,10 @@ struct RAGNAROKUE_API FROGuildMember
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
 	bool bOnline = false;
+
+	/** Cumulative EXP contributed to the guild by this member. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	int64 ContributedExp = 0;
 };
 
 /** Complete guild information. */
@@ -66,6 +120,26 @@ struct RAGNAROKUE_API FROGuildInfo
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
 	TArray<int32> GuildSkillLevels;
 
+	/** Unspent guild skill points. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	int32 GuildSkillPoints = 0;
+
+	/** 20 configurable position/title slots. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	TArray<FROGuildPosition> Positions;
+
+	/** Guild alliances (max 3) and hostilities (max 3). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	TArray<FROGuildAllianceEntry> Relations;
+
+	/** Guild notice/announcement message. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	FString GuildNotice;
+
+	/** EXP required to reach the next guild level. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Guild")
+	int64 ExpToNextLevel = 0;
+
 	bool IsValid() const { return GuildID > 0; }
 
 	/** Get current max members based on Guild Extension skill level. Base 16, +4 per level up to 56. */
@@ -78,6 +152,22 @@ struct RAGNAROKUE_API FROGuildInfo
 			ExtensionLevel = GuildSkillLevels[0];
 		}
 		return FMath::Min(16 + (ExtensionLevel * 4), 56);
+	}
+
+	/** Get the number of allied guilds. */
+	int32 GetAllianceCount() const
+	{
+		int32 Count = 0;
+		for (const auto& R : Relations) { if (R.bIsAlliance) ++Count; }
+		return Count;
+	}
+
+	/** Get the number of hostile guilds. */
+	int32 GetHostileCount() const
+	{
+		int32 Count = 0;
+		for (const auto& R : Relations) { if (!R.bIsAlliance) ++Count; }
+		return Count;
 	}
 };
 
@@ -131,6 +221,56 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Guild")
 	void SetMemberRank(int32 GuildID, int32 SetterID, int32 TargetID, int32 NewRank);
 
+	// ---- Guild Leveling & EXP ----
+
+	/** Contribute EXP to the guild (called when a member kills a monster and guild tax applies). */
+	UFUNCTION(BlueprintCallable, Category = "Guild")
+	void ContributeGuildExp(int32 GuildID, int32 PlayerID, int64 ExpAmount);
+
+	/** Allocate a guild skill point. Returns true on success. */
+	UFUNCTION(BlueprintCallable, Category = "Guild")
+	bool AllocateGuildSkillPoint(int32 GuildID, int32 MasterID, int32 SkillSlot);
+
+	// ---- Positions & Titles ----
+
+	/** Set a position's title and permissions. Only the master can do this. */
+	UFUNCTION(BlueprintCallable, Category = "Guild")
+	void SetPosition(int32 GuildID, int32 MasterID, int32 PositionIndex, const FROGuildPosition& Position);
+
+	/** Assign a member to a position slot. */
+	UFUNCTION(BlueprintCallable, Category = "Guild")
+	void SetMemberPosition(int32 GuildID, int32 SetterID, int32 TargetID, int32 PositionIndex);
+
+	// ---- Alliances ----
+
+	/** Request an alliance with another guild. Max 3 alliances. */
+	UFUNCTION(BlueprintCallable, Category = "Guild")
+	bool RequestAlliance(int32 GuildID, int32 TargetGuildID);
+
+	/** Declare hostility against another guild. Max 3 hostile. */
+	UFUNCTION(BlueprintCallable, Category = "Guild")
+	bool DeclareHostility(int32 GuildID, int32 TargetGuildID);
+
+	/** Remove an alliance or hostility. */
+	UFUNCTION(BlueprintCallable, Category = "Guild")
+	void RemoveRelation(int32 GuildID, int32 TargetGuildID);
+
+	// ---- Guild Notice ----
+
+	/** Set the guild notice/announcement. */
+	UFUNCTION(BlueprintCallable, Category = "Guild")
+	void SetGuildNotice(int32 GuildID, int32 SetterID, const FString& Notice);
+
+	/** Get the guild notice. */
+	UFUNCTION(BlueprintCallable, Category = "Guild")
+	FString GetGuildNotice(int32 GuildID) const;
+
+	// ---- Guild Master Transfer ----
+
+	/** Transfer guild master position to another member. */
+	UFUNCTION(BlueprintCallable, Category = "Guild")
+	bool TransferGuildMaster(int32 GuildID, int32 CurrentMasterID, int32 NewMasterID);
+
 	// ---- Queries ----
 
 	UFUNCTION(BlueprintCallable, Category = "Guild")
@@ -165,4 +305,19 @@ protected:
 	/** Find a member within a guild. Returns nullptr if not found. */
 	FROGuildMember* FindMember(FROGuildInfo& Guild, int32 PlayerID);
 	const FROGuildMember* FindMember(const FROGuildInfo& Guild, int32 PlayerID) const;
+
+	/** Get the EXP required for a specific guild level. */
+	static int64 GetGuildExpForLevel(int32 Level);
+
+	/** Process guild level-ups when EXP threshold is reached. */
+	void ProcessGuildLevelUp(FROGuildInfo& Guild);
+
+	/** Initialize the 20 default position slots. */
+	static void InitializeDefaultPositions(TArray<FROGuildPosition>& Positions);
+
+	/** Pending invite timestamps for cleanup. */
+	TMap<int32, float> PendingInviteTimestamps;
+
+	/** Clean up expired pending invites (older than 30 seconds). */
+	void CleanupExpiredInvites();
 };
