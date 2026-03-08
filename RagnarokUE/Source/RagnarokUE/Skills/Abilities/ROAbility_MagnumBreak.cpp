@@ -107,11 +107,10 @@ void UROAbility_MagnumBreak::OnCastComplete()
 					DamageSpec.Data->SetSetByCallerMagnitude(DamageTypeTag, 0.0f); // Physical with fire element
 				}
 
-				FGameplayTag ElementModTag = FGameplayTag::RequestGameplayTag(FName("Data.ElementMod"), false);
-				if (ElementModTag.IsValid())
+				FGameplayTag AttackElementTag = FGameplayTag::RequestGameplayTag(FName("Data.AttackElement"), false);
+				if (AttackElementTag.IsValid())
 				{
-					// Fire element attack - modifier depends on target's element
-					DamageSpec.Data->SetSetByCallerMagnitude(ElementModTag, 1.0f); // Default; actual calc via execution
+					DamageSpec.Data->SetSetByCallerMagnitude(AttackElementTag, static_cast<float>(SkillElement));
 				}
 
 				// Apply the damage effect to the target
@@ -132,7 +131,7 @@ float UROAbility_MagnumBreak::GetDamageModifier() const
 	return 1.0f + 0.2f * static_cast<float>(SkillLevel);
 }
 
-void UROAbility_MagnumBreak::ApplyFireEndow() const
+void UROAbility_MagnumBreak::ApplyFireEndow()
 {
 	if (!CachedActorInfo || !CachedActorInfo->AbilitySystemComponent.IsValid())
 	{

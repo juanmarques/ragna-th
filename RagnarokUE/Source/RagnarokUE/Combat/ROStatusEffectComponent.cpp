@@ -8,13 +8,19 @@
 UROStatusEffectComponent::UROStatusEffectComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bStartWithTickEnabled = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false; // Enabled on server only in BeginPlay
 	SetIsReplicatedByDefault(true);
 }
 
 void UROStatusEffectComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Only tick on server — clients don't process status effects
+	if (GetOwner() && GetOwner()->HasAuthority())
+	{
+		SetComponentTickEnabled(true);
+	}
 }
 
 void UROStatusEffectComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

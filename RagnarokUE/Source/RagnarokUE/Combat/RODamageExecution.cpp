@@ -3,6 +3,8 @@
 #include "RODamageExecution.h"
 #include "RagnarokUE/Skills/ROAttributeSet.h"
 #include "ROElementalSystem.h"
+#include "ROStatusEffectComponent.h"
+#include "RagnarokUE/Monsters/ROMonsterBase.h"
 #include "AbilitySystemComponent.h"
 
 // Struct to hold captured attributes at execution time
@@ -115,12 +117,44 @@ void URODamageExecution::Execute_Implementation(
 	}
 	const ERODamageType DamageType = static_cast<ERODamageType>(FMath::RoundToInt32(DamageTypeFloat));
 
-	// ElementMod: elemental damage multiplier (pre-calculated by the ability)
+	// ElementMod: compute from attack element vs target's defense element
 	float ElementMod = 1.0f;
-	FGameplayTag ElementModTag = FGameplayTag::RequestGameplayTag(FName("Data.ElementMod"), false);
-	if (ElementModTag.IsValid())
+	FGameplayTag AttackElementTag = FGameplayTag::RequestGameplayTag(FName("Data.AttackElement"), false);
+	if (AttackElementTag.IsValid())
 	{
-		ElementMod = Spec.GetSetByCallerMagnitude(ElementModTag, false, 1.0f);
+		const float AttackElementFloat = Spec.GetSetByCallerMagnitude(AttackElementTag, false, -1.0f);
+		if (AttackElementFloat >= 0.0f)
+		{
+			const EROElement AttackElement = static_cast<EROElement>(FMath::RoundToInt32(AttackElementFloat));
+
+			// Determine target's defense element and level
+			EROElement DefElement = EROElement::Neutral;
+			EROElementLevel DefLevel = EROElementLevel::Level1;
+
+			UAbilitySystemComponent* TargetASC = ExecutionParams.GetTargetAbilitySystemComponent();
+			if (TargetASC)
+			{
+				AActor* TargetActor = TargetASC->GetOwnerActor();
+				if (TargetActor)
+				{
+					// Check status effect overrides first (Freeze -> Water, Stone -> Earth)
+					UROStatusEffectComponent* StatusComp = TargetActor->FindComponentByClass<UROStatusEffectComponent>();
+					if (StatusComp && StatusComp->GetElementOverride(DefElement, DefLevel))
+					{
+						// Element overridden by status effect
+					}
+					else if (AROMonsterBase* Monster = Cast<AROMonsterBase>(TargetActor))
+					{
+						// Monster has explicit element properties
+						DefElement = Monster->Element;
+						DefLevel = Monster->ElementLevel;
+					}
+					// else: player characters default to Neutral Lv1
+				}
+			}
+
+			ElementMod = UROElementalSystem::GetElementalModifier(AttackElement, DefElement, DefLevel);
+		}
 	}
 
 	// SizeMod: size-based damage multiplier
