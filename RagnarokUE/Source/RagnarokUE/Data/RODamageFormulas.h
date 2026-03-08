@@ -51,9 +51,9 @@ public:
 	static int32 CalculateHardDEF(int32 EquipDEF);
 
 	/**
-	 * Calculate soft DEF (VIT-based) damage reduction percentage.
-	 * Formula: VIT + floor(VIT/5)^2  (as a percentage reduction of remaining damage)
-	 * Clamped to 0-100.
+	 * Calculate soft DEF (VIT-based) flat damage reduction.
+	 * Formula: VIT + floor(VIT/5)^2
+	 * In pre-renewal, this is subtracted from damage after hard DEF reduction.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "RO|Damage")
 	static int32 CalculateSoftDEF(int32 VIT);
