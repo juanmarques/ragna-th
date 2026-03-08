@@ -38,9 +38,10 @@ int32 URODamageFormulas::CalculateHardDEF(int32 EquipDEF)
 
 int32 URODamageFormulas::CalculateSoftDEF(int32 VIT)
 {
-	// VIT + floor(VIT/5)^2, flat damage reduction subtracted after hard DEF
-	const int32 VitBonus = (VIT / 5) * (VIT / 5);
-	return FMath::Max(0, VIT + VitBonus);
+	// Pre-renewal: VIT + floor(VIT/2) + floor(VIT^2/100)
+	const int32 VitHalf = VIT / 2;
+	const int32 VitSquared = (VIT * VIT) / 100;
+	return FMath::Max(0, VIT + VitHalf + VitSquared);
 }
 
 int32 URODamageFormulas::CalculateSoftMDEF(int32 INT, int32 VIT, int32 DEX)
@@ -68,8 +69,8 @@ int32 URODamageFormulas::CalculateFleeRate(int32 AGI, int32 LUK, int32 BaseLevel
 
 float URODamageFormulas::CalculateCritRate(int32 LUK)
 {
-	// Formula: LUK * 0.3 + 1
-	return LUK * 0.3f + 1.0f;
+	// Pre-renewal formula: 1 + floor(LUK/3) (integer division)
+	return 1.0f + static_cast<float>(LUK / 3);
 }
 
 // ============================================================================

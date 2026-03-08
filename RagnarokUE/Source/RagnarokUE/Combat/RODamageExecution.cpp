@@ -183,21 +183,17 @@ float URODamageExecution::CalculatePhysicalDamage(
 {
 	// Pre-renewal RO Physical Damage Formula:
 	// FinalDamage = max(1, (ATK * SkillMod * ElementMod * SizeMod) - DEF)
-	// Critical: +40% damage, ignores FLEE and DEF
+	// Critical: always uses max weapon ATK roll, ignores FLEE and DEF
 
 	float RawDamage = ATK * SkillMod * ElementMod * SizeMod;
 
-	// Apply critical bonus
-	if (bIsCritical)
-	{
-		RawDamage *= 1.4f;
-		// Critical hits ignore DEF in pre-renewal
-	}
-	else
+	if (!bIsCritical)
 	{
 		// Flat DEF subtraction (pre-renewal behavior)
 		RawDamage -= TotalDEF;
 	}
+	// Critical hits: DEF is ignored. No multiplicative bonus in pre-renewal;
+	// the damage increase comes from always using max weapon ATK variance.
 
 	return FMath::Max(1.0f, RawDamage);
 }

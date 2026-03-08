@@ -14,7 +14,7 @@ class UROStatsComponent;
 class UROJobComponent;
 class UROLevelingComponent;
 class UROCharacterMovement;
-class UAbilitySystemComponent;
+class UROAbilitySystemComponent;
 class UROAttributeSet;
 class USpringArmComponent;
 class UCameraComponent;
@@ -54,7 +54,7 @@ public:
 	TObjectPtr<UROLevelingComponent> LevelingComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components")
-	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+	TObjectPtr<UROAbilitySystemComponent> AbilitySystemComponent;
 
 	UPROPERTY()
 	TObjectPtr<UROAttributeSet> AttributeSet;
