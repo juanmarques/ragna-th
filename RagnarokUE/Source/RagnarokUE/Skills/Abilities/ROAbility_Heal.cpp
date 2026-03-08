@@ -3,7 +3,6 @@
 #include "ROAbility_Heal.h"
 #include "AbilitySystemComponent.h"
 #include "RagnarokUE/Skills/ROAttributeSet.h"
-#include "RagnarokUE/Combat/RODamageGameplayEffect.h"
 #include "RagnarokUE/Combat/ROHealGameplayEffect.h"
 #include "RagnarokUE/Character/ROStatsComponent.h"
 #include "RagnarokUE/Character/ROLevelingComponent.h"
@@ -120,41 +119,12 @@ void UROAbility_Heal::OnCastComplete()
 
 	if (bDamageUndead && bTargetIsUndead)
 	{
-		// Deal holy damage to undead equal to heal amount via the damage GE
-		FGameplayEffectSpecHandle DamageSpec = MakeOutgoingGameplayEffectSpec(
-			URODamageGameplayEffect::StaticClass(), SkillLevel);
-
-		if (DamageSpec.IsValid())
-		{
-			// For undead damage from Heal, we set SkillMod to the raw heal amount
-			// and DamageType to Misc (2) so it bypasses DEF/MDEF
-			FGameplayTag SkillModTag = FGameplayTag::RequestGameplayTag(FName("Data.SkillMod"), false);
-			if (SkillModTag.IsValid())
-			{
-				// SkillMod acts as a multiplier on ATK/MATK in the execution.
-				// For Heal damage to undead, we want fixed damage = HealAmount.
-				// Set SkillMod high enough that ATK * SkillMod ~ HealAmount.
-				// Using DamageType Misc (2) which computes: ATK * SkillMod * ElementMod
-				// We want the result to be HealAmount, so SkillMod = HealAmount / ATK.
-				// However, the source ATK may be low. Instead, pass HealAmount as SkillMod
-				// and rely on the Misc path which uses SourceATK * SkillMod.
-				DamageSpec.Data->SetSetByCallerMagnitude(SkillModTag, HealAmount);
-			}
-
-			FGameplayTag DamageTypeTag = FGameplayTag::RequestGameplayTag(FName("Data.DamageType"), false);
-			if (DamageTypeTag.IsValid())
-			{
-				DamageSpec.Data->SetSetByCallerMagnitude(DamageTypeTag, 2.0f); // Misc (ignores DEF/MDEF)
-			}
-
-			FGameplayTag ElementModTag = FGameplayTag::RequestGameplayTag(FName("Data.ElementMod"), false);
-			if (ElementModTag.IsValid())
-			{
-				DamageSpec.Data->SetSetByCallerMagnitude(ElementModTag, 1.0f); // Holy
-			}
-
-			SourceASC->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetASC);
-		}
+		// In RO, Heal deals fixed Holy damage to Undead equal to the heal amount.
+		// This bypasses ATK/DEF entirely. Apply directly as IncomingDamage.
+		TargetASC->ApplyModToAttribute(
+			UROAttributeSet::GetIncomingDamageAttribute(),
+			EGameplayModOp::Additive,
+			HealAmount);
 	}
 	else
 	{
