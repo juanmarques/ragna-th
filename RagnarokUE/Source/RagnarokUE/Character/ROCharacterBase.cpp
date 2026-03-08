@@ -197,6 +197,11 @@ void AROCharacterBase::Die()
 		return;
 	}
 
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	bIsDead = true;
 	CurrentHP = 0;
 
@@ -218,8 +223,9 @@ void AROCharacterBase::Die()
 		DisableInput(PC);
 	}
 
-	// Disable collision
+	// Disable collision (capsule + mesh, consistent with OnRep_bIsDead)
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	UE_LOG(LogTemp, Log, TEXT("ROCharacterBase: %s has died."), *GetName());
 }
@@ -241,8 +247,9 @@ void AROCharacterBase::Respawn(FVector RespawnLocation)
 	CurrentHP = FMath::Max(1, MaxHP / 2);
 	CurrentSP = FMath::Max(0, MaxSP / 2);
 
-	// Re-enable collision
+	// Re-enable collision (capsule + mesh, consistent with Die())
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
 	// Re-enable input
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
