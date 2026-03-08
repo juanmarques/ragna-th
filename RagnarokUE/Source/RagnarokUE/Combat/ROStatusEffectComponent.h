@@ -43,6 +43,7 @@ struct FROActiveStatusEffect
 	/** Time spent in current Stone Curse phase. */
 	UPROPERTY()
 	float StonePhaseTimer = 0.0f;
+
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStatusEffectChanged, EROStatusEffect, Effect, bool, bApplied);
@@ -156,6 +157,15 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "RO|StatusEffects")
 	TArray<FROActiveStatusEffect> GetAllActiveEffects() const;
+
+	/**
+	 * Get the element override from status effects (e.g., Stone Curse → Earth Lv1, Freeze → Water Lv1).
+	 * @param OutElement - overridden element if applicable
+	 * @param OutLevel - overridden element level if applicable
+	 * @return True if an element override is active
+	 */
+	UFUNCTION(BlueprintCallable, Category = "RO|StatusEffects")
+	bool GetElementOverride(EROElement& OutElement, EROElementLevel& OutLevel) const;
 
 	// --- Delegates ---
 

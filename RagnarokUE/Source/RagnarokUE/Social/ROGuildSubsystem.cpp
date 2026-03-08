@@ -110,18 +110,21 @@ bool UROGuildSubsystem::AcceptGuildInvite(int32 GuildID, int32 PlayerID)
 	if (!Guild)
 	{
 		PendingInvites.Remove(PlayerID);
+		PendingInviteTimestamps.Remove(PlayerID);
 		return false;
 	}
 
 	if (Guild->Members.Num() >= Guild->GetMaxMembers())
 	{
 		PendingInvites.Remove(PlayerID);
+		PendingInviteTimestamps.Remove(PlayerID);
 		return false;
 	}
 
 	if (IsInGuild(PlayerID))
 	{
 		PendingInvites.Remove(PlayerID);
+		PendingInviteTimestamps.Remove(PlayerID);
 		return false;
 	}
 
@@ -133,6 +136,7 @@ bool UROGuildSubsystem::AcceptGuildInvite(int32 GuildID, int32 PlayerID)
 
 	PlayerGuildMap.Add(PlayerID, GuildID);
 	PendingInvites.Remove(PlayerID);
+	PendingInviteTimestamps.Remove(PlayerID);
 
 	OnGuildMemberJoined.Broadcast(GuildID, PlayerID);
 	return true;
@@ -400,7 +404,7 @@ int64 UROGuildSubsystem::GetGuildExpForLevel(int32 Level)
 void UROGuildSubsystem::ProcessGuildLevelUp(FROGuildInfo& Guild)
 {
 	// Max guild level is 50
-	while (Guild.GuildLevel < 50 && Guild.GuildExp >= Guild.ExpToNextLevel)
+	while (Guild.GuildLevel < 50 && Guild.ExpToNextLevel > 0 && Guild.GuildExp >= Guild.ExpToNextLevel)
 	{
 		Guild.GuildExp -= Guild.ExpToNextLevel;
 		Guild.GuildLevel++;
@@ -676,10 +680,11 @@ bool UROGuildSubsystem::TransferGuildMaster(int32 GuildID, int32 CurrentMasterID
 		return false;
 	}
 
-	// Transfer
+	// Transfer: swap ranks and positions
 	Guild->MasterPlayerID = NewMasterID;
-	OldMaster->Rank = 2;
-	OldMaster->PositionIndex = 1;
+	const int32 NewMasterOldPosition = NewMaster->PositionIndex;
+	OldMaster->Rank = NewMaster->Rank;
+	OldMaster->PositionIndex = NewMasterOldPosition;
 	NewMaster->Rank = 0;
 	NewMaster->PositionIndex = 0;
 
