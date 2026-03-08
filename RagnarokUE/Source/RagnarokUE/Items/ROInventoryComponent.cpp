@@ -188,7 +188,7 @@ void UROInventoryComponent::ServerUseItem_Implementation(int32 SlotIndex)
 			FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
 			EffectContext.AddSourceObject(Owner);
 			FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(Consumable->ConsumableEffect, 1.0f, EffectContext);
-			if (SpecHandle.IsValid())
+			if (SpecHandle.IsValid() && SpecHandle.Data.IsValid())
 			{
 				ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 			}

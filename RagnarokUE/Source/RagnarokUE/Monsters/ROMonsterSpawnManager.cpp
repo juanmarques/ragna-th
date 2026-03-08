@@ -187,6 +187,11 @@ void AROMonsterSpawnManager::ProcessRespawnQueue(float CurrentTime)
 						int32& Count = AliveCountPerDef.FindOrAdd(DefIndex);
 						Count++;
 					}
+					else
+					{
+						// Spawn failed - keep entry in queue for retry next tick
+						continue;
+					}
 				}
 			}
 
