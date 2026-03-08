@@ -139,9 +139,8 @@ bool UROAbility_DoubleStrafe::IsBowEquipped(const FGameplayAbilityActorInfo* Act
 		return ActorInfo->AbilitySystemComponent->HasMatchingGameplayTag(BowTag);
 	}
 
-	// Fallback: in a full implementation, check the equipment component
-	// For now, allow activation if we can't verify (development convenience)
-	return true;
+	// No bow tag found - deny activation (bow must be equipped)
+	return false;
 }
 
 float UROAbility_DoubleStrafe::GetPerHitDamageModifier() const

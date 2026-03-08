@@ -49,8 +49,8 @@ float UROAbility_Discount::GetDiscountForLevel(int32 Level)
 		return 0.0f;
 	}
 
-	// Discount: 5% + 2% * SkillLevel, max 24% at level 10
+	// Discount: 5% + 2% * SkillLevel, max 25% at level 10
 	const float DiscountPercent = 5.0f + 2.0f * static_cast<float>(Level);
-	const float Clamped = FMath::Clamp(DiscountPercent, 0.0f, 24.0f);
+	const float Clamped = FMath::Clamp(DiscountPercent, 0.0f, 25.0f);
 	return Clamped / 100.0f; // Return as 0-1 range
 }
