@@ -14,7 +14,7 @@
  * Physical damage (pre-renewal):
  *   FinalDamage = max(1, (ATK * SkillMod * ElementMod * SizeMod) - DEF)
  *   Hit check: HitRate - FleeRate >= random(0,100)
- *   Critical: CritRate > random(0,100) -> +40% damage, ignore flee and DEF
+ *   Critical: CritRate > random(0,100) -> ignore flee and DEF (no bonus damage in pre-renewal)
  *
  * Magical damage:
  *   FinalDamage = max(1, MATK * SkillMod * ElementMod - MDEF)

@@ -38,10 +38,11 @@ int32 URODamageFormulas::CalculateHardDEF(int32 EquipDEF)
 
 int32 URODamageFormulas::CalculateSoftDEF(int32 VIT)
 {
-	// Pre-renewal: VIT + floor(VIT/2) + floor(VIT^2/100)
-	const int32 VitHalf = VIT / 2;
-	const int32 VitSquared = (VIT * VIT) / 100;
-	return FMath::Max(0, VIT + VitHalf + VitSquared);
+	// Pre-renewal: VIT/2 + max(VIT*0.3, VIT^2/150 - 1)
+	const float VitHalf = static_cast<float>(VIT) / 2.0f;
+	const float Option1 = static_cast<float>(VIT) * 0.3f;
+	const float Option2 = static_cast<float>(VIT * VIT) / 150.0f - 1.0f;
+	return FMath::Max(0, static_cast<int32>(VitHalf + FMath::Max(Option1, Option2)));
 }
 
 int32 URODamageFormulas::CalculateSoftMDEF(int32 INT, int32 VIT, int32 DEX)

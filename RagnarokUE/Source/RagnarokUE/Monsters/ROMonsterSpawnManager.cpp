@@ -48,6 +48,7 @@ void AROMonsterSpawnManager::PerformInitialSpawn()
 			AROMonsterBase* Monster = SpawnMonster(Def);
 			if (Monster)
 			{
+				Monster->SpawnDefIndex = DefIndex;
 				int32& Count = AliveCountPerDef.FindOrAdd(DefIndex);
 				Count++;
 			}
@@ -171,6 +172,7 @@ void AROMonsterSpawnManager::ProcessRespawnQueue(float CurrentTime)
 					AROMonsterBase* Monster = SpawnMonster(Def);
 					if (Monster)
 					{
+						Monster->SpawnDefIndex = DefIndex;
 						int32& Count = AliveCountPerDef.FindOrAdd(DefIndex);
 						Count++;
 					}
@@ -217,12 +219,11 @@ int32 AROMonsterSpawnManager::FindSpawnDefIndex(const AROMonsterBase* Monster) c
 		return -1;
 	}
 
-	for (int32 i = 0; i < SpawnDefinitions.Num(); ++i)
+	// Use the stored definition index to correctly identify which spawn definition
+	// this monster belongs to, even when multiple definitions share the same MonsterID
+	if (SpawnDefinitions.IsValidIndex(Monster->SpawnDefIndex))
 	{
-		if (SpawnDefinitions[i].MonsterID == Monster->MonsterID)
-		{
-			return i;
-		}
+		return Monster->SpawnDefIndex;
 	}
 
 	return -1;

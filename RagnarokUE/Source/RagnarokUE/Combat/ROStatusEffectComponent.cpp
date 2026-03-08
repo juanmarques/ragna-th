@@ -185,14 +185,15 @@ void UROStatusEffectComponent::ProcessPeriodicEffects(float DeltaTime)
 			{
 			case EROStatusEffect::Poison:
 			{
-				// Poison: drain HP over time (base damage = MaxHP * 1% per tick)
+				// Pre-renewal Poison: MaxHP * 1.5% + 2 per tick, cannot drop below 25% MaxHP
 				if (ASC)
 				{
 					const UROAttributeSet* AttrSet = ASC->GetSet<UROAttributeSet>();
 					if (AttrSet)
 					{
-						const float PoisonDamage = AttrSet->GetMaxHP() * 0.01f * static_cast<float>(ActiveEffect.Level);
-						const float NewHP = FMath::Max(1.0f, AttrSet->GetHP() - PoisonDamage); // Poison cannot kill
+						const float PoisonDamage = AttrSet->GetMaxHP() * 0.015f + 2.0f;
+						const float MinHP = AttrSet->GetMaxHP() * 0.25f;
+						const float NewHP = FMath::Max(MinHP, AttrSet->GetHP() - PoisonDamage);
 						ASC->ApplyModToAttribute(UROAttributeSet::GetHPAttribute(), EGameplayModOp::Override, NewHP);
 					}
 				}
@@ -200,13 +201,13 @@ void UROStatusEffectComponent::ProcessPeriodicEffects(float DeltaTime)
 			}
 			case EROStatusEffect::DeadlyPoison:
 			{
-				// Deadly Poison: stronger HP drain (MaxHP * 2% per tick, CAN kill)
+				// Pre-renewal Deadly Poison: MaxHP * 4% per tick, CAN kill
 				if (ASC)
 				{
 					const UROAttributeSet* AttrSet = ASC->GetSet<UROAttributeSet>();
 					if (AttrSet)
 					{
-						const float PoisonDamage = AttrSet->GetMaxHP() * 0.02f * static_cast<float>(ActiveEffect.Level);
+						const float PoisonDamage = AttrSet->GetMaxHP() * 0.04f;
 						const float NewHP = FMath::Max(0.0f, AttrSet->GetHP() - PoisonDamage);
 						ASC->ApplyModToAttribute(UROAttributeSet::GetHPAttribute(), EGameplayModOp::Override, NewHP);
 					}
