@@ -16,7 +16,7 @@ UROAbility_Bash::UROAbility_Bash()
 	SkillLevel = 1;
 	SkillElement = EROElement::Neutral;
 
-	// SP cost: 8 + 2 * Level (using base=6, perLevel=2 so GetSPCost = 6 + 2*Level = 8 at Lv1)
+	// SP cost: 6 + 2 * Level (Lv1=8, Lv5=16, Lv10=26)
 	SPCostBase = 6.0f;
 	SPCostPerLevel = 2.0f;
 

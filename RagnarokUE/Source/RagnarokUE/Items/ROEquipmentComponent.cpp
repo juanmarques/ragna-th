@@ -33,7 +33,19 @@ void UROEquipmentComponent::BeginPlay()
 
 bool UROEquipmentComponent::ServerEquipItem_Validate(int32 InventorySlot, EROEquipSlot TargetSlot)
 {
-	return InventorySlot >= 0;
+	// Validate slot index is within a sane range (actual bounds checked in Implementation)
+	if (InventorySlot < 0 || InventorySlot >= 200)
+	{
+		return false;
+	}
+
+	// Validate TargetSlot is a known enum value
+	if (TargetSlot < EROEquipSlot::Weapon || TargetSlot > EROEquipSlot::HeadLow)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void UROEquipmentComponent::ServerEquipItem_Implementation(int32 InventorySlot, EROEquipSlot TargetSlot)

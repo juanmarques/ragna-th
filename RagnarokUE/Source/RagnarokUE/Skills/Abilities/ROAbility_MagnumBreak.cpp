@@ -132,11 +132,6 @@ float UROAbility_MagnumBreak::GetDamageModifier() const
 	return 1.0f + 0.2f * static_cast<float>(SkillLevel);
 }
 
-void UROAbility_MagnumBreak::ApplyPushback(const FVector& Origin) const
-{
-	// Pushback logic is handled inline in OnCastComplete for each hit target
-}
-
 void UROAbility_MagnumBreak::ApplyFireEndow() const
 {
 	if (!CachedActorInfo || !CachedActorInfo->AbilitySystemComponent.IsValid())
