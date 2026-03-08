@@ -12,8 +12,8 @@ UROAbility_Hiding::UROAbility_Hiding()
 	SkillLevel = 1;
 	SkillElement = EROElement::Neutral;
 
-	// No SP cost to activate (SP is drained over time instead)
-	SPCostBase = 0.0f;
+	// 10 SP to activate, plus SP is drained over time
+	SPCostBase = 10.0f;
 	SPCostPerLevel = 0.0f;
 
 	// Instant cast

@@ -16,9 +16,9 @@ UROAbility_Heal::UROAbility_Heal()
 	SkillLevel = 1;
 	SkillElement = EROElement::Holy;
 
-	// SP cost: 13 + 2 * Level (base=11, perLevel=2 so at Lv1 = 11+2=13)
-	SPCostBase = 11.0f;
-	SPCostPerLevel = 2.0f;
+	// SP cost: Lv1=13, Lv2=16, ..., Lv10=40 (increases by 3 per level)
+	SPCostBase = 10.0f;
+	SPCostPerLevel = 3.0f;
 
 	// Short variable cast time
 	VariableCastTimeBase = 1.0f;
