@@ -68,10 +68,23 @@ void AROMapZone::OnZoneOverlapEnd(UPrimitiveComponent* OverlappedComponent, AAct
 	RemoveZoneRules(OtherActor);
 }
 
+void AROMapZone::RemoveCharacterFromZoneTracking(AActor* DestroyedActor)
+{
+	if (DestroyedActor)
+	{
+		CharacterZones.Remove(DestroyedActor);
+	}
+}
+
 void AROMapZone::ApplyZoneRules(AActor* PlayerCharacter)
 {
 	// Track this zone for the character
 	TArray<TWeakObjectPtr<AROMapZone>>& Zones = CharacterZones.FindOrAdd(PlayerCharacter);
+	if (Zones.Num() == 0)
+	{
+		// First zone for this character — bind to OnDestroyed to clean up the tracking map
+		PlayerCharacter->OnDestroyed.AddDynamic(this, &AROMapZone::OnCharacterDestroyed);
+	}
 	Zones.AddUnique(this);
 
 	AROCharacterBase* ROChar = Cast<AROCharacterBase>(PlayerCharacter);
@@ -142,4 +155,9 @@ void AROMapZone::RemoveZoneRules(AActor* PlayerCharacter)
 
 	UE_LOG(LogTemp, Log, TEXT("Player %s left zone '%s'"),
 		*PlayerCharacter->GetName(), *ZoneName);
+}
+
+void AROMapZone::OnCharacterDestroyed(AActor* DestroyedActor)
+{
+	RemoveCharacterFromZoneTracking(DestroyedActor);
 }

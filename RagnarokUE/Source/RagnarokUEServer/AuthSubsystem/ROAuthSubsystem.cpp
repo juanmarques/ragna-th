@@ -5,7 +5,6 @@
 #include "Misc/Guid.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
-#include "HAL/PlatformMisc.h"
 
 void UROAuthSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -345,24 +344,27 @@ bool UROAuthSubsystem::IsAccountBanned(int32 AccountID) const
 
 FString UROAuthSubsystem::GenerateSalt()
 {
-	// Generate 16 random bytes as 32 hex characters
-	FString Salt;
-	Salt.Reserve(32);
-	for (int32 i = 0; i < 16; ++i)
-	{
-		Salt += FString::Printf(TEXT("%02x"), FMath::RandRange(0, 255));
-	}
-	return Salt;
+	// FIX: Use FGuid::NewGuid() which sources entropy from the platform's CSPRNG
+	// (CryptGenRandom on Windows, /dev/urandom on Linux/Mac).
+	// Two GUIDs provide 256 bits of cryptographic randomness for the salt.
+	const FGuid Guid1 = FGuid::NewGuid();
+	const FGuid Guid2 = FGuid::NewGuid();
+	return Guid1.ToString(EGuidFormats::Digits) + Guid2.ToString(EGuidFormats::Digits);
 }
 
 FString UROAuthSubsystem::HashPassword(const FString& Password, const FString& Salt)
 {
-	// FIX 1: Salted SHA-256 hash. Salt is prepended to the password before hashing.
-	// FPlatformMisc::GetSha256Hash converts the FString to UTF-8 internally and
-	// returns a lowercase hex-encoded SHA-256 digest.
-	// In production, consider bcrypt/scrypt/argon2 for better resistance to brute-force attacks.
+	// FIX: Use FSHA1 from Misc/SecureHash.h which is guaranteed to exist in all UE5 versions.
+	// FPlatformMisc::GetSha256Hash does NOT exist in UE5 and would fail to compile.
+	// Salt is prepended to the password before hashing.
+	// TODO: In production, consider bcrypt/scrypt/argon2 for better resistance to brute-force attacks.
 	const FString Combined = Salt + Password;
-	return FPlatformMisc::GetSha256Hash(*Combined);
+	const FTCHARToUTF8 Utf8Combined(*Combined);
+
+	FSHAHash Hash;
+	FSHA1::HashBuffer(Utf8Combined.Get(), Utf8Combined.Length(), Hash.Hash);
+
+	return Hash.ToString();
 }
 
 FString UROAuthSubsystem::GenerateSessionToken()

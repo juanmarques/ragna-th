@@ -255,12 +255,42 @@ bool UROInventoryComponent::CanAddItem(int32 ItemID, int32 Amount) const
 		return false;
 	}
 
-	// Ensure weight is current before checking
-	const_cast<UROInventoryComponent*>(this)->UpdateWeight();
+	// Calculate projected weight locally without modifying state
+	float ProjectedWeight = 0.0f;
+	for (const FROItemInstance& Slot : InventorySlots)
+	{
+		if (Slot.IsValid())
+		{
+			const UROItemBase* SlotItemData = DB->GetItemData(Slot.ItemID);
+			if (SlotItemData)
+			{
+				ProjectedWeight += SlotItemData->Weight * Slot.Amount;
+			}
+		}
+	}
+
+	// Include equipped item weights
+	if (AActor* Owner = GetOwner())
+	{
+		if (UROEquipmentComponent* EquipComp = Owner->FindComponentByClass<UROEquipmentComponent>())
+		{
+			for (const auto& Pair : EquipComp->EquippedItems)
+			{
+				if (Pair.Value.IsValid())
+				{
+					const UROItemBase* EquipItemData = DB->GetItemData(Pair.Value.ItemID);
+					if (EquipItemData)
+					{
+						ProjectedWeight += EquipItemData->Weight;
+					}
+				}
+			}
+		}
+	}
 
 	// Weight check
 	float AdditionalWeight = ItemData->Weight * Amount;
-	if (CurrentWeight + AdditionalWeight > MaxWeight)
+	if (ProjectedWeight + AdditionalWeight > MaxWeight)
 	{
 		return false;
 	}

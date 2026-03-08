@@ -30,6 +30,7 @@ public:
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
+	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 	//~ End AGameModeBase interface
@@ -90,6 +91,6 @@ private:
 	 */
 	void ApplyDeathPenalty(AROPlayerState* PS) const;
 
-	/** Pending respawn timers keyed by controller, so they can be cancelled on logout. */
-	TMap<TWeakObjectPtr<APlayerController>, FTimerHandle> PendingRespawnTimers;
+	/** Pending respawn timers keyed by controller unique ID, so they can be cancelled on logout. */
+	TMap<int32, FTimerHandle> PendingRespawnTimers;
 };

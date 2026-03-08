@@ -318,15 +318,38 @@ bool UROTradeSystem::ExecuteTrade(int32 TradeID)
 		return false;
 	}
 
-	// Verify trade items and Zeny haven't changed since lock (tamper detection)
-	if (Trade->Player1Items != Trade->Player1LockedItems ||
+	// Verify trade items and Zeny haven't changed since lock (tamper detection).
+	// operator== on FROItemInstance only compares UniqueID, so we must also compare
+	// RefineLevel, CardSlots, and Amount to detect modifications (e.g., refining or
+	// carding an item between lock and confirm).
+	auto ItemsMatchFully = [](const TArray<FROItemInstance>& Current, const TArray<FROItemInstance>& Locked) -> bool
+	{
+		if (Current.Num() != Locked.Num())
+		{
+			return false;
+		}
+		for (int32 i = 0; i < Current.Num(); ++i)
+		{
+			if (Current[i].UniqueID != Locked[i].UniqueID ||
+				Current[i].ItemID != Locked[i].ItemID ||
+				Current[i].Amount != Locked[i].Amount ||
+				Current[i].RefineLevel != Locked[i].RefineLevel ||
+				Current[i].CardSlots != Locked[i].CardSlots)
+			{
+				return false;
+			}
+		}
+		return true;
+	};
+
+	if (!ItemsMatchFully(Trade->Player1Items, Trade->Player1LockedItems) ||
 		Trade->Player1Zeny != Trade->Player1LockedZeny)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Trade %d aborted: Player1 trade contents changed after lock."), TradeID);
 		CancelTradeWithReason(TradeID, TEXT("Trade items changed after lock"));
 		return false;
 	}
-	if (Trade->Player2Items != Trade->Player2LockedItems ||
+	if (!ItemsMatchFully(Trade->Player2Items, Trade->Player2LockedItems) ||
 		Trade->Player2Zeny != Trade->Player2LockedZeny)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Trade %d aborted: Player2 trade contents changed after lock."), TradeID);

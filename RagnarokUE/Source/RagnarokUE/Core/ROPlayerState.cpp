@@ -44,13 +44,16 @@ void AROPlayerState::SyncFromCharacter(APawn* NewPawn)
 	{
 		BaseLevel = LevelComp->BaseLevel;
 		JobLevel = LevelComp->JobLevel;
+		LevelComp->OnBaseLevelUp.RemoveDynamic(this, &AROPlayerState::OnCharacterBaseLevelUp);
 		LevelComp->OnBaseLevelUp.AddDynamic(this, &AROPlayerState::OnCharacterBaseLevelUp);
+		LevelComp->OnJobLevelUp.RemoveDynamic(this, &AROPlayerState::OnCharacterJobLevelUp);
 		LevelComp->OnJobLevelUp.AddDynamic(this, &AROPlayerState::OnCharacterJobLevelUp);
 	}
 
 	if (UROJobComponent* JobComp = NewPawn->FindComponentByClass<UROJobComponent>())
 	{
 		JobClass = JobComp->CurrentJobClass;
+		JobComp->OnJobChanged.RemoveDynamic(this, &AROPlayerState::OnCharacterJobChanged);
 		JobComp->OnJobChanged.AddDynamic(this, &AROPlayerState::OnCharacterJobChanged);
 	}
 }

@@ -476,10 +476,10 @@ float URODamageFormulas::GetElementalModifier(EROElement AtkElement, EROElement 
 
 int32 URODamageFormulas::CalculateStatPointCost(int32 CurrentStatValue)
 {
-	// Guard: stats should never be below 1; minimum cost is 2 per RO rules
+	// Guard: can't raise a stat below 1; return 0 to indicate no cost / invalid
 	if (CurrentStatValue < 1)
 	{
-		return 2;
+		return 0;
 	}
 	// floor((CurrentStatValue - 1) / 10) + 2
 	return (CurrentStatValue - 1) / 10 + 2;
@@ -531,8 +531,8 @@ int32 URODamageFormulas::CalculatePhysicalDamage(
 		TotalATK -= static_cast<float>(EffectiveSoftDEF);
 	}
 
-	// Minimum 1 before applying elemental/size modifiers
-	TotalATK = FMath::Max(1.0f, TotalATK);
+	// Allow negative values to flow through to elemental modifier for absorb.
+	// Do NOT clamp to 1 here -- that blocks elemental absorb from working.
 
 	// Step 6: Apply elemental modifier (after DEF subtraction, pre-renewal order)
 	const float ElemMod = GetElementalModifier(AtkElement, DefElement, DefElementLevel);
@@ -541,8 +541,13 @@ int32 URODamageFormulas::CalculatePhysicalDamage(
 	// Step 7: Apply size modifier
 	TotalATK *= SizeModifier;
 
-	// Minimum damage is 1 (allow negative for elemental absorb at caller's discretion)
-	return FMath::Max(1, static_cast<int32>(TotalATK));
+	// Allow 0 (miss/immunity) and negative (elemental absorb) through.
+	// Only enforce min-1 when damage is positive (we actually want to deal damage).
+	if (TotalATK > 0.0f)
+	{
+		return FMath::Max(1, static_cast<int32>(TotalATK));
+	}
+	return static_cast<int32>(TotalATK);
 }
 
 int32 URODamageFormulas::CalculateMagicalDamage(
@@ -578,6 +583,11 @@ int32 URODamageFormulas::CalculateMagicalDamage(
 	// Step 6: Subtract Soft MDEF (flat reduction from INT)
 	TotalDmg -= static_cast<float>(TargetMDEF_Soft);
 
-	// Minimum damage is 1
-	return FMath::Max(1, static_cast<int32>(TotalDmg));
+	// Allow 0 (immunity) and negative (elemental absorb) through.
+	// Only enforce min-1 when damage is positive.
+	if (TotalDmg > 0.0f)
+	{
+		return FMath::Max(1, static_cast<int32>(TotalDmg));
+	}
+	return static_cast<int32>(TotalDmg);
 }

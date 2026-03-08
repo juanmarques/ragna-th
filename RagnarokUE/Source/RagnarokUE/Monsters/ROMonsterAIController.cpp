@@ -223,9 +223,9 @@ bool AROMonsterAIController::IsTargetValid() const
 		return false;
 	}
 
-	// Check if target is within chase range from spawn location
-	const float TargetDistFromHome = FVector::Dist(Target->GetActorLocation(), OwnerMonster->SpawnLocation);
-	if (TargetDistFromHome > OwnerMonster->ChaseRange)
+	// Check if the monster itself is too far from its spawn (leash range)
+	const float MonsterDistFromHome = FVector::Dist(OwnerMonster->GetActorLocation(), OwnerMonster->SpawnLocation);
+	if (MonsterDistFromHome > OwnerMonster->ChaseRange)
 	{
 		return false;
 	}

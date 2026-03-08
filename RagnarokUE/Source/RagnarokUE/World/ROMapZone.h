@@ -59,6 +59,12 @@ public:
 	 */
 	static TMap<TWeakObjectPtr<AActor>, TArray<TWeakObjectPtr<AROMapZone>>> CharacterZones;
 
+	/**
+	 * Remove a character from the CharacterZones tracking map.
+	 * Should be called when a character is destroyed to prevent memory leaks.
+	 */
+	static void RemoveCharacterFromZoneTracking(AActor* DestroyedActor);
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -86,4 +92,8 @@ protected:
 
 	/** Remove zone rules from a player leaving the zone. Recomputes flags from remaining zones. */
 	void RemoveZoneRules(AActor* PlayerCharacter);
+
+	/** Called when a tracked character is destroyed, to clean up the static CharacterZones map. */
+	UFUNCTION()
+	void OnCharacterDestroyed(AActor* DestroyedActor);
 };

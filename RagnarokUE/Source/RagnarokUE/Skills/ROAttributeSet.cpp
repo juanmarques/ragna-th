@@ -102,13 +102,10 @@ void UROAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 				}
 			}
 		}
-		else if (LocalDamage < 0.0f)
-		{
-			// Negative damage means healing (e.g., elemental absorb)
-			const float HealAmount = FMath::Abs(LocalDamage);
-			const float NewHP = FMath::Min(GetMaxHP(), GetHP() + HealAmount);
-			SetHP(NewHP);
-		}
+		// NOTE: Negative IncomingDamage (absorb) is NOT handled here.
+		// Absorb healing is handled exclusively in RODamageExecution, which
+		// converts negative damage to IncomingHealing. Handling it in both
+		// places would cause double-healing.
 	}
 	// Handle incoming healing meta attribute
 	else if (Data.EvaluatedData.Attribute == GetIncomingHealingAttribute())

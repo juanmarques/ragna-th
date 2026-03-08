@@ -90,8 +90,8 @@ FROValidationResult UROServerValidation::ValidateDamage(
 		return FROValidationResult::Failure(Details, 3);
 	}
 
-	int32 AttackerATK = 1;
-	int32 DefenderDEF = 0;
+	int32 AttackerATK = -1;
+	int32 DefenderDEF = -1;
 
 	// Get ATK from attacker's AbilitySystemComponent
 	if (const IAbilitySystemInterface* AttackerASI = Cast<IAbilitySystemInterface>(Attacker))
@@ -115,6 +115,18 @@ FROValidationResult UROServerValidation::ValidateDamage(
 				DefenderDEF = FMath::RoundToInt32(DefenderAttrs->GetDEF());
 			}
 		}
+	}
+
+	// If we couldn't read ATK or DEF attributes, skip validation entirely rather
+	// than using fallback values (ATK=1, DEF=0) that would cause false positives
+	// in cheat detection when the player's actual damage doesn't match.
+	if (AttackerATK < 0 || DefenderDEF < 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[ANTICHEAT] ValidateDamage: Could not read %s%s attributes for Player=%s, skipping validation"),
+			(AttackerATK < 0) ? TEXT("ATK") : TEXT(""),
+			(DefenderDEF < 0) ? TEXT("DEF") : TEXT(""),
+			*PlayerNetID);
+		return FROValidationResult::Success();
 	}
 
 	// Calculate expected maximum damage

@@ -104,6 +104,10 @@ bool UROLootManager::PickupLoot(AActor* Character, AROLootActor* LootActor)
 
 	Inventory->UpdateWeight();
 
+	// Broadcast inventory change so UI updates
+	Inventory->OnInventoryChanged.Broadcast();
+	Inventory->OnItemAdded.Broadcast(SlotIndex, Inventory->GetItemAtSlot(SlotIndex));
+
 	// Destroy the loot actor
 	LootActor->Destroy();
 

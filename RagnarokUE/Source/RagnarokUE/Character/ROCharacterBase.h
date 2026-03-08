@@ -136,6 +136,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Character")
 	void StandUp();
 
+	/** Server RPC: request sit down from client. */
+	UFUNCTION(Server, Reliable)
+	void ServerSitDown();
+
+	/** Server RPC: request stand up from client. */
+	UFUNCTION(Server, Reliable)
+	void ServerStandUp();
+
 	/** Override TakeDamage for RO damage pipeline. */
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
 		AController* EventInstigator, AActor* DamageCauser) override;

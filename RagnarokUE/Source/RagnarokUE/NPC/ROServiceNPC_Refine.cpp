@@ -4,6 +4,8 @@
 #include "RagnarokUE/Character/ROCharacterBase.h"
 #include "RagnarokUE/Items/ROInventoryComponent.h"
 #include "RagnarokUE/Items/RORefinementSystem.h"
+#include "GameFramework/PlayerController.h"
+#include "Engine/World.h"
 
 AROServiceNPC_Refine::AROServiceNPC_Refine()
 {
@@ -32,25 +34,39 @@ void AROServiceNPC_Refine::OnInteract_Implementation(AROCharacterBase* Interacto
 
 AROCharacterBase* AROServiceNPC_Refine::GetRefineUserForCaller() const
 {
-	const FVector NPCLocation = GetActorLocation();
-	AROCharacterBase* ClosestUser = nullptr;
-	float ClosestDistSq = FLT_MAX;
-
-	for (const auto& Pair : RefineUsers)
+	// Look up the calling player by their ID from RefineUsers, not by proximity.
+	// This prevents an attacker from standing near the NPC and hijacking
+	// another player's refine session.
+	UWorld* World = GetWorld();
+	if (!World)
 	{
-		if (Pair.Value.IsValid())
+		return nullptr;
+	}
+
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (!PC)
 		{
-			AROCharacterBase* Character = Pair.Value.Get();
-			const float DistSq = FVector::DistSquared(NPCLocation, Character->GetActorLocation());
-			if (DistSq < ClosestDistSq)
-			{
-				ClosestDistSq = DistSq;
-				ClosestUser = Character;
-			}
+			continue;
+		}
+
+		APawn* Pawn = PC->GetPawn();
+		AROCharacterBase* Character = Cast<AROCharacterBase>(Pawn);
+		if (!Character)
+		{
+			continue;
+		}
+
+		const int32 PlayerID = Character->GetUniqueID();
+		const TWeakObjectPtr<AROCharacterBase>* Found = RefineUsers.Find(PlayerID);
+		if (Found && Found->IsValid() && Found->Get() == Character)
+		{
+			return Character;
 		}
 	}
 
-	return ClosestUser;
+	return nullptr;
 }
 
 void AROServiceNPC_Refine::OnRefinePlayerDestroyed(AActor* DestroyedActor)

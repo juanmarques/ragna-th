@@ -250,6 +250,10 @@ void AROMonsterBase::ResetToIdle()
 		return;
 	}
 
+	// Clear any pending death destroy timer to prevent it from firing
+	// after the monster has been recycled by the spawn manager
+	GetWorldTimerManager().ClearTimer(DeathDestroyTimerHandle);
+
 	HP = MaxHP;
 	bIsDead = false;
 	CurrentTarget = nullptr;
@@ -257,9 +261,9 @@ void AROMonsterBase::ResetToIdle()
 	SkillCooldowns.Empty();
 	LastAttackTime = 0.0f;
 
-	// Reset spawn location to current actor location to prevent
-	// return-to-home pathfinding to a stale/overwritten location
-	SpawnLocation = GetActorLocation();
+	// SpawnLocation is intentionally NOT reset here.
+	// It is set in BeginPlay() from the spawner and should only be changed
+	// when the spawn manager explicitly repositions the monster.
 }
 
 bool AROMonsterBase::CanAttack() const

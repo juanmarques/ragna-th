@@ -69,11 +69,11 @@ void AROGameModeBase::Logout(AController* Exiting)
 		// Cancel any pending respawn timer for this controller
 		if (APlayerController* PC = Cast<APlayerController>(Exiting))
 		{
-			TWeakObjectPtr<APlayerController> WeakPC(PC);
-			if (FTimerHandle* Timer = PendingRespawnTimers.Find(WeakPC))
+			const int32 PCId = PC->GetUniqueID();
+			if (FTimerHandle* Timer = PendingRespawnTimers.Find(PCId))
 			{
 				GetWorldTimerManager().ClearTimer(*Timer);
-				PendingRespawnTimers.Remove(WeakPC);
+				PendingRespawnTimers.Remove(PCId);
 			}
 		}
 
@@ -88,6 +88,47 @@ void AROGameModeBase::Logout(AController* Exiting)
 	}
 
 	Super::Logout(Exiting);
+}
+
+// ---------------------------------------------------------------
+// HandleStartingNewPlayer – parse portal destination coordinates
+// ---------------------------------------------------------------
+
+void AROGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+
+	if (!NewPlayer)
+	{
+		return;
+	}
+
+	// Parse destination coordinates from ClientTravel options (set by ROPortalActor / ROWarpPortal)
+	const FString Options = NewPlayer->GetLocalPlayer() ? NewPlayer->GetLocalPlayer()->LastURL.ToString() : FString();
+	// UGameplayStatics::ParseOption works on the full options string (e.g. "?DestX=100?DestY=200")
+	const FString DestXStr = UGameplayStatics::ParseOption(Options, TEXT("DestX"));
+	const FString DestYStr = UGameplayStatics::ParseOption(Options, TEXT("DestY"));
+	const FString DestZStr = UGameplayStatics::ParseOption(Options, TEXT("DestZ"));
+	const FString DestYawStr = UGameplayStatics::ParseOption(Options, TEXT("DestYaw"));
+
+	if (!DestXStr.IsEmpty() && !DestYStr.IsEmpty() && !DestZStr.IsEmpty())
+	{
+		const FVector DestLocation(
+			FCString::Atof(*DestXStr),
+			FCString::Atof(*DestYStr),
+			FCString::Atof(*DestZStr)
+		);
+		const float DestYaw = DestYawStr.IsEmpty() ? 0.0f : FCString::Atof(*DestYawStr);
+		const FRotator DestRotation(0.0f, DestYaw, 0.0f);
+
+		APawn* Pawn = NewPlayer->GetPawn();
+		if (Pawn)
+		{
+			Pawn->SetActorLocationAndRotation(DestLocation, DestRotation);
+			UE_LOG(LogRagnarokUE, Log, TEXT("HandleStartingNewPlayer – Placed %s at portal destination %s"),
+				*NewPlayer->GetName(), *DestLocation.ToString());
+		}
+	}
 }
 
 // ---------------------------------------------------------------
@@ -198,16 +239,17 @@ void AROGameModeBase::HandlePlayerDeath(APlayerController* DeadController, ACont
 	}
 
 	// Queue respawn after the configured delay, storing the handle for cancellation on logout
+	const int32 DeadPCId = DeadController->GetUniqueID();
 	TWeakObjectPtr<APlayerController> WeakDeadController(DeadController);
-	FTimerHandle& RespawnTimer = PendingRespawnTimers.FindOrAdd(WeakDeadController);
+	FTimerHandle& RespawnTimer = PendingRespawnTimers.FindOrAdd(DeadPCId);
 
 	GetWorldTimerManager().SetTimer(
 		RespawnTimer,
-		[this, WeakDeadController]()
+		[this, WeakDeadController, DeadPCId]()
 		{
+			PendingRespawnTimers.Remove(DeadPCId);
 			if (APlayerController* PC = WeakDeadController.Get())
 			{
-				PendingRespawnTimers.Remove(WeakDeadController);
 				RespawnPlayer(PC);
 			}
 		},

@@ -53,7 +53,7 @@ struct FROAccountData
 
 	int32 AccountID = 0;
 	FString Username;
-	FString PasswordHash; // SHA-256 hash (salted)
+	FString PasswordHash; // SHA-1 hash (salted) - TODO: upgrade to bcrypt/argon2 in production
 	FString PasswordSalt; // Per-account random salt
 	FString Email;
 	FDateTime CreatedAt;
@@ -82,7 +82,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAuthFailure, const FROAuthResult&
 
 /**
  * UROAuthSubsystem
- * Handles account registration, authentication with salted SHA-256 password hashing,
+ * Handles account registration, authentication with salted SHA-1 password hashing,
  * and session token generation/validation with atomic session operations.
  */
 UCLASS()
@@ -99,7 +99,7 @@ public:
 	/**
 	 * Register a new account.
 	 * @param Username  The desired username (3-24 alphanumeric characters).
-	 * @param Password  The plaintext password (will be salted and hashed with SHA-256).
+	 * @param Password  The plaintext password (will be salted and hashed with SHA-1).
 	 * @param Email     The email address for account recovery.
 	 * @return Registration result.
 	 */
@@ -214,7 +214,7 @@ protected:
 	/** Generate a cryptographic random salt (32 hex characters). */
 	static FString GenerateSalt();
 
-	/** Hash a password with SHA-256 using the provided salt. Salt is prepended before hashing. */
+	/** Hash a password with SHA-1 using the provided salt. Salt is prepended before hashing. */
 	static FString HashPassword(const FString& Password, const FString& Salt);
 
 	/** Generate a unique session token. */

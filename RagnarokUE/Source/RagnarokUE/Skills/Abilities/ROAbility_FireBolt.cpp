@@ -15,9 +15,9 @@ UROAbility_FireBolt::UROAbility_FireBolt()
 	SkillLevel = 1;
 	SkillElement = EROElement::Fire;
 
-	// SP cost: 12 + 3 * Level (base=9, perLevel=3 so at Lv1 = 9+3=12)
-	SPCostBase = 9.0f;
-	SPCostPerLevel = 3.0f;
+	// SP cost: 10 + 2 * Level (Lv1=12, Lv2=14, ... Lv10=30 per RO tables)
+	SPCostBase = 10.0f;
+	SPCostPerLevel = 2.0f;
 
 	// Variable cast time scales with level
 	VariableCastTimeBase = 0.7f; // Base variable cast per bolt
