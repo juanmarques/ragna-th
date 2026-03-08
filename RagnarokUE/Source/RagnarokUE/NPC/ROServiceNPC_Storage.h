@@ -46,15 +46,15 @@ public:
 	// ---- Server RPCs ----
 
 	/** Deposit an item from player inventory into storage. */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Storage")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerDepositItem(int32 InventorySlot, int32 Amount);
 
 	/** Withdraw an item from storage into player inventory. */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Storage")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerWithdrawItem(int32 StorageSlot, int32 Amount);
 
 	/** Close the storage window for the current user. */
-	UFUNCTION(Server, Reliable, Category = "Storage")
+	UFUNCTION(Server, Reliable)
 	void ServerCloseStorage();
 
 	// ---- Queries ----

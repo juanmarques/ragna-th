@@ -158,7 +158,7 @@ protected:
 
 	/** The actor that has exclusive pickup rights during ownership period. */
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Loot")
-	TWeakObjectPtr<AActor> LootOwner;
+	TObjectPtr<AActor> LootOwner;
 
 	/** Whether the ownership period has expired. */
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Loot")

@@ -51,7 +51,7 @@ public:
 	 * Validates the item is refinable, player has required ore and Zeny,
 	 * and the item is under the max refine level.
 	 */
-	UFUNCTION(Server, Reliable, WithValidation, Category = "Refine")
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRefineItem(int32 InventorySlot);
 
 	// ---- Queries ----

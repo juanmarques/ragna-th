@@ -198,7 +198,7 @@ void AROLootActor::BeginPlay()
 			DESPAWN_TIME, false);
 
 		// Set up ownership expiry timer
-		if (LootOwner.IsValid())
+		if (LootOwner != nullptr)
 		{
 			GetWorldTimerManager().SetTimer(
 				OwnershipTimerHandle, this, &AROLootActor::OnOwnershipTimerExpired,
@@ -233,7 +233,7 @@ bool AROLootActor::CanPickup(AActor* Character) const
 	}
 
 	// During ownership period, only the owner can pick up
-	return LootOwner.IsValid() && Character == LootOwner.Get();
+	return LootOwner != nullptr && Character == LootOwner;
 }
 
 float AROLootActor::GetRemainingDespawnTime() const

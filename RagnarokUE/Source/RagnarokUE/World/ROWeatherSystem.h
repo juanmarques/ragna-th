@@ -8,19 +8,6 @@
 #include "RagnarokUE/Data/ROStructs.h"
 #include "ROWeatherSystem.generated.h"
 
-/** Weather states for the weather system. */
-UENUM(BlueprintType)
-enum class EROWeather : uint8
-{
-	Clear		UMETA(DisplayName = "Clear"),
-	Cloudy		UMETA(DisplayName = "Cloudy"),
-	Rain		UMETA(DisplayName = "Rain"),
-	Snow		UMETA(DisplayName = "Snow"),
-	Storm		UMETA(DisplayName = "Storm"),
-	Night		UMETA(DisplayName = "Night"),
-	Foggy		UMETA(DisplayName = "Foggy")
-};
-
 /** Per-map weather configuration. */
 USTRUCT(BlueprintType)
 struct RAGNAROKUE_API FROMapWeatherConfig
@@ -33,7 +20,7 @@ struct RAGNAROKUE_API FROMapWeatherConfig
 
 	/** Possible weather states for this map with probability weights. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weather")
-	TMap<EROWeather, float> WeatherWeights;
+	TMap<EROWeatherType, float> WeatherWeights;
 
 	/** Minimum time in seconds between weather changes. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weather")
@@ -49,10 +36,10 @@ struct RAGNAROKUE_API FROMapWeatherConfig
 
 	/** The forced weather type (only used if bForcedWeather is true). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weather")
-	EROWeather ForcedWeatherType = EROWeather::Clear;
+	EROWeatherType ForcedWeatherType = EROWeatherType::Clear;
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnWeatherChanged, EROWeather, OldWeather, EROWeather, NewWeather);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnWeatherChanged, EROWeatherType, OldWeather, EROWeatherType, NewWeather);
 
 /**
  * UROWeatherSystem
@@ -72,11 +59,11 @@ public:
 
 	/** Force-set the current weather immediately. */
 	UFUNCTION(BlueprintCallable, Category = "Weather")
-	void SetWeather(EROWeather Weather);
+	void SetWeather(EROWeatherType Weather);
 
 	/** Get the current weather state. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Weather")
-	EROWeather GetCurrentWeather() const;
+	EROWeatherType GetCurrentWeather() const;
 
 	/** Update weather logic. Call from a game mode tick or timer. */
 	UFUNCTION(BlueprintCallable, Category = "Weather")
@@ -105,7 +92,7 @@ public:
 protected:
 	/** Current active weather. */
 	UPROPERTY()
-	EROWeather CurrentWeather = EROWeather::Clear;
+	EROWeatherType CurrentWeather = EROWeatherType::Clear;
 
 	/** Current active map ID. */
 	FName ActiveMapID;
@@ -120,7 +107,7 @@ protected:
 	bool bWeatherTimerActive = false;
 
 	/** Select a random weather based on the current map's weight configuration. */
-	EROWeather SelectRandomWeather() const;
+	EROWeatherType SelectRandomWeather() const;
 
 	/** Calculate the next weather change time. */
 	float CalculateNextChangeTime() const;
