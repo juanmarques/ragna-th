@@ -326,7 +326,14 @@ void UROPartySubsystem::DistributeExp(int32 PartyID, int64 BaseExp, int64 JobExp
 			}
 		}
 
-		const int32 ShareCount = FMath::Max(1, LevelEligible.Num());
+		// If no members are level-eligible, no one receives EXP
+		if (LevelEligible.Num() == 0)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Party EvenShare: No level-eligible members (level gap > %d). EXP not distributed."), EvenShareLevelRange);
+			return;
+		}
+
+		const int32 ShareCount = LevelEligible.Num();
 		const int64 SharedBaseExp = BaseExp / ShareCount;
 		const int64 SharedJobExp = JobExp / ShareCount;
 
