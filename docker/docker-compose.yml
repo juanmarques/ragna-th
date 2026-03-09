@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: ragnath-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ragnath_db
+      POSTGRES_USER: ragnath
+      POSTGRES_PASSWORD: ragnath_dev_2026
+    ports:
+      - "5433:5432"
+    volumes:
+      - ragnath_pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ragnath -d ragnath_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  ragnath_pgdata:

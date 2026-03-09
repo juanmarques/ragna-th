@@ -2,10 +2,10 @@
 
 #include "ROSPRReader.h"
 
-namespace
+namespace SPRReaderInternal
 {
 	template<typename T>
-	bool SafeRead(const uint8*& Cursor, const uint8* End, T& OutValue)
+	static bool SafeRead(const uint8*& Cursor, const uint8* End, T& OutValue)
 	{
 		if (Cursor + sizeof(T) > End)
 		{
@@ -16,6 +16,7 @@ namespace
 		return true;
 	}
 }
+using namespace SPRReaderInternal;
 
 bool FROSPRReader::Parse(const TArray<uint8>& Data)
 {
