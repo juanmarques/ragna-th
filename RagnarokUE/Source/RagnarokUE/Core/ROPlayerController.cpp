@@ -1,7 +1,7 @@
 // Copyright Ragna-TH Project. All Rights Reserved.
 
-#include "Core/ROPlayerController.h"
-#include "RagnarokUE.h"
+#include "ROPlayerController.h"
+#include "RagnarokUE/RagnarokUE.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
@@ -140,12 +140,6 @@ void AROPlayerController::StopMovement()
 {
 	bIsMovingToDestination = false;
 	MoveDestination = FVector::ZeroVector;
-
-	// Stop any active pathfinding movement
-	if (GetPathFollowingComponent())
-	{
-		GetPathFollowingComponent()->AbortMove(*this, FPathFollowingResultFlags::UserAbort);
-	}
 
 	Super::StopMovement();
 }

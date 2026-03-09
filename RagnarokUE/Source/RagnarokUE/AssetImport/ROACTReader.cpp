@@ -286,7 +286,7 @@ bool FROACTReader::Parse(const TArray<uint8>& Data)
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("ROACTReader: Parsed %d actions (v%d.%d), %d sounds"),
-		Actions.Num(), Version >> 8, Version & 0xFF, SoundFiles.Num());
+		Actions.Num(), static_cast<int32>(Version >> 8), static_cast<int32>(Version & 0xFF), SoundFiles.Num());
 	return true;
 }
 

@@ -225,7 +225,7 @@ void URONetworkSubsystem::FlagConnection(const FString& PlayerNetID, const FStri
 				if (!PC) continue;
 
 				APlayerState* PS = PC->GetPlayerState<APlayerState>();
-				if (PS && PS->GetUniqueId().ToString() == PlayerNetID)
+				if (PS && PS->GetUniqueId()->ToString() == PlayerNetID)
 				{
 					PC->ClientReturnToMainMenuWithTextReason(
 						FText::FromString(TEXT("Disconnected: suspicious activity detected")));

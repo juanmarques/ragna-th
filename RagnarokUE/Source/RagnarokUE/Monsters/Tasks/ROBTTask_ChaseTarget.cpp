@@ -10,7 +10,7 @@ UROBTTask_ChaseTarget::UROBTTask_ChaseTarget()
 {
 	NodeName = "RO: Chase Target";
 	bNotifyTick = true;
-	bNotifyAbort = true;
+	bNotifyTaskFinished = true;
 
 	// Default BlackboardKey filters to Object (for TargetActor)
 	BlackboardKey.AddObjectFilter(this, GET_MEMBER_NAME_CHECKED(UROBTTask_ChaseTarget, BlackboardKey), AActor::StaticClass());

@@ -34,15 +34,15 @@ public:
 
 	/** Set the item in a specific equipment slot. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Equipment")
-	void SetEquippedItem(EROEquipSlot Slot, const FROItemInstance& Item);
+	void SetEquippedItem(EROEquipSlot EquipSlot, const FROItemInstance& Item);
 
 	/** Clear (unequip) a specific slot. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Equipment")
-	void ClearEquipSlot(EROEquipSlot Slot);
+	void ClearEquipSlot(EROEquipSlot EquipSlot);
 
 	/** Get the item currently in a slot. */
 	UFUNCTION(BlueprintPure, Category = "RO|Equipment")
-	FROItemInstance GetEquippedItem(EROEquipSlot Slot) const;
+	FROItemInstance GetEquippedItem(EROEquipSlot EquipSlot) const;
 
 	/** Set total equipment-derived stats for display. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Equipment")

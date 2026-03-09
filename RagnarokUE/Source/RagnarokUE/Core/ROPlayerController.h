@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/HitResult.h"
 #include "GameFramework/PlayerController.h"
 #include "ROPlayerController.generated.h"
 
@@ -64,8 +65,7 @@ public:
 	void SetDestination(const FVector& Destination);
 
 	/** Stop any active click-to-move navigation. */
-	UFUNCTION(BlueprintCallable, Category = "Movement")
-	void StopMovement();
+	virtual void StopMovement() override;
 
 	// ---------------------------------------------------------------
 	// Camera control

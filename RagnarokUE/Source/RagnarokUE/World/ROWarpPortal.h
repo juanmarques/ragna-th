@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/HitResult.h"
 #include "GameFramework/Actor.h"
 #include "RagnarokUE/Data/ROEnums.h"
 #include "RagnarokUE/Data/ROStructs.h"
@@ -65,7 +66,7 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "WarpPortal")
 	void InitializePortal(FName InDestinationMap, FVector InDestinationLocation,
-		int32 InCasterPlayerID, int32 InMaxUses = DefaultMaxUses, float InDuration = DefaultDuration);
+		int32 InCasterPlayerID, int32 InMaxUses = 8, float InDuration = 30.0f);
 
 	/** Get the number of remaining uses. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "WarpPortal")

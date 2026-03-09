@@ -102,5 +102,5 @@ protected:
 	TObjectPtr<AROMonsterBase> OwnerMonster;
 
 	/** Setup blackboard with initial values from monster data. */
-	void InitializeBlackboard();
+	void InitializeMonsterBlackboard();
 };

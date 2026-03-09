@@ -5,6 +5,7 @@
 #include "RagnarokUE/Monsters/ROMonsterAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
+#include "Engine/DamageEvents.h"
 
 // ============================================================================
 // UROBTTask_AggressiveScan
@@ -66,7 +67,7 @@ UROBTTask_AggressiveChaseAttack::UROBTTask_AggressiveChaseAttack()
 {
 	NodeName = "RO Aggressive: Chase & Attack";
 	bNotifyTick = true;
-	bNotifyAbort = true;
+	bNotifyTaskFinished = true;
 }
 
 EBTNodeResult::Type UROBTTask_AggressiveChaseAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

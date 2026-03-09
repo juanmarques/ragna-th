@@ -2,11 +2,13 @@
 
 #include "ROAbility_MagnumBreak.h"
 #include "AbilitySystemComponent.h"
+#include "Engine/HitResult.h"
 #include "RagnarokUE/Skills/ROAttributeSet.h"
 #include "RagnarokUE/Combat/ROStatusEffectComponent.h"
 #include "RagnarokUE/Combat/RODamageGameplayEffect.h"
 #include "GameFramework/Character.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Engine/OverlapResult.h"
 
 UROAbility_MagnumBreak::UROAbility_MagnumBreak()
 {

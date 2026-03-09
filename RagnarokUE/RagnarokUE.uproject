@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.3",
+	"EngineAssociation": "5.7",
 	"Category": "",
 	"Description": "Ragnarok Online Recreation in Unreal Engine 5",
 	"Modules": [
@@ -15,7 +15,7 @@
 		},
 		{
 			"Name": "RagnarokUEServer",
-			"Type": "Runtime",
+			"Type": "ServerOnly",
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
 				"Engine"
@@ -33,6 +33,10 @@
 		},
 		{
 			"Name": "OnlineSubsystemUtils",
+			"Enabled": true
+		},
+		{
+			"Name": "ReplicationGraph",
 			"Enabled": true
 		}
 	],

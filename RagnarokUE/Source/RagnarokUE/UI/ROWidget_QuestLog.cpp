@@ -30,7 +30,7 @@ void UROWidget_QuestLog::SetQuests(const TArray<FROQuestEntry>& Quests)
 	RefreshDisplay();
 }
 
-void UROWidget_QuestLog::UpdateQuestProgress(int32 QuestID, const TArray<FROQuestObjective>& Objectives)
+void UROWidget_QuestLog::UpdateQuestProgress(int32 QuestID, const TArray<FROQuestObjectiveDisplay>& Objectives)
 {
 	for (FROQuestEntry& Quest : AllQuests)
 	{
@@ -40,7 +40,7 @@ void UROWidget_QuestLog::UpdateQuestProgress(int32 QuestID, const TArray<FROQues
 
 			// Check if all objectives are complete
 			bool bAllComplete = true;
-			for (const FROQuestObjective& Obj : Objectives)
+			for (const FROQuestObjectiveDisplay& Obj : Objectives)
 			{
 				if (!Obj.IsComplete())
 				{
