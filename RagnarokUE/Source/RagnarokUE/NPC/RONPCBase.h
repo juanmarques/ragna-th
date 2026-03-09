@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/HitResult.h"
 #include "GameFramework/Actor.h"
 #include "RagnarokUE/Data/ROEnums.h"
 #include "RagnarokUE/Data/ROStructs.h"

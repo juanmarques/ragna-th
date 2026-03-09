@@ -282,7 +282,7 @@ void UROServerValidation::LogSuspiciousActivity(
 				if (!PC) continue;
 
 				APlayerState* PS = PC->GetPlayerState<APlayerState>();
-				if (PS && PS->GetUniqueId().ToString() == PlayerNetID)
+				if (PS && PS->GetUniqueId()->ToString() == PlayerNetID)
 				{
 					UE_LOG(LogTemp, Warning, TEXT("[ANTICHEAT] Auto-kicking player %s for severity %d violation: %s"),
 						*PlayerNetID, Severity, *ActivityType);

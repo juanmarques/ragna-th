@@ -22,7 +22,7 @@ void UROEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(UROEquipmentComponent, EquippedItems);
+	DOREPLIFETIME(UROEquipmentComponent, ReplicatedEquipSlots);
 }
 
 void UROEquipmentComponent::BeginPlay()
@@ -139,6 +139,7 @@ void UROEquipmentComponent::ServerEquipItem_Implementation(int32 InventorySlot, 
 
 	PendingEquipSlots.Remove(InventorySlot);
 
+	SyncMapToReplicatedArray();
 	OnEquipmentChanged.Broadcast();
 	OnItemEquipped.Broadcast(TargetSlot, ItemToEquip);
 }
@@ -196,6 +197,7 @@ void UROEquipmentComponent::ServerUnequipItem_Implementation(EROEquipSlot Slot)
 
 	PendingUnequipSlots.Remove(Slot);
 
+	SyncMapToReplicatedArray();
 	OnEquipmentChanged.Broadcast();
 	OnItemUnequipped.Broadcast(Slot);
 }
@@ -437,7 +439,25 @@ void UROEquipmentComponent::RemoveEquipmentEffects()
 
 void UROEquipmentComponent::OnRep_EquippedItems()
 {
+	// Rebuild the runtime TMap from the replicated array
+	EquippedItems.Empty();
+	for (const FROEquippedSlotEntry& Entry : ReplicatedEquipSlots)
+	{
+		if (Entry.Item.IsValid())
+		{
+			EquippedItems.Add(Entry.Slot, Entry.Item);
+		}
+	}
 	OnEquipmentChanged.Broadcast();
+}
+
+void UROEquipmentComponent::SyncMapToReplicatedArray()
+{
+	ReplicatedEquipSlots.Empty();
+	for (const auto& Pair : EquippedItems)
+	{
+		ReplicatedEquipSlots.Add({Pair.Key, Pair.Value});
+	}
 }
 
 // ---- Private Helpers ----
@@ -506,6 +526,7 @@ bool UROEquipmentComponent::ValidateEquipSlot(const UROItemBase* ItemData, EROEq
 					// Update weight immediately so subsequent checks see the shield
 					// in inventory (not equipped) and avoid double-counting
 					Inventory->UpdateWeight();
+					SyncMapToReplicatedArray();
 				}
 				else
 				{

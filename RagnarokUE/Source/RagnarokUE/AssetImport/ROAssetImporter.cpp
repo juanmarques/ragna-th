@@ -460,25 +460,25 @@ UTexture2D* UROAssetImporter::LoadPNGAsTexture(const FString& FilePath)
 
 UTexture2D* UROAssetImporter::GetItemIcon(int32 ItemID) const
 {
-	const TObjectPtr<UTexture2D>* Found = ItemIconCache.Find(ItemID);
+	UTexture2D* const* Found = ItemIconCache.Find(ItemID);
 	return Found ? *Found : nullptr;
 }
 
 UTexture2D* UROAssetImporter::GetSkillIcon(int32 SkillID) const
 {
-	const TObjectPtr<UTexture2D>* Found = SkillIconCache.Find(SkillID);
+	UTexture2D* const* Found = SkillIconCache.Find(SkillID);
 	return Found ? *Found : nullptr;
 }
 
 UTexture2D* UROAssetImporter::GetMonsterIcon(int32 MonsterID) const
 {
-	const TObjectPtr<UTexture2D>* Found = MonsterIconCache.Find(MonsterID);
+	UTexture2D* const* Found = MonsterIconCache.Find(MonsterID);
 	return Found ? *Found : nullptr;
 }
 
 UTexture2D* UROAssetImporter::GetElementIcon(int32 ElementIndex) const
 {
-	const TObjectPtr<UTexture2D>* Found = ElementIconCache.Find(ElementIndex);
+	UTexture2D* const* Found = ElementIconCache.Find(ElementIndex);
 	return Found ? *Found : nullptr;
 }
 
@@ -486,7 +486,7 @@ UTexture2D* UROAssetImporter::GetElementIcon(int32 ElementIndex) const
 
 UTexture2D* UROAssetImporter::GetCachedTexture(const FString& Key) const
 {
-	const TObjectPtr<UTexture2D>* Found = TextureCache.Find(Key);
+	UTexture2D* const* Found = TextureCache.Find(Key);
 	return Found ? *Found : nullptr;
 }
 

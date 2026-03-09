@@ -5,12 +5,13 @@
 #include "RagnarokUE/Monsters/ROMonsterAIController.h"
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Engine/DamageEvents.h"
 
 UROBTTask_UseSkill::UROBTTask_UseSkill()
 {
 	NodeName = "RO: Use Monster Skill";
 	bNotifyTick = true;
-	bNotifyAbort = true;
+	bNotifyTaskFinished = true;
 
 	BlackboardKey.AddObjectFilter(this, GET_MEMBER_NAME_CHECKED(UROBTTask_UseSkill, BlackboardKey), AActor::StaticClass());
 }

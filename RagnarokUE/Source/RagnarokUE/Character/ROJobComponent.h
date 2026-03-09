@@ -70,13 +70,14 @@ public:
 	/** Add skill points (called on job level up). */
 	void AddSkillPoints(int32 Amount);
 
+	/** Execute a job change (server only). Called directly by NPCs/systems that already validated prerequisites. */
+	void ExecuteJobChange(EROJobClass NewJob);
+
 protected:
 	UFUNCTION()
 	void OnRep_CurrentJobClass();
 
 private:
-	/** Internal job change logic (server only). */
-	void ExecuteJobChange(EROJobClass NewJob);
 
 	/** Get the minimum job level required to change to the next tier. */
 	static int32 GetRequiredJobLevelForChange(EROJobTier TargetTier);

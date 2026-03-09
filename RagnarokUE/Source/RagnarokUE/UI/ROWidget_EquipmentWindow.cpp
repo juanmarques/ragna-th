@@ -36,9 +36,9 @@ int32 UROWidget_EquipmentWindow::SlotToIndex(EROEquipSlot Slot)
 	return static_cast<int32>(Slot);
 }
 
-void UROWidget_EquipmentWindow::SetEquippedItem(EROEquipSlot Slot, const FROItemInstance& Item)
+void UROWidget_EquipmentWindow::SetEquippedItem(EROEquipSlot EquipSlot, const FROItemInstance& Item)
 {
-	const int32 Index = SlotToIndex(Slot);
+	const int32 Index = SlotToIndex(EquipSlot);
 	if (EquippedItems.IsValidIndex(Index))
 	{
 		EquippedItems[Index] = Item;
@@ -46,9 +46,9 @@ void UROWidget_EquipmentWindow::SetEquippedItem(EROEquipSlot Slot, const FROItem
 	}
 }
 
-void UROWidget_EquipmentWindow::ClearEquipSlot(EROEquipSlot Slot)
+void UROWidget_EquipmentWindow::ClearEquipSlot(EROEquipSlot EquipSlot)
 {
-	const int32 Index = SlotToIndex(Slot);
+	const int32 Index = SlotToIndex(EquipSlot);
 	if (EquippedItems.IsValidIndex(Index))
 	{
 		EquippedItems[Index] = FROItemInstance();
@@ -57,9 +57,9 @@ void UROWidget_EquipmentWindow::ClearEquipSlot(EROEquipSlot Slot)
 	}
 }
 
-FROItemInstance UROWidget_EquipmentWindow::GetEquippedItem(EROEquipSlot Slot) const
+FROItemInstance UROWidget_EquipmentWindow::GetEquippedItem(EROEquipSlot EquipSlot) const
 {
-	const int32 Index = SlotToIndex(Slot);
+	const int32 Index = SlotToIndex(EquipSlot);
 	if (EquippedItems.IsValidIndex(Index))
 	{
 		return EquippedItems[Index];

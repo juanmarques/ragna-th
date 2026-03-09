@@ -1,7 +1,7 @@
 // Copyright Ragna-TH Project. All Rights Reserved.
 
-#include "Core/ROGameInstance.h"
-#include "RagnarokUE.h"
+#include "ROGameInstance.h"
+#include "RagnarokUE/RagnarokUE.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 

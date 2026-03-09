@@ -1,10 +1,10 @@
 // Copyright Ragna-TH Project. All Rights Reserved.
 
-#include "Core/ROGameModeBase.h"
-#include "Core/ROPlayerController.h"
-#include "Core/ROPlayerState.h"
-#include "Core/ROGameStateBase.h"
-#include "RagnarokUE.h"
+#include "ROGameModeBase.h"
+#include "ROPlayerController.h"
+#include "ROPlayerState.h"
+#include "ROGameStateBase.h"
+#include "RagnarokUE/RagnarokUE.h"
 #include "RagnarokUE/Character/ROLevelingComponent.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
@@ -104,7 +104,7 @@ void AROGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* 
 	}
 
 	// Parse destination coordinates from ClientTravel options (set by ROPortalActor / ROWarpPortal)
-	const FString Options = NewPlayer->GetLocalPlayer() ? NewPlayer->GetLocalPlayer()->LastURL.ToString() : FString();
+	const FString Options = GetWorld() ? GetWorld()->URL.ToString() : FString();
 	// UGameplayStatics::ParseOption works on the full options string (e.g. "?DestX=100?DestY=200")
 	const FString DestXStr = UGameplayStatics::ParseOption(Options, TEXT("DestX"));
 	const FString DestYStr = UGameplayStatics::ParseOption(Options, TEXT("DestY"));
@@ -125,8 +125,10 @@ void AROGameModeBase::HandleStartingNewPlayer_Implementation(APlayerController* 
 		if (Pawn)
 		{
 			Pawn->SetActorLocationAndRotation(DestLocation, DestRotation);
-			UE_LOG(LogRagnarokUE, Log, TEXT("HandleStartingNewPlayer – Placed %s at portal destination %s"),
-				*NewPlayer->GetName(), *DestLocation.ToString());
+			const FString PlayerName = NewPlayer->GetName();
+			const FString DestStr = DestLocation.ToString();
+			UE_LOG(LogRagnarokUE, Log, TEXT("HandleStartingNewPlayer - Placed %s at portal destination %s"),
+				*PlayerName, *DestStr);
 		}
 	}
 }

@@ -5,6 +5,7 @@
 #include "RagnarokUE/Monsters/ROMonsterAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
+#include "Engine/DamageEvents.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 
@@ -102,7 +103,7 @@ UROBTTask_AssistAttack::UROBTTask_AssistAttack()
 {
 	NodeName = "RO Assist: Stack Aggro Attack";
 	bNotifyTick = true;
-	bNotifyAbort = true;
+	bNotifyTaskFinished = true;
 }
 
 EBTNodeResult::Type UROBTTask_AssistAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

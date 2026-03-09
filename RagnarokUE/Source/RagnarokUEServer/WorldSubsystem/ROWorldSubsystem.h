@@ -27,7 +27,7 @@ struct FROMapPlayerInfo
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPlayerEnteredMap, FName, MapID, const FString&, PlayerNetID);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPlayerLeftMap, FName, MapID, const FString&, PlayerNetID);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerDisconnected, const FString&, PlayerNetID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWorldPlayerDisconnected, const FString&, PlayerNetID);
 
 /**
  * UROWorldSubsystem
@@ -143,7 +143,7 @@ public:
 	FOnPlayerLeftMap OnPlayerLeftMap;
 
 	UPROPERTY(BlueprintAssignable, Category = "World")
-	FOnPlayerDisconnected OnPlayerDisconnected;
+	FOnWorldPlayerDisconnected OnPlayerDisconnected;
 
 protected:
 	/** Per-map player tracking. */

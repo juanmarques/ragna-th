@@ -17,6 +17,22 @@ class UROCardData;
 class UROItemDatabase;
 class UAbilitySystemComponent;
 
+/**
+ * FROEquippedSlotEntry
+ * Replicated struct pairing an equipment slot with its item (TMaps can't be replicated in UE 5.7+).
+ */
+USTRUCT()
+struct FROEquippedSlotEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	EROEquipSlot Slot = EROEquipSlot::Weapon;
+
+	UPROPERTY()
+	FROItemInstance Item;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEquipmentChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemEquipped, EROEquipSlot, Slot, const FROItemInstance&, Item);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemUnequipped, EROEquipSlot, Slot);
@@ -39,9 +55,13 @@ public:
 
 	// ---- Equipment Data ----
 
-	/** Currently equipped items, keyed by slot. */
-	UPROPERTY(ReplicatedUsing = OnRep_EquippedItems, BlueprintReadOnly, Category = "Equipment")
+	/** Currently equipped items, keyed by slot (runtime map, rebuilt from replicated array). */
+	UPROPERTY(BlueprintReadOnly, Category = "Equipment")
 	TMap<EROEquipSlot, FROItemInstance> EquippedItems;
+
+	/** Replicated array of equipped items (drives EquippedItems map via OnRep). */
+	UPROPERTY(ReplicatedUsing = OnRep_EquippedItems)
+	TArray<FROEquippedSlotEntry> ReplicatedEquipSlots;
 
 	// ---- Delegates ----
 
@@ -115,6 +135,9 @@ private:
 
 	/** Cached equipment stat bonuses for delta-based application. */
 	FROStatBlock CachedEquipBonuses;
+
+	/** Sync EquippedItems TMap to ReplicatedEquipSlots TArray for replication. */
+	void SyncMapToReplicatedArray();
 
 	/** Get the item database subsystem. */
 	UROItemDatabase* GetItemDatabase() const;

@@ -55,9 +55,10 @@ void AROMonsterAIController::OnPossess(APawn* InPawn)
 	// Use the behavior tree's blackboard asset
 	if (SelectedBT->BlackboardAsset)
 	{
-		if (UseBlackboard(SelectedBT->BlackboardAsset, Blackboard))
+		UBlackboardComponent* BBComp = nullptr;
+		if (UseBlackboard(SelectedBT->BlackboardAsset, BBComp))
 		{
-			InitializeBlackboard();
+			InitializeMonsterBlackboard();
 		}
 	}
 
@@ -205,7 +206,7 @@ bool AROMonsterAIController::IsTargetValid() const
 		return false;
 	}
 
-	UBlackboardComponent* BB = GetBlackboardComponent();
+	const UBlackboardComponent* BB = GetBlackboardComponent();
 	if (!BB)
 	{
 		return false;
@@ -276,7 +277,7 @@ void AROMonsterAIController::ExitCombat()
 	}
 }
 
-void AROMonsterAIController::InitializeBlackboard()
+void AROMonsterAIController::InitializeMonsterBlackboard()
 {
 	UBlackboardComponent* BB = GetBlackboardComponent();
 	if (!BB || !OwnerMonster)
