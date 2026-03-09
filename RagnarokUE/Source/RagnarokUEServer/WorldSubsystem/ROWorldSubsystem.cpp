@@ -3,6 +3,7 @@
 #include "ROWorldSubsystem.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerState.h"
 #include "GameFramework/Pawn.h"
 
 // Fix #5: Dedicated log category instead of LogTemp
@@ -229,7 +230,7 @@ void UROWorldSubsystem::BroadcastToMap(FName MapID, const FString& Message)
 
 		// Use the player's UniqueId as the NetID key
 		const FString NetID = PC->GetPlayerState<APlayerState>()
-			? PC->GetPlayerState<APlayerState>()->GetUniqueId().ToString()
+			? PC->GetPlayerState<APlayerState>()->GetUniqueId()->ToString()
 			: FString();
 
 		if (TargetNetIDs.Contains(NetID))
@@ -298,7 +299,7 @@ void UROWorldSubsystem::BroadcastToArea(FName MapID, FVector Origin, float Radiu
 		}
 
 		const FString NetID = PC->GetPlayerState<APlayerState>()
-			? PC->GetPlayerState<APlayerState>()->GetUniqueId().ToString()
+			? PC->GetPlayerState<APlayerState>()->GetUniqueId()->ToString()
 			: FString();
 
 		if (!TargetNetIDs.Contains(NetID))

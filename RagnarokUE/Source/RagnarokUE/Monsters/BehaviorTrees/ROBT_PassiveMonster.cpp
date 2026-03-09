@@ -5,6 +5,7 @@
 #include "RagnarokUE/Monsters/ROMonsterAIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
+#include "Engine/DamageEvents.h"
 #include "NavigationSystem.h"
 #include "Navigation/PathFollowingComponent.h"
 
@@ -74,7 +75,7 @@ UROBTTask_PassiveFightBack::UROBTTask_PassiveFightBack()
 {
 	NodeName = "RO Passive: Fight Back";
 	bNotifyTick = true;
-	bNotifyAbort = true;
+	bNotifyTaskFinished = true;
 }
 
 EBTNodeResult::Type UROBTTask_PassiveFightBack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

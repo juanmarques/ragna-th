@@ -1,7 +1,7 @@
 // Copyright Ragna-TH Project. All Rights Reserved.
 
-#include "Core/ROPlayerState.h"
-#include "RagnarokUE.h"
+#include "ROPlayerState.h"
+#include "RagnarokUE/RagnarokUE.h"
 #include "Net/UnrealNetwork.h"
 #include "RagnarokUE/Character/ROLevelingComponent.h"
 #include "RagnarokUE/Character/ROJobComponent.h"

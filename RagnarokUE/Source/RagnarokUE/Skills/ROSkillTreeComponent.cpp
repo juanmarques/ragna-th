@@ -18,13 +18,19 @@ void UROSkillTreeComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	InitializeSkillDefinitions();
+
+	// Rebuild runtime map from replicated array (for clients receiving initial state)
+	for (const FROLearnedSkillEntry& Entry : LearnedSkillEntries)
+	{
+		LearnedSkills.Add(Entry.SkillID, Entry.Level);
+	}
 }
 
 void UROSkillTreeComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(UROSkillTreeComponent, LearnedSkills);
+	DOREPLIFETIME(UROSkillTreeComponent, LearnedSkillEntries);
 	DOREPLIFETIME(UROSkillTreeComponent, SkillPoints);
 	DOREPLIFETIME(UROSkillTreeComponent, CurrentJobClass);
 }
@@ -132,6 +138,22 @@ void UROSkillTreeComponent::ServerLearnSkill_Implementation(int32 SkillID)
 
 	// All checks passed - learn/level up the skill
 	LearnedSkills.FindOrAdd(SkillID) = DesiredLevel;
+
+	// Sync to replicated array
+	bool bFound = false;
+	for (FROLearnedSkillEntry& Entry : LearnedSkillEntries)
+	{
+		if (Entry.SkillID == SkillID)
+		{
+			Entry.Level = DesiredLevel;
+			bFound = true;
+			break;
+		}
+	}
+	if (!bFound)
+	{
+		LearnedSkillEntries.Add({SkillID, DesiredLevel});
+	}
 	SkillPoints--;
 	TotalSkillPointsSpent++;
 
@@ -200,6 +222,7 @@ void UROSkillTreeComponent::ResetSkills()
 	SkillPoints += TotalSkillPointsSpent;
 	TotalSkillPointsSpent = 0;
 	LearnedSkills.Empty();
+	LearnedSkillEntries.Empty();
 }
 
 const FROSkillDefinition* UROSkillTreeComponent::FindSkillDefinition(int32 SkillID) const

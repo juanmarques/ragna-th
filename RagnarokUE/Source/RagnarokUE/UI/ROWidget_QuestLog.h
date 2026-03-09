@@ -24,11 +24,11 @@ enum class EROQuestTab : uint8
 };
 
 /**
- * FROQuestObjective
+ * FROQuestObjectiveDisplay
  * A single objective within a quest.
  */
 USTRUCT(BlueprintType)
-struct FROQuestObjective
+struct FROQuestObjectiveDisplay
 {
 	GENERATED_BODY()
 
@@ -77,7 +77,7 @@ struct FROQuestEntry
 
 	/** Quest objectives. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Quest")
-	TArray<FROQuestObjective> Objectives;
+	TArray<FROQuestObjectiveDisplay> Objectives;
 
 	/** Whether the quest is completed. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Quest")
@@ -107,7 +107,7 @@ public:
 
 	/** Update a single quest's objectives. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Quest")
-	void UpdateQuestProgress(int32 QuestID, const TArray<FROQuestObjective>& Objectives);
+	void UpdateQuestProgress(int32 QuestID, const TArray<FROQuestObjectiveDisplay>& Objectives);
 
 	/** Mark a quest as completed. */
 	UFUNCTION(BlueprintCallable, Category = "RO|Quest")

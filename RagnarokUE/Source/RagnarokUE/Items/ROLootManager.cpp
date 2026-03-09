@@ -38,7 +38,7 @@ void UROLootManager::GenerateLoot(int32 MonsterID, AActor* Killer, FVector Death
 	}
 
 	UWorld* World = GetWorld();
-	if (!World || !World->IsServer())
+	if (!World || World->GetNetMode() == NM_Client)
 	{
 		return;
 	}
@@ -179,7 +179,7 @@ AROLootActor::AROLootActor()
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 	bAlwaysRelevant = false;
-	NetUpdateFrequency = 1.0f;
+	SetNetUpdateFrequency(1.0f);
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);

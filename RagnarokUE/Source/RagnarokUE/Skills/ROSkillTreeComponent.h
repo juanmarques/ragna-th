@@ -55,6 +55,22 @@ struct FROSkillDefinition
 	FText Description;
 };
 
+/**
+ * FROLearnedSkillEntry
+ * Replicated struct representing a single learned skill.
+ */
+USTRUCT()
+struct FROLearnedSkillEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	int32 SkillID = 0;
+
+	UPROPERTY()
+	int32 Level = 0;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillLearned, int32, SkillID, int32, NewLevel);
 
 /**
@@ -141,8 +157,11 @@ protected:
 	virtual void InitializeSkillDefinitions();
 
 private:
-	/** Learned skills: SkillID -> current level. */
+	/** Learned skills (replicated as array, accessed as map internally). */
 	UPROPERTY(Replicated)
+	TArray<FROLearnedSkillEntry> LearnedSkillEntries;
+
+	/** Runtime map for fast lookup (rebuilt from LearnedSkillEntries). */
 	TMap<int32, int32> LearnedSkills;
 
 	/** Available skill points to spend. */

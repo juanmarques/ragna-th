@@ -1,7 +1,7 @@
 // Copyright Ragna-TH Project. All Rights Reserved.
 
-#include "Core/ROGameStateBase.h"
-#include "RagnarokUE.h"
+#include "ROGameStateBase.h"
+#include "RagnarokUE/RagnarokUE.h"
 #include "Net/UnrealNetwork.h"
 
 AROGameStateBase::AROGameStateBase()

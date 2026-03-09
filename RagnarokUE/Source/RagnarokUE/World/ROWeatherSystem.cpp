@@ -26,7 +26,7 @@ void UROWeatherSystem::SetWeather(EROWeatherType Weather)
 	const EROWeatherType OldWeather = CurrentWeather;
 	CurrentWeather = Weather;
 
-	UE_LOG(LogTemp, Log, TEXT("Weather changed: %d -> %d"), static_cast<uint8>(OldWeather), static_cast<uint8>(Weather));
+	UE_LOG(LogTemp, Log, TEXT("Weather changed: %d -> %d"), static_cast<int32>(OldWeather), static_cast<int32>(Weather));
 
 	// TODO: Trigger visual effects:
 	// - Update post-processing volume (brightness, fog, color grading)

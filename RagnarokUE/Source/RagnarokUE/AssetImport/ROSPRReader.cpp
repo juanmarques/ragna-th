@@ -115,7 +115,7 @@ bool FROSPRReader::Parse(const TArray<uint8>& Data)
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("ROSPRReader: Parsed %d palette frames + %d RGBA frames (v%d.%d)"),
-		PaletteFrameCount, RGBAFrameCount, Version >> 8, Version & 0xFF);
+		PaletteFrameCount, RGBAFrameCount, static_cast<int32>(Version >> 8), static_cast<int32>(Version & 0xFF));
 	return true;
 }
 
