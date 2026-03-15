@@ -92,4 +92,10 @@ protected:
 
 	/** Find the spawn definition index for a given monster. */
 	int32 FindSpawnDefIndex(const AROMonsterBase* Monster) const;
+
+	/** Returns true when the current world time is considered nighttime. */
+	bool IsCurrentlyNightTime() const;
+
+	/** Returns true when a spawn definition is allowed to spawn at current time. */
+	bool IsSpawnDefinitionActiveAtCurrentTime(const FROMonsterSpawnInfo& Info) const;
 };

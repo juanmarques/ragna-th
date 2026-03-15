@@ -3,6 +3,7 @@
 #include "ROMonsterSpawnManager.h"
 #include "ROMonsterBase.h"
 #include "ROMonsterDatabase.h"
+#include "RagnarokUE/Core/ROGameStateBase.h"
 #include "RagnarokUE/Social/ROChatSubsystem.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
@@ -45,6 +46,11 @@ void AROMonsterSpawnManager::PerformInitialSpawn()
 		const FROMonsterSpawnInfo& Def = SpawnDefinitions[DefIndex];
 		AliveCountPerDef.Add(DefIndex, 0);
 
+		if (!IsSpawnDefinitionActiveAtCurrentTime(Def))
+		{
+			continue;
+		}
+
 		for (int32 i = 0; i < Def.Count; ++i)
 		{
 			AROMonsterBase* Monster = SpawnMonster(Def);
@@ -63,6 +69,11 @@ void AROMonsterSpawnManager::PerformInitialSpawn()
 
 AROMonsterBase* AROMonsterSpawnManager::SpawnMonster(const FROMonsterSpawnInfo& Info)
 {
+	if (!IsSpawnDefinitionActiveAtCurrentTime(Info))
+	{
+		return nullptr;
+	}
+
 	if (!MonsterClass)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("SpawnManager: No MonsterClass set!"));
@@ -194,6 +205,12 @@ void AROMonsterSpawnManager::ProcessRespawnQueue(float CurrentTime)
 			if (SpawnDefinitions.IsValidIndex(DefIndex))
 			{
 				const FROMonsterSpawnInfo& Def = SpawnDefinitions[DefIndex];
+				if (!IsSpawnDefinitionActiveAtCurrentTime(Def))
+				{
+					// Keep this entry in queue until the definition becomes active.
+					continue;
+				}
+
 				const int32 AliveCount = AliveCountPerDef.FindRef(DefIndex);
 
 				// Count how many respawns for this definition are already queued
@@ -277,4 +294,30 @@ int32 AROMonsterSpawnManager::FindSpawnDefIndex(const AROMonsterBase* Monster) c
 	}
 
 	return -1;
+}
+
+bool AROMonsterSpawnManager::IsCurrentlyNightTime() const
+{
+	const AROGameStateBase* GameState = GetWorld() ? GetWorld()->GetGameState<AROGameStateBase>() : nullptr;
+	if (!GameState)
+	{
+		return false;
+	}
+
+	const float TimeOfDaySeconds = FMath::Fmod(GameState->GetServerTime(), 86400.0f);
+	constexpr float DayStartSeconds = 6.0f * 3600.0f;
+	constexpr float NightStartSeconds = 18.0f * 3600.0f;
+
+	return TimeOfDaySeconds < DayStartSeconds || TimeOfDaySeconds >= NightStartSeconds;
+}
+
+bool AROMonsterSpawnManager::IsSpawnDefinitionActiveAtCurrentTime(const FROMonsterSpawnInfo& Info) const
+{
+	if (Info.bSpawnDuringDay && Info.bSpawnDuringNight)
+	{
+		return true;
+	}
+
+	const bool bNightTime = IsCurrentlyNightTime();
+	return bNightTime ? Info.bSpawnDuringNight : Info.bSpawnDuringDay;
 }

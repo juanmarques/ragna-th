@@ -58,7 +58,7 @@ Tracking all missing systems, features, and formula corrections identified in th
 
 - [x] **ATK variance per attack** — `GetAttackDamage()` rolls between ATKMin/ATKMax each attack
 - [x] **Minimum respawn delay** — Enforced 5-second minimum in `OnMonsterDied()`
-- [ ] **Day/night spawn support** — Monsters that only spawn during day or night
+- [x] **Day/night spawn support** — Added per-spawn day/night flags (`bSpawnDuringDay`, `bSpawnDuringNight`) enforced in initial spawn and respawn processing
 - [x] **Boss/MVP death announcement** — Log broadcast on boss kill (TODO: client multicast)
 - [x] **Monster skill conditions** — `CheckSkillConditions()` checks HP%, range, cooldown, use chance
 - [ ] **Per-spawn cell randomization** — Randomize initial center, subsequent respawns use randomized center

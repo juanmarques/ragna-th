@@ -305,6 +305,14 @@ struct RAGNAROKUE_API FROMonsterSpawnInfo
 	/** Random variance added to respawn delay (+/- this value in seconds). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn", meta = (ClampMin = "0"))
 	float RespawnVariance = 1.0f;
+
+	/** If true, this spawn definition is allowed to spawn during daytime. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn|Time")
+	bool bSpawnDuringDay = true;
+
+	/** If true, this spawn definition is allowed to spawn during nighttime. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn|Time")
+	bool bSpawnDuringNight = true;
 };
 
 /**
