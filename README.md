@@ -1,5 +1,7 @@
 # Ragna-TH: Ragnarok Online - Unreal Engine 5 Recreation
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A full Ragnarok Online MMORPG recreation built in Unreal Engine 5 with C++. Preserves the nostalgic gameplay (classes, stats, skills, combat, social systems) while leveraging UE5 for modern 3D graphics.
 
 **Scope**: Prontera region as starting zone. All 6 first classes + all 12 second classes (Knight, Crusader, Wizard, Sage, Hunter, Bard/Dancer, Assassin, Rogue, Blacksmith, Alchemist, Priest, Monk). Full game systems.
