@@ -141,7 +141,7 @@ UE5 project structure, build targets (Client/Editor/Server), module definitions,
 - `ROEmperiumActor` - Destructible Emperium (normal attacks only, blocks own guild)
 
 ### Phase 11: UI System (~16 files)
-16 UMG widgets: HUD, Hotbar (F1-F9), StatWindow, InventoryWindow, EquipmentWindow, SkillWindow, ChatWindow, Minimap, PartyWindow, GuildWindow, QuestLog, TradeWindow, NPCDialogue, ShopWindow, CastBar, TargetInfo
+17 UMG widgets: HUD, Hotbar (F1-F9), StatWindow, InventoryWindow, EquipmentWindow, SkillWindow, ChatWindow, Minimap, PartyWindow, GuildWindow, QuestLog, TradeWindow, NPCDialogue, ShopWindow, CastBar, TargetInfo, LoginScreen
 
 ### Phase 12: Network & Server (~10 files)
 - `ROReplicationGraph` - Grid spatialization, always-relevant nodes for party/guild
